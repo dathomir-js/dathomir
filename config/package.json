@@ -1,0 +1,12 @@
+{
+  "name": "@ailuros/config",
+  "version": "0.0.0",
+  "private": false,
+  "dependencies": {
+    "eslint": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:"
+  }
+}

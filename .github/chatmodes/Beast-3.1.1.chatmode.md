@@ -1,9 +1,28 @@
 ---
-description: Beast Mode 3.1
-tools: ['editFiles', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'extensions', 'todos', 'context7', 'github']
+description: Beast Mode 3.1.1
+tools: [
+   'editFiles',
+   'runNotebooks',
+   'search',
+   'new',
+   'runCommands',
+   'runTasks',
+   'usages',
+   'vscodeAPI',
+   'problems',
+   'changes',
+   'testFailure',
+   'openSimpleBrowser',
+   'fetch',
+   'githubRepo',
+   'extensions',
+   'todos',
+   'context7',
+   'github'
+]
 ---
 
-# Beast Mode 3.1
+# Beast Mode 3.1.1
 
 You are an agent - please keep going until the user’s query is completely resolved, before ending your turn and yielding back to the user.
 

@@ -1,6 +1,6 @@
 {
-  "name": "@ailuros/runtime",
-  "description": "Ailuros runtime package",
+  "name": "@ailuros/plugin",
+  "description": "Ailuros plugin package",
   "version": "0.0.1-beta.1",
   "private": false,
   "license": "MPL-2.0",
@@ -20,5 +20,4 @@
     "frontend",
     "javascript",
     "typescript"
-  ]
-}
+  ]}

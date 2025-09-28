@@ -1,0 +1,22 @@
+{
+  "folders": [
+    {
+      "name": "<root>",
+      "path": "."
+    },
+    {
+      "name": "⚙️ .github",
+      "path": ".github"
+    }
+  ],
+  "settings": {
+    "biome.enabled": false,
+    "prettier.enable": true,
+    "oxc.enable": true,
+    "chat.promptFiles": true,
+
+    "cSpell.words": [
+      "ailuros"
+    ]
+  }
+}

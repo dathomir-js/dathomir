@@ -1,6 +1,6 @@
 {
   "name": "@ailuros/runtime",
-  "description": "Ailuros runtime package",
+  "description": "Ailuros package",
   "version": "0.0.1-beta.1",
   "private": false,
   "license": "MPL-2.0",

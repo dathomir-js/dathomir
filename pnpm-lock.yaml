@@ -44,7 +44,15 @@ importers:
         specifier: 'catalog:'
         version: 5.9.2
 
+  packages/ailuros: {}
+
+  packages/plugin: {}
+
+  packages/reactivity: {}
+
   packages/runtime: {}
+
+  packages/transformer: {}
 
 packages:
 

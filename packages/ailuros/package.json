@@ -1,5 +1,5 @@
 {
-  "name": "@ailuros/runtime",
+  "name": "@ailuros/core",
   "description": "Ailuros package",
   "version": "0.0.1-beta.1",
   "private": false,

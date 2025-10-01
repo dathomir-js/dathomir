@@ -2,6 +2,9 @@
 description: Beast Mode 3.1.1
 tools: [
    'editFiles',
+   'createDirectory',
+   'createFile',
+   'editNotebook',
    'runNotebooks',
    'search',
    'new',

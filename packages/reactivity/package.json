@@ -8,9 +8,9 @@
     "type": "git",
     "url": "git+ssh://git@github.com:nucoui/ailuros.git"
   },
-   "bugs": {
+  "bugs": {
     "url": "https://github.com/nucoui/ailuros/issues",
-    "email" : "ailuros@takumaru.dev"
+    "email": "ailuros@takumaru.dev"
   },
   "homepage": "https://github.com/nucoui/ailuros#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
@@ -20,5 +20,11 @@
     "frontend",
     "javascript",
     "typescript"
-  ]
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@ailuros/config": "workspace:*"
+  }
 }

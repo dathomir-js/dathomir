@@ -5,8 +5,40 @@
       "path": "."
     },
     {
+      "name": "=== ⚙️ config ===",
+      "path": "=== ⚙️ config ==="
+    },
+    {
       "name": "⚙️ .github",
       "path": ".github"
+    },
+    {
+      "name": "⚙️ config",
+      "path": "./config"
+    },
+    {
+      "name": "=== 📦 packages ===",
+      "path": "=== 📦 packages ==="
+    },
+    {
+      "name": "📦 @ailuros/core",
+      "path": "./packages/ailuros"
+    },
+    {
+      "name": "📦 @ailuros/plugin",
+      "path": "./packages/plugin"
+    },
+    {
+      "name": "📦 @ailuros/reactivity",
+      "path": "./packages/reactivity"
+    },
+    {
+      "name": "📦 @ailuros/runtime",
+      "path": "./packages/runtime"
+    },
+    {
+      "name": "📦 @ailuros/transformer",
+      "path": "./packages/transformer"
     }
   ],
   "settings": {

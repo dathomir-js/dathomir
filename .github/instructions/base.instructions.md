@@ -16,6 +16,7 @@ Read and understand these instructions before you start thinking or acting.
 - When reasoning about the contents of individual packages, read the `<package-name>.instructions.md` file to understand the purpose and contents of that package.
 - The project's goals are described in `project-todo.instructions.md`. Collaborate with the human to accomplish those goals.
 - For TypeScript development, follow the development principles in `typescript-development-principles.instructions.md`. Prioritize type safety and code quality.
+- Please provide responses in Japanese.
 
 ## Directory Structure Instructions
 - `~/<project-root>/` : Project root

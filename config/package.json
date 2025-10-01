@@ -2,6 +2,14 @@
   "name": "@ailuros/config",
   "version": "0.0.0",
   "private": false,
+  "type": "module",
+  "bin": {
+    "tsc": "./bin/tsc.js",
+    "eslint": "./bin/eslint.js",
+    "oxlint": "./bin/oxlint.js",
+    "tsgolint": "./bin/tsgolint.js",
+    "prettier": "./bin/prettier.js"
+  },
   "scripts": {},
   "dependencies": {
     "eslint": "catalog:",

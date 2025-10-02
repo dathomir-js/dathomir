@@ -22,6 +22,5 @@
     "oxlint-tsgolint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
-  },
-  "devDependencies": {}
+  }
 }

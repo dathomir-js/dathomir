@@ -22,7 +22,8 @@
     "typescript"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint"
   },
   "devDependencies": {
     "@ailuros/config": "workspace:*"

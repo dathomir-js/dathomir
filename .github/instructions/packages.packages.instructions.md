@@ -1,18 +1,26 @@
 ---
 applyTo: '**/packages/**'
+priority: 0
 ---
 
 # ailuros Project Packages Instructions
 
 # Overview
-`/packages/**` 配下には、ailuros プロジェクトの各パッケージが格納されています。
-各パッケージは独立しており、個別にビルド、テスト、デプロイが可能です。
-各パッケージの目的と内容については、各パッケージの `<package-name>.instructions.md` ファイルを参照してください。
+The ailuros project stores its packages under `/packages/**`.
+Each package is independent and can be built, tested, and deployed individually.
+For the purpose and contents of each package, refer to the package's `<package-name>.instructions.md` file.
 
 # Main Instructions
-- 回答を生成する際には、 use context7 で依存パッケージの最新の仕様や使用方法を理解した上で回答してください。
-- テストの生成はこちらの指示があるまで行わないでください。テストを行う必要性を感じた場合は必ず「テストを行う必要があります。テストを行いますか？」と尋ねてください。
-  - テストには vitest を使用してください。
-  - vitest の使用方法については、use context7 で最新の情報を取得してください。
-- 新規でmarkdown等でドキュメントを生成することはしないでください。ドキュメントではなく、JSDocコメントでコード内に説明を追加してください。
-  - 過剰にコメントは残さずに、関数の説明や引数の説明など、必要最低限のコメントを残してください。
+- When generating responses, use `use context7` to understand the latest specifications and usage of dependent packages before replying.
+
+## Test
+- Do not generate tests until explicitly instructed to do so.
+- If you intend to generate tests, first confirm with a human.
+- Use vitest to create and run tests.
+- For how to use vitest, obtain the latest information via `use context7`.
+- Aim for 100% test coverage whenever possible.
+
+## Documentation
+- Do not generate new documentation in Markdown or similar formats.
+- Add explanations in the code using JSDoc comments. Write them in English.
+- Avoid excessive commenting; include only the minimum necessary comments such as function descriptions and parameter explanations.

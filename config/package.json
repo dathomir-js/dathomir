@@ -10,6 +10,11 @@
     "tsgolint": "./bin/tsgolint.js",
     "prettier": "./bin/prettier.js"
   },
+  "exports": {
+    "./templates/oxlintrc.template.json": "./templates/oxlintrc.template.json",
+    "./templates/prettier.template.js": "./templates/prettier.template.js",
+    "./templates/tsconfig.template.json": "./templates/tsconfig.template.json"
+  },
   "scripts": {},
   "dependencies": {
     "eslint": "catalog:",
@@ -18,7 +23,5 @@
     "prettier": "catalog:",
     "typescript": "catalog:"
   },
-  "devDependencies": {
-    "@types/node": "^24.6.1"
-  }
+  "devDependencies": {}
 }

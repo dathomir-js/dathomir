@@ -43,6 +43,7 @@ export function executeBinFromPackage(packageName, relativeBinPath) {
     cwd: process.cwd()
   });
 
+
   child.on('exit', (code) => {
     process.exit(code || 0);
   });

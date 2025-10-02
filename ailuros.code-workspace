@@ -47,6 +47,24 @@
     "oxc.enable": true,
     "chat.promptFiles": true,
 
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.inlineSuggest.enabled": true,
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "github.copilot.enable": {
+      "*": true,
+      "plaintext": false,
+      "markdown": true,
+      "typescript": true,
+      "javascript": true
+    },
+    "editor.codeActionsOnSave": {
+      "source.fixAll.oxc": "explicit"
+    },
+
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+
     "cSpell.words": [
       "ailuros"
     ]

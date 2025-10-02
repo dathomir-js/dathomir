@@ -25,10 +25,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
-    "test": "vitest run"
+    "test": "vitest run --coverage"
   },
   "devDependencies": {
     "@ailuros/config": "workspace:*",
+    "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   },
   "dependencies": {

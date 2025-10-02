@@ -9,13 +9,13 @@ import {
  * Describes a direct value or updater function that can be applied to a signal.
  * @template T
  */
-export type SignalUpdate<T> = T | ((previous: T) => T);
+type SignalUpdate<T> = T | ((previous: T) => T);
 
 /**
  * Reactive container that tracks reads and notifies dependents on change.
  * @template T
  */
-export interface Signal<T> {
+interface Signal<T> {
   /**
    * Current value of the signal. Reading this accessor registers a dependency.
    */
@@ -40,7 +40,7 @@ export interface Signal<T> {
  * Lazily evaluated value that caches its latest computation until inputs change.
  * @template T
  */
-export interface Computed<T> {
+interface Computed<T> {
   /**
    * Derived value that tracks dependencies when read.
    */
@@ -54,7 +54,7 @@ export interface Computed<T> {
 /**
  * Function returned by {@link effect} that removes the effect's subscriptions.
  */
-export type EffectCleanup = () => void;
+type EffectCleanup = () => void;
 
 type NodeKind = "signal" | "computed" | "effect" | "scope";
 
@@ -411,8 +411,8 @@ function createComputedApi<T>(node: ComputedNode<T>): Computed<T> {
  * @param {T} initialValue Initial value stored in the signal.
  * @returns {Signal<T>} Reactive signal instance.
  */
-export function signal<T>(initialValue: T): Signal<T>;
-export function signal<T = undefined>(initialValue?: T): Signal<T> {
+function signal<T>(initialValue: T): Signal<T>;
+function signal<T = undefined>(initialValue?: T): Signal<T> {
   return createSignalApi(createSignalNode(initialValue as T));
 }
 
@@ -422,7 +422,7 @@ export function signal<T = undefined>(initialValue?: T): Signal<T> {
  * @param {(previousValue?: T) => T} getter Function that produces the derived value.
  * @returns {Computed<T>} Lazily evaluated computed value.
  */
-export function computed<T>(getter: (previousValue?: T) => T): Computed<T> {
+function computed<T>(getter: (previousValue?: T) => T): Computed<T> {
   return createComputedApi(createComputedNode(getter));
 }
 
@@ -431,7 +431,7 @@ export function computed<T>(getter: (previousValue?: T) => T): Computed<T> {
  * @param {() => void} fn Effect function to execute and track.
  * @returns {EffectCleanup} Cleanup function that stops the effect.
  */
-export function effect(fn: () => void): EffectCleanup {
+function effect(fn: () => void): EffectCleanup {
   const effectNode = createEffectNode(fn);
   const prevSub = setActiveSub(effectNode);
   if (prevSub !== undefined) {
@@ -451,7 +451,7 @@ export function effect(fn: () => void): EffectCleanup {
  * @param {() => T} fn Callback to run within the batch.
  * @returns {T} Result of the callback.
  */
-export function batch<T>(fn: () => T): T {
+function batch<T>(fn: () => T): T {
   startBatch();
   try {
     return fn();
@@ -459,3 +459,6 @@ export function batch<T>(fn: () => T): T {
     endBatch();
   }
 }
+
+export type { SignalUpdate, Signal, Computed, EffectCleanup };
+export { signal, computed, effect, batch };

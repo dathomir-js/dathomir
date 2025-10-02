@@ -1,6 +1,7 @@
 {
   "name": "@ailuros/reactivity",
   "description": "Ailuros reactivity package",
+  "type": "module",
   "version": "0.0.1-beta.1",
   "private": false,
   "license": "MPL-2.0",
@@ -23,9 +24,14 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint"
+    "lint": "oxlint",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "@ailuros/config": "workspace:*"
+    "@ailuros/config": "workspace:*",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "alien-signals": "^3.0.0"
   }
 }

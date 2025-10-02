@@ -17,8 +17,10 @@
   "devDependencies": {
     "concurrently": "^9.2.1"
   },
-  "volta": {
-    "node": "24.9.0",
+  "dependencies": {
     "pnpm": "10.17.1"
+  },
+  "volta": {
+    "node": "24.9.0"
   }
 }

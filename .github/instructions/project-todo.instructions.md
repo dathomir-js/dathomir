@@ -1,5 +1,6 @@
 ---
 applyTo: '**'
+priority: 0
 ---
 
 ## All Project TODOs

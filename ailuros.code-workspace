@@ -9,6 +9,10 @@
       "path": "=== ⚙️ config ==="
     },
     {
+      "name": "⚙️ .workspace",
+      "path": ".workspace"
+    },
+    {
       "name": "⚙️ .github",
       "path": ".github"
     },

@@ -10,7 +10,8 @@
     "p:plugin": "pnpm --filter @ailuros/plugin",
     "p:reactivity": "pnpm --filter @ailuros/reactivity",
     "p:runtime": "pnpm --filter @ailuros/runtime",
-    "p:transformer": "pnpm --filter @ailuros/transformer"
+    "p:transformer": "pnpm --filter @ailuros/transformer",
+    "version": "node -v"
   },
   "license": "MPL-2.0",
   "packageManager": "pnpm@10.17.1",
@@ -19,8 +20,5 @@
   },
   "dependencies": {
     "pnpm": "10.17.1"
-  },
-  "volta": {
-    "node": "24.9.0"
   }
 }

@@ -8,12 +8,17 @@
     "eslint": "./bin/eslint.js",
     "oxlint": "./bin/oxlint.js",
     "tsgolint": "./bin/tsgolint.js",
-    "prettier": "./bin/prettier.js"
+    "prettier": "./bin/prettier.js",
+    "tsdown": "./bin/tsdown.js"
   },
   "exports": {
     "./templates/oxlintrc.template.json": "./templates/oxlintrc.template.json",
     "./templates/prettier.template.js": "./templates/prettier.template.js",
-    "./templates/tsconfig.template.json": "./templates/tsconfig.template.json"
+    "./templates/tsconfig.template.json": "./templates/tsconfig.template.json",
+    "./tsdown": {
+      "import": "./scripts/tsdown.mjs",
+      "types": "./scripts/tsdown.d.ts"
+    }
   },
   "scripts": {},
   "dependencies": {
@@ -21,6 +26,7 @@
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
     "prettier": "catalog:",
+    "tsdown": "catalog:",
     "typescript": "catalog:"
   }
 }

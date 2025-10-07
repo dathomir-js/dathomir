@@ -8,9 +8,9 @@
     "type": "git",
     "url": "git+ssh://git@github.com:nucoui/ailuros.git"
   },
-   "bugs": {
+  "bugs": {
     "url": "https://github.com/nucoui/ailuros/issues",
-    "email" : "ailuros@takumaru.dev"
+    "email": "ailuros@takumaru.dev"
   },
   "homepage": "https://github.com/nucoui/ailuros#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
@@ -20,5 +20,25 @@
     "frontend",
     "javascript",
     "typescript"
-  ]
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "test": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@ailuros/config": "workspace:*",
+    "@babel/types": "^7.28.4",
+    "@types/babel__generator": "^7.27.0",
+    "@types/babel__traverse": "^7.28.0",
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@babel/generator": "^7.28.3",
+    "@babel/parser": "^7.28.4",
+    "@babel/traverse": "^7.28.4"
+  }
 }

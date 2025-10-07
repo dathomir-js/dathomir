@@ -62,7 +62,7 @@
       "javascript": true
     },
     "editor.codeActionsOnSave": {
-      "source.fixAll.oxc": "explicit"
+      "source.fixAll.oxc":"never"
     },
 
     "[typescript]": {
@@ -71,7 +71,7 @@
 
     "github.copilot.chat.commitMessageGeneration.instructions": [
       {
-        "file": ".github/instructions/commit-message.instructions.md",
+        "file": "commit-message-instructions.md",
       }
     ],
 

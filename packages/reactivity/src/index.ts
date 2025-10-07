@@ -168,7 +168,7 @@ function runWatcher(node: WatcherNode, flags: ReactiveFlags): void {
     ++cycle;
     node.depsTail = undefined;
     node.flags =
-      (node.flags & ~ReactiveFlags.Dirty) |
+      (node.flags & ~(ReactiveFlags.Dirty | ReactiveFlags.Pending)) |
       ReactiveFlags.Watching |
       ReactiveFlags.RecursedCheck;
     const prevSub = setActiveSub(node);

@@ -43,6 +43,14 @@
     {
       "name": "📦 @ailuros/transformer",
       "path": "./packages/transformer"
+    },
+        {
+      "name": "=== 🎮 playgrounds ===",
+      "path": "=== 🎮 playgrounds ==="
+    },
+    {
+      "name": "🎮 vanilla",
+      "path": "./playgrounds/vanilla"
     }
   ],
   "settings": {

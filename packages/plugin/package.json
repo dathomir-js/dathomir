@@ -4,13 +4,14 @@
   "version": "0.0.1-beta.1",
   "private": false,
   "license": "MPL-2.0",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com:nucoui/ailuros.git"
   },
-   "bugs": {
+  "bugs": {
     "url": "https://github.com/nucoui/ailuros/issues",
-    "email" : "ailuros@takumaru.dev"
+    "email": "ailuros@takumaru.dev"
   },
   "homepage": "https://github.com/nucoui/ailuros#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
@@ -20,4 +21,28 @@
     "frontend",
     "javascript",
     "typescript"
-  ]}
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsdown --watch",
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint"
+  },
+  "devDependencies": {
+    "@ailuros/config": "workspace:*"
+  },
+  "dependencies": {
+    "@ailuros/transformer": "workspace:*",
+    "unplugin": "^2.3.10"
+  }
+}

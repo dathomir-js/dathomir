@@ -96,3 +96,21 @@ describe("batch", () => {
     expect(observed).toEqual([0, 2]);
   });
 });
+
+describe("Consecutive changes", () => {
+  it("handles multiple consecutive changes correctly", () => {
+    const count = signal(0);
+    const doubleCount = computed(() => count.value * 2);
+
+    const observed: number[] = [];
+
+    effect(() => {
+      observed.push(doubleCount.value);
+    });
+
+    count.set(1);
+    count.set(2);
+
+    expect(observed).toEqual([0, 2, 4]);
+  });
+});

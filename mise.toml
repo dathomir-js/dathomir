@@ -1,8 +1,0 @@
-min_version = "2024.9.5"
-
-[tools]
-node = "24.2.0"
-pnpm = "10.17.1"
-
-[env]
-_.path = ["{{config_root}}/node_modules/.bin"]

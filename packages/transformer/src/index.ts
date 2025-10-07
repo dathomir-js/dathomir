@@ -1,4 +1,4 @@
-import generate from "@babel/generator";
+import { generate } from "@babel/generator";
 import type { GeneratorResult } from "@babel/generator";
 import { parseToAst } from "./parseToAst";
 import { traverseToReactive } from "./traverseToReactive";
@@ -11,7 +11,7 @@ import { traverseToReactive } from "./traverseToReactive";
 export const transform = (input: string): GeneratorResult => {
   const ast = parseToAst(input);
   traverseToReactive(ast);
-  const result = generate(ast, { retainLines: false });
+  const result = generate(ast, { retainLines: false, comments: true });
 
   return result;
 };

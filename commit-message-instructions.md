@@ -1,5 +1,3 @@
-最初に必ず「やあ」とつけて
-
 # Commit message instructions
 
 ## Rules

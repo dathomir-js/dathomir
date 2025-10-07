@@ -14,11 +14,7 @@
     "version": "node -v"
   },
   "license": "MPL-2.0",
-  "packageManager": "pnpm@10.17.1",
   "devDependencies": {
     "concurrently": "^9.2.1"
-  },
-  "dependencies": {
-    "pnpm": "10.17.1"
   }
 }

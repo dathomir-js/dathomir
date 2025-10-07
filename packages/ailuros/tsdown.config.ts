@@ -3,9 +3,10 @@ import { defineConfig } from "@ailuros/config/tsdown";
 export default defineConfig({
   entry: [
     "src/index.ts",
-    "src/jsx-runtime.ts",
-    "src/jsx-dev-runtime.ts",
-    "src/reactivity.ts",
+    "src/runtime/index.ts",
+    "src/runtime/jsx-runtime.ts",
+    "src/runtime/jsx-dev-runtime.ts",
+    "src/reactivity/index.ts",
   ],
   dts: true,
   outDir: "dist",

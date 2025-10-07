@@ -3,6 +3,7 @@
   "description": "Ailuros transformer package",
   "version": "0.0.1-beta.1",
   "private": false,
+  "type": "module",
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
@@ -21,9 +22,16 @@
     "javascript",
     "typescript"
   ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
-    "build": "tsdown",
     "dev": "tsdown --watch",
+    "build": "tsdown",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "test": "vitest run --coverage"

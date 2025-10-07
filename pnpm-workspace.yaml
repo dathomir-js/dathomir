@@ -1,6 +1,7 @@
 packages:
   - packages/**
   - config
+  - playgrounds/**
 
 catalog:
   '@vitest/coverage-v8': 3.2.4

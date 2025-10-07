@@ -1,0 +1,3 @@
+{
+  "extends": "@ailuros/config/templates/tsconfig.template.json"
+}

@@ -49,35 +49,35 @@
 - [x] ul
 
 ## Inline text semantics
-- [ ] a
-- [ ] abbr
-- [ ] b
-- [ ] bdi
-- [ ] bdo
-- [ ] br
-- [ ] cite
-- [ ] code
-- [ ] data
-- [ ] dfn
-- [ ] em
-- [ ] i
-- [ ] kbd
-- [ ] mark
-- [ ] q
-- [ ] rp
-- [ ] rt
-- [ ] ruby
-- [ ] s
-- [ ] samp
-- [ ] small
-- [ ] span
-- [ ] strong
-- [ ] sub
-- [ ] sup
-- [ ] time
-- [ ] u
-- [ ] var
-- [ ] wbr
+- [x] a
+- [x] abbr
+- [x] b
+- [x] bdi
+- [x] bdo
+- [x] br
+- [x] cite
+- [x] code
+- [x] data
+- [x] dfn
+- [x] em
+- [x] i
+- [x] kbd
+- [x] mark
+- [x] q
+- [x] rp
+- [x] rt
+- [x] ruby
+- [x] s
+- [x] samp
+- [x] small
+- [x] span
+- [x] strong
+- [x] sub
+- [x] sup
+- [x] time
+- [x] u
+- [x] var
+- [x] wbr
 
 ## Image and multimedia
 - [ ] area

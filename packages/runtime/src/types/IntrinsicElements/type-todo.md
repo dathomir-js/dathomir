@@ -15,133 +15,133 @@
 - [x] body
 
 ## Content sectioning
-- [ ] address
-- [ ] article
-- [ ] aside
-- [ ] footer
-- [ ] header
-- [ ] h1
-- [ ] h2
-- [ ] h3
-- [ ] h4
-- [ ] h5
-- [ ] h6
-- [ ] hgroup
-- [ ] main
-- [ ] nav
-- [ ] section
-- [ ] search
+- [x] address
+- [x] article
+- [x] aside
+- [x] footer
+- [x] header
+- [x] h1
+- [x] h2
+- [x] h3
+- [x] h4
+- [x] h5
+- [x] h6
+- [x] hgroup
+- [x] main
+- [x] nav
+- [x] section
+- [x] search
 
 ## Text content
-- [ ] blockquote
-- [ ] dd
+- [x] blockquote
+- [x] dd
 - [x] div
-- [ ] dl
-- [ ] dt
-- [ ] figcaption
-- [ ] figure
-- [ ] hr
-- [ ] li
-- [ ] menu
-- [ ] ol
-- [ ] p
-- [ ] pre
-- [ ] ul
+- [x] dl
+- [x] dt
+- [x] figcaption
+- [x] figure
+- [x] hr
+- [x] li
+- [x] menu
+- [x] ol
+- [x] p
+- [x] pre
+- [x] ul
 
 ## Inline text semantics
-- [ ] a
-- [ ] abbr
-- [ ] b
-- [ ] bdi
-- [ ] bdo
-- [ ] br
-- [ ] cite
-- [ ] code
-- [ ] data
-- [ ] dfn
-- [ ] em
-- [ ] i
-- [ ] kbd
-- [ ] mark
-- [ ] q
-- [ ] rp
-- [ ] rt
-- [ ] ruby
-- [ ] s
-- [ ] samp
-- [ ] small
-- [ ] span
-- [ ] strong
-- [ ] sub
-- [ ] sup
-- [ ] time
-- [ ] u
-- [ ] var
-- [ ] wbr
+- [x] a
+- [x] abbr
+- [x] b
+- [x] bdi
+- [x] bdo
+- [x] br
+- [x] cite
+- [x] code
+- [x] data
+- [x] dfn
+- [x] em
+- [x] i
+- [x] kbd
+- [x] mark
+- [x] q
+- [x] rp
+- [x] rt
+- [x] ruby
+- [x] s
+- [x] samp
+- [x] small
+- [x] span
+- [x] strong
+- [x] sub
+- [x] sup
+- [x] time
+- [x] u
+- [x] var
+- [x] wbr
 
 ## Image and multimedia
-- [ ] area
-- [ ] audio
-- [ ] img
-- [ ] map
-- [ ] track
-- [ ] video
+- [x] area
+- [x] audio
+- [x] img
+- [x] map
+- [x] track
+- [x] video
 
 ## Embedded content
-- [ ] embed
-- [ ] fencedframe
-- [ ] iframe
-- [ ] object
-- [ ] picture
-- [ ] source
+- [x] embed
+- [x] fencedframe
+- [x] iframe
+- [x] object
+- [x] picture
+- [x] source
 
 ## SVG and MathML
-- [ ] svg
-- [ ] math
+- [x] svg
+- [x] math
 
 ## Scripting
-- [ ] canvas
-- [ ] noscript
-- [ ] script
+- [x] canvas
+- [x] noscript
+- [x] script
 
 ## Demarcating edits
-- [ ] del
-- [ ] ins
+- [x] del
+- [x] ins
 
 ## Table content
-- [ ] caption
-- [ ] col
-- [ ] colgroup
-- [ ] table
-- [ ] tbody
-- [ ] td
-- [ ] tfoot
-- [ ] th
-- [ ] thead
-- [ ] tr
+- [x] caption
+- [x] col
+- [x] colgroup
+- [x] table
+- [x] tbody
+- [x] td
+- [x] tfoot
+- [x] th
+- [x] thead
+- [x] tr
 
 ## Forms
-- [ ] button
-- [ ] datalist
-- [ ] fieldset
-- [ ] form
-- [ ] input
-- [ ] label
-- [ ] legend
-- [ ] meter
-- [ ] optgroup
-- [ ] option
-- [ ] output
-- [ ] progress
-- [ ] select
-- [ ] selectedcontent
-- [ ] textarea
+- [x] button
+- [x] datalist
+- [x] fieldset
+- [x] form
+- [x] input
+- [x] label
+- [x] legend
+- [x] meter
+- [x] optgroup
+- [x] option
+- [x] output
+- [x] progress
+- [x] select
+- [x] selectedcontent
+- [x] textarea
 
 ## Interactive elements
-- [ ] details
-- [ ] dialog
-- [ ] summary
+- [x] details
+- [x] dialog
+- [x] summary
 
 ## Web Components
-- [ ] slot
-- [ ] template
+- [x] slot
+- [x] template

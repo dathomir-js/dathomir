@@ -56,6 +56,16 @@ interface CommonEventHandlers {
   /** Before input event handler */
   onBeforeInput?: (event: InputEvent) => void;
 
+  // Form Events
+  /** Form submission event handler */
+  onSubmit?: (event: Event) => void;
+  /** Form reset event handler */
+  onReset?: (event: Event) => void;
+  /** Form validation failed event handler */
+  onInvalid?: (event: Event) => void;
+  /** Form input event handler */
+  onFormData?: (event: Event) => void;
+
   // Drag & Drop Events
   /** Drag event handler */
   onDrag?: (event: DragEvent) => void;
@@ -142,6 +152,56 @@ interface CommonEventHandlers {
   /** Lost pointer capture event handler */
   onLostPointerCapture?: (event: PointerEvent) => void;
 
+  // Media Events
+  /** Media can play event handler */
+  onCanPlay?: (event: Event) => void;
+  /** Media can play through event handler */
+  onCanPlayThrough?: (event: Event) => void;
+  /** Media duration change event handler */
+  onDurationChange?: (event: Event) => void;
+  /** Media emptied event handler */
+  onEmptied?: (event: Event) => void;
+  /** Media ended event handler */
+  onEnded?: (event: Event) => void;
+  /** Media error event handler */
+  onError?: (event: Event) => void;
+  /** Media loaded data event handler */
+  onLoadedData?: (event: Event) => void;
+  /** Media loaded metadata event handler */
+  onLoadedMetadata?: (event: Event) => void;
+  /** Media load start event handler */
+  onLoadStart?: (event: Event) => void;
+  /** Media pause event handler */
+  onPause?: (event: Event) => void;
+  /** Media play event handler */
+  onPlay?: (event: Event) => void;
+  /** Media playing event handler */
+  onPlaying?: (event: Event) => void;
+  /** Media progress event handler */
+  onProgress?: (event: Event) => void;
+  /** Media rate change event handler */
+  onRateChange?: (event: Event) => void;
+  /** Media seeked event handler */
+  onSeeked?: (event: Event) => void;
+  /** Media seeking event handler */
+  onSeeking?: (event: Event) => void;
+  /** Media stalled event handler */
+  onStalled?: (event: Event) => void;
+  /** Media suspend event handler */
+  onSuspend?: (event: Event) => void;
+  /** Media time update event handler */
+  onTimeUpdate?: (event: Event) => void;
+  /** Media volume change event handler */
+  onVolumeChange?: (event: Event) => void;
+  /** Media waiting event handler */
+  onWaiting?: (event: Event) => void;
+
+  // Resource Events
+  /** Resource load event handler */
+  onLoad?: (event: Event) => void;
+  /** Resource load error event handler (fallback if media onError not used) */
+  // onError is already defined above in Media Events
+
   // Other Common Events
   /** Abort event handler */
   onAbort?: (event: Event) => void;
@@ -153,6 +213,12 @@ interface CommonEventHandlers {
   onBeforeMatch?: (event: Event) => void;
   /** Command event handler (commandfor attribute) */
   onCommand?: (event: Event) => void;
+  /** Contextmenu event (deprecated but still in use) */
+  onContextLost?: (event: Event) => void;
+  /** Context restored event */
+  onContextRestored?: (event: Event) => void;
+  /** Cue change event handler (for track elements) */
+  onCueChange?: (event: Event) => void;
   /** Security policy violation event handler */
   onSecurityPolicyViolation?: (event: SecurityPolicyViolationEvent) => void;
   /** Slot change event handler */

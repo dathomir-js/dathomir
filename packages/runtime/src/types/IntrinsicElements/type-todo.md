@@ -88,60 +88,60 @@
 - [x] video
 
 ## Embedded content
-- [ ] embed
-- [ ] fencedframe
-- [ ] iframe
-- [ ] object
-- [ ] picture
-- [ ] source
+- [x] embed
+- [x] fencedframe
+- [x] iframe
+- [x] object
+- [x] picture
+- [x] source
 
 ## SVG and MathML
-- [ ] svg
-- [ ] math
+- [x] svg
+- [x] math
 
 ## Scripting
-- [ ] canvas
-- [ ] noscript
-- [ ] script
+- [x] canvas
+- [x] noscript
+- [x] script
 
 ## Demarcating edits
-- [ ] del
-- [ ] ins
+- [x] del
+- [x] ins
 
 ## Table content
-- [ ] caption
-- [ ] col
-- [ ] colgroup
-- [ ] table
-- [ ] tbody
-- [ ] td
-- [ ] tfoot
-- [ ] th
-- [ ] thead
-- [ ] tr
+- [x] caption
+- [x] col
+- [x] colgroup
+- [x] table
+- [x] tbody
+- [x] td
+- [x] tfoot
+- [x] th
+- [x] thead
+- [x] tr
 
 ## Forms
-- [ ] button
-- [ ] datalist
-- [ ] fieldset
-- [ ] form
-- [ ] input
-- [ ] label
-- [ ] legend
-- [ ] meter
-- [ ] optgroup
-- [ ] option
-- [ ] output
-- [ ] progress
-- [ ] select
-- [ ] selectedcontent
-- [ ] textarea
+- [x] button
+- [x] datalist
+- [x] fieldset
+- [x] form
+- [x] input
+- [x] label
+- [x] legend
+- [x] meter
+- [x] optgroup
+- [x] option
+- [x] output
+- [x] progress
+- [x] select
+- [x] selectedcontent
+- [x] textarea
 
 ## Interactive elements
-- [ ] details
-- [ ] dialog
-- [ ] summary
+- [x] details
+- [x] dialog
+- [x] summary
 
 ## Web Components
-- [ ] slot
-- [ ] template
+- [x] slot
+- [x] template

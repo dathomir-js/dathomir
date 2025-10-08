@@ -15,22 +15,22 @@
 - [x] body
 
 ## Content sectioning
-- [ ] address
-- [ ] article
-- [ ] aside
-- [ ] footer
-- [ ] header
-- [ ] h1
-- [ ] h2
-- [ ] h3
-- [ ] h4
-- [ ] h5
-- [ ] h6
-- [ ] hgroup
-- [ ] main
-- [ ] nav
-- [ ] section
-- [ ] search
+- [x] address
+- [x] article
+- [x] aside
+- [x] footer
+- [x] header
+- [x] h1
+- [x] h2
+- [x] h3
+- [x] h4
+- [x] h5
+- [x] h6
+- [x] hgroup
+- [x] main
+- [x] nav
+- [x] section
+- [x] search
 
 ## Text content
 - [ ] blockquote

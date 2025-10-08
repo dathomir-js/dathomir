@@ -80,12 +80,12 @@
 - [x] wbr
 
 ## Image and multimedia
-- [ ] area
-- [ ] audio
-- [ ] img
-- [ ] map
-- [ ] track
-- [ ] video
+- [x] area
+- [x] audio
+- [x] img
+- [x] map
+- [x] track
+- [x] video
 
 ## Embedded content
 - [ ] embed

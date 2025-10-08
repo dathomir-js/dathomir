@@ -2,6 +2,8 @@ import { effect } from "../reactivity";
 import { isDomNode, isReactiveNode } from "./guards";
 import type { ReactiveLike } from "./guards";
 
+type ParentDomNode = Element | DocumentFragment;
+
 /**
  * Convert JSX child input into DOM nodes that can be appended.
  */
@@ -28,7 +30,10 @@ const createNodesFromValue = (value: unknown): Node[] => {
 /**
  * Mount a reactive child by inserting an anchor and reacting to value changes.
  */
-const mountReactiveChild = (parent: Element, reactiveChild: ReactiveLike) => {
+const mountReactiveChild = (
+  parent: ParentDomNode,
+  reactiveChild: ReactiveLike
+) => {
   const placeholder = document.createRange();
   const childCount = parent.childNodes.length;
   placeholder.setStart(parent, childCount);
@@ -116,7 +121,7 @@ const mountReactiveChild = (parent: Element, reactiveChild: ReactiveLike) => {
 /**
  * Append JSX children while handling arrays, reactive values, and primitives.
  */
-const appendChild = (parent: Element, child: unknown) => {
+const appendChild = (parent: ParentDomNode, child: unknown) => {
   if (Array.isArray(child)) {
     child.forEach((item) => appendChild(parent, item));
     return;

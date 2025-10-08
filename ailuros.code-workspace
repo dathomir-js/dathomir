@@ -85,6 +85,9 @@
 
     "cSpell.words": [
       "ailuros"
-    ]
+    ],
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
   }
 }

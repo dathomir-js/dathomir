@@ -29,17 +29,55 @@ const createNodesFromValue = (value: unknown): Node[] => {
  * Mount a reactive child by inserting an anchor and reacting to value changes.
  */
 const mountReactiveChild = (parent: Element, reactiveChild: ReactiveLike) => {
-  const anchor = document.createComment("ailuros:placeholder");
-  parent.appendChild(anchor);
+  const placeholder = document.createRange();
+  const childCount = parent.childNodes.length;
+  placeholder.setStart(parent, childCount);
+  placeholder.setEnd(parent, childCount);
+
   let currentNodes: Node[] = [];
 
+  const collapsePlaceholder = () => {
+    placeholder.collapse(true);
+  };
+
   const cleanupCurrentNodes = () => {
-    for (const node of currentNodes) {
-      if (node.parentNode === parent) {
-        parent.removeChild(node);
-      }
+    if (currentNodes.length === 0) {
+      collapsePlaceholder();
+      return;
     }
+
+    const firstNode = currentNodes[0];
+    const lastNode = currentNodes[currentNodes.length - 1];
+
+    if (firstNode.parentNode !== parent || lastNode.parentNode !== parent) {
+      currentNodes = [];
+      collapsePlaceholder();
+      return;
+    }
+
+    placeholder.setStartBefore(firstNode);
+    placeholder.setEndAfter(lastNode);
+    placeholder.deleteContents();
+    collapsePlaceholder();
     currentNodes = [];
+  };
+
+  const insertNodes = (nodes: Node[]) => {
+    if (nodes.length === 0) {
+      currentNodes = [];
+      collapsePlaceholder();
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (const node of nodes) {
+      fragment.appendChild(node);
+    }
+
+    placeholder.insertNode(fragment);
+    placeholder.setStartBefore(nodes[0]);
+    placeholder.setEndAfter(nodes[nodes.length - 1]);
+    currentNodes = nodes;
   };
 
   effect(() => {
@@ -55,8 +93,7 @@ const mountReactiveChild = (parent: Element, reactiveChild: ReactiveLike) => {
 
       cleanupCurrentNodes();
       const textNode = document.createTextNode(textContent);
-      parent.insertBefore(textNode, anchor);
-      currentNodes = [textNode];
+      insertNodes([textNode]);
       return;
     }
 
@@ -72,11 +109,7 @@ const mountReactiveChild = (parent: Element, reactiveChild: ReactiveLike) => {
     const nextNodes = createNodesFromValue(nextValue);
     cleanupCurrentNodes();
 
-    for (const node of nextNodes) {
-      parent.insertBefore(node, anchor);
-    }
-
-    currentNodes = nextNodes;
+    insertNodes(nextNodes);
   });
 };
 

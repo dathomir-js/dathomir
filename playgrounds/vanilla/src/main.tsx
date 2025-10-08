@@ -3,7 +3,7 @@ import { computed, effect, signal } from "@ailuros/core/reactivity"
 const count = signal(0)
 const doubleCount = computed(() => count.value * 2)
 const oddElm = computed(() => {
-  return count.value % 2 === 1 ? <span>odd</span> : <span>even</span>
+  return count.value % 2 === 1 ? <span>odd</span> : <p><span>even</span></p>
 })
 
 // setInterval(() => {

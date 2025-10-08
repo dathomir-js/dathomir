@@ -12,6 +12,8 @@ interface TextareaIntrinsicElements extends CommonIntrinsicElements {
   autoFocus?: boolean;
   /** Visible width of the text control in average character widths */
   cols?: number;
+  /** Default value for the textarea */
+  defaultValue?: string;
   /** Name of the form control to use for sending the dirname */
   dirName?: string;
   /** Whether the textarea is disabled */

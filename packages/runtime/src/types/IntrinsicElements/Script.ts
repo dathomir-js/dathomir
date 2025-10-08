@@ -10,6 +10,8 @@ type ScriptReferrerPolicy =
   | "strict-origin-when-cross-origin"
   | "unsafe-url";
 
+type ScriptBlocking = "render";
+
 /**
  * Attributes for the `<script>` element, which embeds or references executable code.
  *
@@ -18,6 +20,8 @@ type ScriptReferrerPolicy =
 interface ScriptIntrinsicElements extends CommonIntrinsicElements {
   /** Execute the script asynchronously */
   async?: boolean;
+  /** Blocks rendering until the script loads */
+  blocking?: ScriptBlocking;
   /** CORS settings for the script */
   crossOrigin?: "anonymous" | "use-credentials";
   /** Execute the script after the document has been parsed */
@@ -36,4 +40,4 @@ interface ScriptIntrinsicElements extends CommonIntrinsicElements {
   type?: string;
 }
 
-export { ScriptIntrinsicElements, ScriptReferrerPolicy };
+export { ScriptIntrinsicElements, ScriptReferrerPolicy, ScriptBlocking };

@@ -42,6 +42,10 @@ interface InputIntrinsicElements extends CommonIntrinsicElements {
   capture?: boolean | "user" | "environment";
   /** Whether the checkbox/radio is checked */
   checked?: boolean;
+  /** Default checked state for checkbox/radio */
+  defaultChecked?: boolean;
+  /** Default value for the input */
+  defaultValue?: string | number;
   /** Name of the form control to use for sending the dirname */
   dirName?: string;
   /** Whether the input is disabled */
@@ -78,6 +82,10 @@ interface InputIntrinsicElements extends CommonIntrinsicElements {
   pattern?: string;
   /** Placeholder text */
   placeholder?: string;
+  /** ID of the popover element to control */
+  popovertarget?: string;
+  /** Action to perform on the popover */
+  popovertargetaction?: "hide" | "show" | "toggle";
   /** Whether the input is read-only */
   readOnly?: boolean;
   /** Whether the input is required */

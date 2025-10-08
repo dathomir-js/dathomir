@@ -7,7 +7,7 @@ import { CommonIntrinsicElements } from "./Common";
  */
 interface OutputIntrinsicElements extends CommonIntrinsicElements {
   /** Space-separated list of IDs of elements that contributed to the output */
-  htmlFor?: string;
+  for?: string;
   /** Associates the output with a form element */
   form?: string;
   /** Name of the output */

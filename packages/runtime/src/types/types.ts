@@ -1,4 +1,8 @@
 import { Computed } from "@ailuros/reactivity";
+import { Fragment } from "../jsx-runtime";
+
+type PrimitiveChild = string | number | boolean | null | undefined;
+type HostElement = Element | DocumentFragment;
 
 type AilurosJSX = (
   tag: any,
@@ -7,18 +11,14 @@ type AilurosJSX = (
     children?: AilurosNode;
   } | null,
   key?: string | number
-) => Element;
+) => HostElement;
 
 type AilurosNode =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | Computed<string | number | boolean | null | undefined>
+  | PrimitiveChild
+  | Computed<PrimitiveChild>
   | AilurosJSX
-  | Element
-  | Computed<Element>
+  | HostElement
+  | Computed<HostElement>
   | AilurosNode[];
 
 type AilurosElement = AilurosJSX;
@@ -28,7 +28,8 @@ export namespace JSX {
     [elemName: string]: any;
   }
 
-  export interface Element extends HTMLElement {}
+  export type Element = HostElement;
+  export type Fragment = typeof Fragment;
 }
 
 export { AilurosJSX, AilurosNode, AilurosElement };

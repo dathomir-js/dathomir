@@ -2,6 +2,8 @@ import type { AilurosJSX } from "../types/types";
 import { appendChild } from "./children";
 import { addEventListenerFromProp, isEventProp, setDomProperty } from "./props";
 
+const Fragment = Symbol.for("ailuros.fragment");
+
 /**
  * Create a DOM element for the given host tag, falling back to a div.
  */
@@ -17,6 +19,16 @@ const createHostElement = (tag: unknown): Element => {
  * JSX factory used by the runtime to materialize host elements and wire props.
  */
 const jsx: AilurosJSX = (tag, props, _key) => {
+  if (tag === Fragment) {
+    const fragment = document.createDocumentFragment();
+
+    if (props && "children" in props) {
+      appendChild(fragment, props.children);
+    }
+
+    return fragment;
+  }
+
   const element = createHostElement(tag);
 
   if (props) {
@@ -42,5 +54,5 @@ const jsx: AilurosJSX = (tag, props, _key) => {
 
 const jsxs = jsx;
 
-export { jsx, jsxs };
+export { jsx, jsxs, Fragment };
 export * from "../types/types";

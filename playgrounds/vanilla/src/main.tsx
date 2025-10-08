@@ -1,29 +1,23 @@
-import { computed, effect, signal } from "@ailuros/core/reactivity"
+import "./style.css"
 
-const count = signal(0)
-const doubleCount = computed(() => count.value * 2)
-const oddElm = computed(() => {
-  return count.value % 2 === 1 ? <span>odd</span> : <p><span>even</span></p>
-})
+import { computed, signal } from "@ailuros/core/reactivity"
 
-// setInterval(() => {
-//   count.update((prev) => prev + 1)
-// }, 1000)
+const firstName = signal("First")
+const lastName = signal("Last")
+const fullName = computed(() => firstName.value + (firstName.value ? " " : "") + lastName.value)
 
-// effect(() => {
-//   console.log("count", count.value)
-// })
+const App = <>
+  <h1>{fullName.value}</h1>
+  <p>test</p>
+  <div>
+    Hello, Ailuros!
+    <form action="">
+      <input name="firstName" type="text" value={firstName.value} onInput={(e) => firstName.set(e.target.value)} />
+      <input name="lastName" type="text" value={lastName.value} onInput={(e) => lastName.set(e.target.value)} />
+    </form>
 
-const increment = () => {
-  count.update((prev) => prev + 1)
-}
-
-const App = <div>
-  Hello, Ailuros!<br/>
-  {count.value}
-  <p data-count={doubleCount.value}>double count is {doubleCount.value}</p>
-  <button onClick={increment}>inc</button>
-  {oddElm.value}
-</div>
+    <p>Your name is {fullName.value}</p>
+  </div>
+</>
 
 document.getElementById("app")?.appendChild(App)

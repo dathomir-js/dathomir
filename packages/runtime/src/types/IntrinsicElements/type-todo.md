@@ -33,20 +33,20 @@
 - [x] search
 
 ## Text content
-- [ ] blockquote
-- [ ] dd
+- [x] blockquote
+- [x] dd
 - [x] div
-- [ ] dl
-- [ ] dt
-- [ ] figcaption
-- [ ] figure
-- [ ] hr
-- [ ] li
-- [ ] menu
-- [ ] ol
-- [ ] p
-- [ ] pre
-- [ ] ul
+- [x] dl
+- [x] dt
+- [x] figcaption
+- [x] figure
+- [x] hr
+- [x] li
+- [x] menu
+- [x] ol
+- [x] p
+- [x] pre
+- [x] ul
 
 ## Inline text semantics
 - [ ] a

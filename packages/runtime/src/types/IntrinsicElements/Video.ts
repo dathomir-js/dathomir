@@ -12,8 +12,14 @@ interface VideoIntrinsicElements extends CommonIntrinsicElements {
   autoPlay?: boolean;
   /** Whether to show the default media controls */
   controls?: boolean;
+  /** Customizes which controls to show */
+  controlsList?: string;
   /** CORS settings for the video */
   crossOrigin?: "anonymous" | "use-credentials";
+  /** Whether to disable picture-in-picture mode */
+  disablePictureInPicture?: boolean;
+  /** Whether to disable remote playback */
+  disableRemotePlayback?: boolean;
   /** Intrinsic height of the video in pixels */
   height?: number | string;
   /** Whether to loop the video */

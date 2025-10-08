@@ -12,8 +12,12 @@ interface AudioIntrinsicElements extends CommonIntrinsicElements {
   autoPlay?: boolean;
   /** Whether to show the default media controls */
   controls?: boolean;
+  /** Customizes which controls to show */
+  controlsList?: string;
   /** CORS settings for the audio */
   crossOrigin?: "anonymous" | "use-credentials";
+  /** Whether to disable remote playback */
+  disableRemotePlayback?: boolean;
   /** Whether to loop the audio */
   loop?: boolean;
   /** Whether the audio is muted by default */

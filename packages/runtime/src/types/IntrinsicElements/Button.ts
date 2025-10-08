@@ -24,6 +24,10 @@ interface ButtonIntrinsicElements extends CommonIntrinsicElements {
   formTarget?: "_self" | "_blank" | "_parent" | "_top" | (string & {});
   /** Name of the button */
   name?: string;
+  /** ID of the popover element to control */
+  popovertarget?: string;
+  /** Action to perform on the popover */
+  popovertargetaction?: "hide" | "show" | "toggle";
   /** Type of the button */
   type?: ButtonType;
   /** Value associated with the button's name */

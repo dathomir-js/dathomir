@@ -7,7 +7,7 @@ import { CommonIntrinsicElements } from "./Common";
  */
 interface LabelIntrinsicElements extends CommonIntrinsicElements {
   /** ID of the form control with which to associate the label */
-  htmlFor?: string;
+  for?: string;
 }
 
 export { LabelIntrinsicElements };

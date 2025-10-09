@@ -11,6 +11,12 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  box-sizing: border-box;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 a {
@@ -93,4 +99,26 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+
+  > span {
+    text-align: left;
+  }
+}
+
+input {
+  font: inherit;
+  padding: 0.5em;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  border: none;
+  width: 100%;
+}
+
+label {
+  text-align: left;
 }

@@ -29,7 +29,14 @@ type InputType =
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
  */
-interface InputIntrinsicElements extends CommonIntrinsicElements {
+interface InputIntrinsicElements
+  extends Omit<CommonIntrinsicElements, "onInput" | "onChange"> {
+  // Override event handlers with more specific types for input elements
+  /** Input event handler with HTMLInputElement target */
+  onInput?: (event: InputEvent & { target: HTMLInputElement | null }) => void;
+  /** Change event handler with HTMLInputElement target */
+  onChange?: (event: Event & { target: HTMLInputElement | null }) => void;
+
   /** Hint for expected file type in file upload controls */
   accept?: string;
   /** Alternative text for image inputs */
@@ -55,7 +62,10 @@ interface InputIntrinsicElements extends CommonIntrinsicElements {
   /** URL to use for form submission (submit/image buttons) */
   formAction?: string;
   /** Encoding type for form submission */
-  formEnctype?: "application/x-www-form-urlencoded" | "multipart/form-data" | "text/plain";
+  formEnctype?:
+    | "application/x-www-form-urlencoded"
+    | "multipart/form-data"
+    | "text/plain";
   /** HTTP method for form submission */
   formMethod?: "get" | "post" | "dialog";
   /** Whether to bypass form validation */

@@ -5,7 +5,12 @@ import { CommonIntrinsicElements } from "./Common";
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/select
  */
-interface SelectIntrinsicElements extends CommonIntrinsicElements {
+interface SelectIntrinsicElements
+  extends Omit<CommonIntrinsicElements, "onChange"> {
+  // Override event handlers with more specific types for select elements
+  /** Change event handler with HTMLSelectElement target */
+  onChange?: (event: Event & { target: HTMLSelectElement | null }) => void;
+
   /** Whether the select should have autocomplete enabled */
   autoComplete?: string;
   /** Whether the select should automatically get focus */

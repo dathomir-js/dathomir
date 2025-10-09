@@ -49,7 +49,9 @@
   ],
   "scripts": {
     "dev": "tsdown --watch",
-    "build": "tsdown"
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint"
   },
   "dependencies": {
     "@ailuros/reactivity": "workspace:*"

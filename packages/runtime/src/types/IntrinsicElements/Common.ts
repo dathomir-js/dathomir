@@ -50,7 +50,7 @@ interface CommonEventHandlers {
 
   // Input Events
   /** Input event handler */
-  onInput?: (event: Event) => void;
+  onInput?: (event: InputEvent) => void;
   /** Change event handler */
   onChange?: (event: Event) => void;
   /** Before input event handler */

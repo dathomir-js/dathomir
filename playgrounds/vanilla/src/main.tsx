@@ -12,8 +12,8 @@ const App = <>
   <div>
     Hello, Ailuros!
     <form action="">
-      <input name="firstName" type="text" value={firstName.value} onInput={(e) => firstName.set(e.target.value)} />
-      <input name="lastName" type="text" value={lastName.value} onInput={(e) => lastName.set(e.target.value)} />
+      <input name="firstName" type="text" value={firstName.value} onInput={(e) => e.target?.value && firstName.set(e.target.value)} />
+      <input name="lastName" type="text" value={lastName.value} onInput={(e) => e.target?.value && lastName.set(e.target.value)} />
     </form>
 
     <p>Your name is {fullName.value}</p>

@@ -5,7 +5,16 @@ import { CommonIntrinsicElements } from "./Common";
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea
  */
-interface TextareaIntrinsicElements extends CommonIntrinsicElements {
+interface TextareaIntrinsicElements
+  extends Omit<CommonIntrinsicElements, "onInput" | "onChange"> {
+  // Override event handlers with more specific types for textarea elements
+  /** Input event handler with HTMLTextAreaElement target */
+  onInput?: (
+    event: InputEvent & { target: HTMLTextAreaElement | null }
+  ) => void;
+  /** Change event handler with HTMLTextAreaElement target */
+  onChange?: (event: Event & { target: HTMLTextAreaElement | null }) => void;
+
   /** Whether the textarea should have autocomplete enabled */
   autoComplete?: string;
   /** Whether the textarea should automatically get focus */

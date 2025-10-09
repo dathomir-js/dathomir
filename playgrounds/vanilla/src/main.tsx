@@ -1,10 +1,10 @@
 import "./style.css"
-
 import { computed, signal } from "@ailuros/core/reactivity"
 
 const firstName = signal("First")
 const lastName = signal("Last")
 const fullName = computed(() => firstName.value + (firstName.value ? " " : "") + lastName.value)
+const ff = computed(() => (arg: string) => { return arg === "Hello" ? <p><h1>Hello</h1></p> : <p>Goodbye</p> })
 
 const App = <>
   <h1>{fullName.value}</h1>
@@ -17,6 +17,7 @@ const App = <>
     </form>
 
     <p>Your name is {fullName.value}</p>
+    {ff.value(firstName.value)}
   </div>
 </>
 

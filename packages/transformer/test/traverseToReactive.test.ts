@@ -4,7 +4,7 @@ import { transform } from "../src";
 describe("traverseToReactive", () => {
   it("wraps signal references inside JSX expressions with computed calls", () => {
     const source = `
-			import { signal, computed } from "@ailuros/reactivity";
+			import { signal, computed } from "@ailuros/core/reactivity";
 
 			const count = signal(0);
 
@@ -18,7 +18,7 @@ describe("traverseToReactive", () => {
     const output = transform(source);
 
     expect(output.code).toContain(
-      'import { signal, computed } from "@ailuros/reactivity";'
+      'import { signal, computed } from "@ailuros/core/reactivity";'
     );
     expect(output.code).toContain("computed(() => count.value)");
     expect(output.code.match(/computed\(\(\) => count\.value\)/g)?.length).toBe(
@@ -28,7 +28,7 @@ describe("traverseToReactive", () => {
 
   it("adds computed import when only signal is present and wraps attribute expressions", () => {
     const source = `
-			import { signal } from "@ailuros/reactivity";
+			import { signal } from "@ailuros/core/reactivity";
 
 			const count = signal(0);
 
@@ -40,7 +40,7 @@ describe("traverseToReactive", () => {
     const output = transform(source);
 
     expect(output.code).toContain(
-      'import { signal, computed } from "@ailuros/reactivity";'
+      'import { signal, computed } from "@ailuros/core/reactivity";'
     );
     expect(output.code).toContain(
       "disabled={computed(() => count.value === 0)}"
@@ -49,7 +49,7 @@ describe("traverseToReactive", () => {
 
   it("reuses namespace imports for computed and avoids double wrapping", () => {
     const source = `
-			import * as reactivity from "@ailuros/reactivity";
+			import * as reactivity from "@ailuros/core/reactivity";
 
 			const count = reactivity.signal(0);
 			const handleClick = reactivity.computed(() => count.set((value) => value + 1));
@@ -67,7 +67,7 @@ describe("traverseToReactive", () => {
     const output = transform(source);
 
     expect(output.code).toContain(
-      'import * as reactivity from "@ailuros/reactivity";'
+      'import * as reactivity from "@ailuros/core/reactivity";'
     );
     expect(output.code).toContain(
       "onClick={reactivity.computed(() => handleClick)}"

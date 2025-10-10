@@ -1,5 +1,4 @@
 import { Computed } from "@ailuros/reactivity";
-import { Fragment } from "../jsx-runtime";
 import { AIntrinsicElements } from "./IntrinsicElements/A";
 import { AbbrIntrinsicElements } from "./IntrinsicElements/Abbr";
 import { AddressIntrinsicElements } from "./IntrinsicElements/Address";
@@ -118,7 +117,6 @@ import { VideoIntrinsicElements } from "./IntrinsicElements/Video";
 import { WbrIntrinsicElements } from "./IntrinsicElements/Wbr";
 
 type PrimitiveChild = string | number | boolean | null | undefined;
-type HostElement = Element | DocumentFragment;
 
 type AilurosJSX = (
   tag: any,
@@ -127,14 +125,14 @@ type AilurosJSX = (
     children?: AilurosNode;
   } | null,
   key?: string | number
-) => HostElement;
+) => Node;
 
 type AilurosNode =
   | PrimitiveChild
   | Computed<PrimitiveChild>
   | AilurosJSX
-  | HostElement
-  | Computed<HostElement>
+  | Node
+  | Computed<Node>
   | AilurosNode[];
 
 type AilurosElement = AilurosJSX;
@@ -216,7 +214,9 @@ export namespace JSX {
     option: OptionIntrinsicElements;
     output: OutputIntrinsicElements;
     p: PIntrinsicElements;
+    picture: PictureIntrinsicElements;
     pre: PreIntrinsicElements;
+    progress: ProgressIntrinsicElements;
     q: QIntrinsicElements;
     rp: RpIntrinsicElements;
     rt: RtIntrinsicElements;
@@ -257,8 +257,14 @@ export namespace JSX {
     wbr: WbrIntrinsicElements;
   }
 
-  export type Element = HostElement;
-  export type Fragment = typeof Fragment;
+  export type Element = Node;
+  export type ElementType =
+    | keyof IntrinsicElements
+    | ((props: { children?: AilurosNode }) => DocumentFragment);
+
+  export interface ElementChildrenAttribute {
+    children: {};
+  }
 }
 
 export { AilurosJSX, AilurosNode, AilurosElement };

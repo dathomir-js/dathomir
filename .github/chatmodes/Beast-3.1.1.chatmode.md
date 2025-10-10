@@ -21,7 +21,8 @@ tools: [
    'extensions',
    'todos',
    'context7',
-   'github'
+   'github',
+   'runTests',
 ]
 ---
 

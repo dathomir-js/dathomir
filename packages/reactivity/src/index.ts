@@ -34,6 +34,7 @@ interface Signal<T> {
    * Read the current value without tracking the access.
    */
   peek(): T;
+  readonly __type__: "signal";
 }
 
 /**
@@ -49,6 +50,7 @@ interface Computed<T> {
    * Read the current cached value without tracking.
    */
   peek(): T;
+  readonly __type__: "computed";
 }
 
 /**
@@ -388,6 +390,7 @@ function createSignalApi<T>(node: SignalNode<T>): Signal<T> {
     peek() {
       return readUntracked();
     },
+    __type__: "signal",
   };
 }
 
@@ -402,6 +405,7 @@ function createComputedApi<T>(node: ComputedNode<T>): Computed<T> {
     peek() {
       return readUntracked();
     },
+    __type__: "computed",
   };
 }
 

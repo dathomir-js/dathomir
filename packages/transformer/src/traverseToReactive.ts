@@ -92,6 +92,9 @@ const collectReactiveBinding = (
 
 /**
  * Collects function parameter bindings to track as reactive.
+ * Handles common parameter patterns used in render functions.
+ * Note: Does not handle nested destructuring patterns (e.g., { props: { value } })
+ * or rest elements within array patterns (e.g., [a, ...rest]).
  * @param params - Array of function parameters
  * @param scope - The function scope
  * @param state - The transform state

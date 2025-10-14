@@ -21,6 +21,8 @@ interface TransformState {
   reactiveCreatorNames: Set<string>;
   /** Bindings that were created by reactive creators */
   reactiveBindings: Set<Binding>;
+  /** Bindings that are function parameters (like props) */
+  parameterBindings: Set<Binding>;
   /** Local name of the computed import */
   computedImportName: string | null;
   /** Local names of namespace imports from @ailuros/reactivity */
@@ -89,6 +91,57 @@ const collectReactiveBinding = (
 };
 
 /**
+ * Collects function parameter bindings to track as reactive.
+ * @param params - Array of function parameters
+ * @param scope - The function scope
+ * @param state - The transform state
+ */
+const collectParameterBindings = (
+  params: t.Function["params"],
+  scope: NodePath["scope"],
+  state: TransformState
+) => {
+  for (const param of params) {
+    if (t.isIdentifier(param)) {
+      const binding = scope.getBinding(param.name);
+      if (binding) {
+        state.parameterBindings.add(binding);
+      }
+    } else if (t.isObjectPattern(param)) {
+      // Handle destructured parameters like { value, title }
+      for (const prop of param.properties) {
+        if (t.isObjectProperty(prop) && t.isIdentifier(prop.value)) {
+          const binding = scope.getBinding(prop.value.name);
+          if (binding) {
+            state.parameterBindings.add(binding);
+          }
+        } else if (t.isRestElement(prop) && t.isIdentifier(prop.argument)) {
+          const binding = scope.getBinding(prop.argument.name);
+          if (binding) {
+            state.parameterBindings.add(binding);
+          }
+        }
+      }
+    } else if (t.isArrayPattern(param)) {
+      // Handle array destructuring like [a, b]
+      for (const element of param.elements) {
+        if (element && t.isIdentifier(element)) {
+          const binding = scope.getBinding(element.name);
+          if (binding) {
+            state.parameterBindings.add(binding);
+          }
+        }
+      }
+    } else if (t.isRestElement(param) && t.isIdentifier(param.argument)) {
+      const binding = scope.getBinding(param.argument.name);
+      if (binding) {
+        state.parameterBindings.add(binding);
+      }
+    }
+  }
+};
+
+/**
  * Checks if a callee is a reactive creator function (signal or computed).
  * @param calleePath - The callee path to check
  * @param state - The transform state
@@ -124,10 +177,10 @@ const isReactiveCreatorCallee = (
 };
 
 /**
- * Checks if an expression contains references to reactive bindings.
+ * Checks if an expression contains references to reactive bindings or parameter bindings.
  * @param expressionPath - The expression path to check
  * @param state - The transform state
- * @returns True if the expression contains reactive references
+ * @returns True if the expression contains reactive references or parameter references
  */
 const containsReactiveReference = (
   expressionPath: NodePath<t.Expression>,
@@ -136,7 +189,7 @@ const containsReactiveReference = (
   if (expressionPath.isIdentifier()) {
     const binding = expressionPath.scope.getBinding(expressionPath.node.name);
 
-    if (binding && state.reactiveBindings.has(binding)) {
+    if (binding && (state.reactiveBindings.has(binding) || state.parameterBindings.has(binding))) {
       return true;
     }
   }
@@ -152,7 +205,7 @@ const containsReactiveReference = (
 
         const binding = path.scope.getBinding(path.node.name);
 
-        if (binding && state.reactiveBindings.has(binding)) {
+        if (binding && (state.reactiveBindings.has(binding) || state.parameterBindings.has(binding))) {
           found = true;
           path.stop();
         }
@@ -392,6 +445,15 @@ const visitor: TraverseOptions<TransformState> = {
   VariableDeclarator(path, state) {
     collectReactiveBinding(path, state);
   },
+  FunctionDeclaration(path, state) {
+    collectParameterBindings(path.node.params, path.scope, state);
+  },
+  FunctionExpression(path, state) {
+    collectParameterBindings(path.node.params, path.scope, state);
+  },
+  ArrowFunctionExpression(path, state) {
+    collectParameterBindings(path.node.params, path.scope, state);
+  },
   JSXExpressionContainer(path, state) {
     wrapExpressionWithComputed(path, state);
   },
@@ -406,6 +468,7 @@ export const traverseToReactive = (ast: ReturnType<typeof parseToAst>) => {
     programPath: null,
     reactiveCreatorNames: new Set<string>(),
     reactiveBindings: new Set<Binding>(),
+    parameterBindings: new Set<Binding>(),
     computedImportName: null,
     namespaceImports: new Set<string>(),
     defaultImports: new Set<string>(),

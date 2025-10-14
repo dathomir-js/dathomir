@@ -81,4 +81,75 @@ describe("traverseToReactive", () => {
       )
     ).toBe(false);
   });
+
+  it("wraps props parameter references in JSX with computed", () => {
+    const source = `
+			import { signal, computed } from "@ailuros/core/reactivity";
+
+			const render = (props) => {
+				const count = signal(0);
+				
+				return (
+					<div>
+						<div>Count: {count.value}</div>
+						<div>Prop value: {props.value}</div>
+					</div>
+				);
+			};
+		`;
+
+    const output = transform(source);
+
+    expect(output.code).toContain(
+      'import { signal, computed } from "@ailuros/core/reactivity";'
+    );
+    expect(output.code).toContain("computed(() => count.value)");
+    expect(output.code).toContain("computed(() => props.value)");
+  });
+
+  it("wraps nested props parameter references with computed", () => {
+    const source = `
+			import { signal } from "@ailuros/core/reactivity";
+
+			const Component = ({ props }) => {
+				return (
+					<div>
+						<span>{props.title}</span>
+						<span>{props.nested.value}</span>
+					</div>
+				);
+			};
+		`;
+
+    const output = transform(source);
+
+    expect(output.code).toContain(
+      'import { signal, computed } from "@ailuros/core/reactivity";'
+    );
+    expect(output.code).toContain("computed(() => props.title)");
+    expect(output.code).toContain("computed(() => props.nested.value)");
+  });
+
+  it("wraps destructured props parameter references with computed", () => {
+    const source = `
+			import { signal } from "@ailuros/core/reactivity";
+
+			const Component = ({ value, title }) => {
+				return (
+					<div>
+						<span>{title}</span>
+						<span>{value}</span>
+					</div>
+				);
+			};
+		`;
+
+    const output = transform(source);
+
+    expect(output.code).toContain(
+      'import { signal, computed } from "@ailuros/core/reactivity";'
+    );
+    expect(output.code).toContain("computed(() => title)");
+    expect(output.code).toContain("computed(() => value)");
+  });
 });

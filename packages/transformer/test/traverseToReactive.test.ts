@@ -2,15 +2,17 @@ import { describe, expect, it } from "vitest";
 import { transform } from "../src";
 
 describe("traverseToReactive", () => {
-  it("wraps signal references inside JSX expressions with computed calls", () => {
+  it("wraps all JSX expressions with computed calls", () => {
     const source = `
 			import { signal, computed } from "@ailuros/core/reactivity";
 
 			const count = signal(0);
+			const staticText = "hello";
 
 			const Component = () => (
 				<div>
 					{count.value}
+					{staticText}
 				</div>
 			);
 		`;
@@ -21,19 +23,24 @@ describe("traverseToReactive", () => {
       'import { signal, computed } from "@ailuros/core/reactivity";'
     );
     expect(output.code).toContain("computed(() => count.value)");
+    expect(output.code).toContain("computed(() => staticText)");
     expect(output.code.match(/computed\(\(\) => count\.value\)/g)?.length).toBe(
+      1
+    );
+    expect(output.code.match(/computed\(\(\) => staticText\)/g)?.length).toBe(
       1
     );
   });
 
-  it("adds computed import when only signal is present and wraps attribute expressions", () => {
+  it("adds computed import and wraps all attribute expressions", () => {
     const source = `
 			import { signal } from "@ailuros/core/reactivity";
 
 			const count = signal(0);
+			const label = "Increment";
 
 			const Component = () => (
-				<button disabled={count.value === 0}>Increment</button>
+				<button disabled={count.value === 0}>{label}</button>
 			);
 		`;
 
@@ -45,6 +52,7 @@ describe("traverseToReactive", () => {
     expect(output.code).toContain(
       "disabled={computed(() => count.value === 0)}"
     );
+    expect(output.code).toContain("computed(() => label)");
   });
 
   it("reuses namespace imports for computed and avoids double wrapping", () => {
@@ -82,16 +90,17 @@ describe("traverseToReactive", () => {
     ).toBe(false);
   });
 
-  it("wraps props parameter references in JSX with computed", () => {
+  it("wraps all expressions including props and signals in JSX with computed", () => {
     const source = `
 			import { signal, computed } from "@ailuros/core/reactivity";
 
 			const render = (props) => {
 				const count = signal(0);
+				const staticText = "Count: ";
 				
 				return (
 					<div>
-						<div>Count: {count.value}</div>
+						<div>{staticText}{count.value}</div>
 						<div>Prop value: {props.value}</div>
 					</div>
 				);
@@ -103,17 +112,20 @@ describe("traverseToReactive", () => {
     expect(output.code).toContain(
       'import { signal, computed } from "@ailuros/core/reactivity";'
     );
+    expect(output.code).toContain("computed(() => staticText)");
     expect(output.code).toContain("computed(() => count.value)");
     expect(output.code).toContain("computed(() => props.value)");
   });
 
-  it("wraps nested props parameter references with computed", () => {
+  it("wraps all expressions including nested property access with computed", () => {
     const source = `
 			import { signal } from "@ailuros/core/reactivity";
 
 			const Component = ({ props }) => {
+				const prefix = "Title: ";
 				return (
 					<div>
+						<span>{prefix}</span>
 						<span>{props.title}</span>
 						<span>{props.nested.value}</span>
 					</div>
@@ -126,18 +138,21 @@ describe("traverseToReactive", () => {
     expect(output.code).toContain(
       'import { signal, computed } from "@ailuros/core/reactivity";'
     );
+    expect(output.code).toContain("computed(() => prefix)");
     expect(output.code).toContain("computed(() => props.title)");
     expect(output.code).toContain("computed(() => props.nested.value)");
   });
 
-  it("wraps destructured props parameter references with computed", () => {
+  it("wraps all expressions including destructured parameters with computed", () => {
     const source = `
 			import { signal } from "@ailuros/core/reactivity";
 
 			const Component = ({ value, title }) => {
+				const separator = " - ";
 				return (
 					<div>
 						<span>{title}</span>
+						<span>{separator}</span>
 						<span>{value}</span>
 					</div>
 				);
@@ -150,6 +165,7 @@ describe("traverseToReactive", () => {
       'import { signal, computed } from "@ailuros/core/reactivity";'
     );
     expect(output.code).toContain("computed(() => title)");
+    expect(output.code).toContain("computed(() => separator)");
     expect(output.code).toContain("computed(() => value)");
   });
 });

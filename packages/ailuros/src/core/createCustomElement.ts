@@ -20,6 +20,7 @@ type CreateCustomElementParams<
   }: {
     onConnected: (callback: () => Promise<void> | void) => void;
     onDisconnected: (callback: () => Promise<void> | void) => void;
+    onConnectedMove: (callback: () => Promise<void> | void) => void;
     onAdopted: (callback: () => Promise<void> | void) => void;
     defineShadow: (callback: () => ShadowRootInit) => void;
     /**
@@ -41,6 +42,7 @@ const createCustomElement = <
   class CustomElement extends HTMLElement {
     #onConnectedFunctions: Array<() => Promise<void> | void> = [];
     #onDisconnectedFunctions: Array<() => Promise<void> | void> = [];
+    #onConnectedMoveFunctions: Array<() => Promise<void> | void> = [];
     #onAdoptedFunctions: Array<() => Promise<void> | void> = [];
     #defineShadow: (() => ShadowRootInit) | undefined = undefined;
     #renderNoShadow: () => void = () => {};
@@ -74,6 +76,9 @@ const createCustomElement = <
         onAdopted: (callback) => {
           this.#onAdoptedFunctions.push(callback);
         },
+        onConnectedMove: (callback) => {
+          this.#onConnectedMoveFunctions.push(callback);
+        },
         defineShadow: (callback) => {
           this.#defineShadow = callback;
         },
@@ -100,6 +105,10 @@ const createCustomElement = <
 
     async disconnectedCallback() {
       await Promise.all(this.#onDisconnectedFunctions.map((fn) => fn()));
+    }
+
+    async connectedMoveCallback() {
+      await Promise.all(this.#onConnectedMoveFunctions.map((fn) => fn()));
     }
 
     async adoptedCallback() {

@@ -58,36 +58,29 @@
     "prettier.enable": true,
     "oxc.enable": true,
     "chat.promptFiles": true,
+    "chat.agent.todoList": {
+      "position": "default"
+    },
 
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.inlineSuggest.enabled": true,
     "github.copilot.nextEditSuggestions.enabled": true,
-    "github.copilot.enable": {
-      "*": true,
-      "plaintext": false,
-      "markdown": true,
-      "typescript": true,
-      "javascript": true
-    },
     "editor.codeActionsOnSave": {
       "source.fixAll.oxc":"never"
     },
-
     "[typescript]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
-
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
     "github.copilot.chat.commitMessageGeneration.instructions": [
       {
         "file": "commit-message-instructions.md",
       }
     ],
-
     "cSpell.words": [
       "ailuros"
     ],
-    "[typescriptreact]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
-    }
   }
 }

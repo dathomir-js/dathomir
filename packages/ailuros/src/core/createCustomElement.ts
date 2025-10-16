@@ -1,19 +1,20 @@
-import { toPascalCase } from "@/utils/toPascalCase";
 import { PropsDictionary } from "./Props";
-import { computed } from "node_modules/@ailuros/reactivity/dist/index.cjs";
 import { jsx } from "@ailuros/runtime/jsx-runtime";
-import { Computed, Signal, signal } from "@ailuros/reactivity";
+import { computed, Computed, Signal, signal } from "@ailuros/reactivity";
+import { CamelCase, pascalCase } from "@ailuros/shared";
 
 type PropsSignals<P extends PropsDictionary> = {
   [K in keyof P]: Signal<P[K]["__props_type__"] | undefined>;
 };
 
 type CreateCustomElementParams<
-  T extends `${string}-${string}`,
+  Emits extends Record<string, (event: CustomEventInit<any>) => any>,
+  TagName extends `${string}-${string}`,
   Props extends PropsDictionary
 > = {
-  tagName: T;
+  tagName: TagName;
   props: Props;
+  emits?: Emits;
   render: ({
     onConnected,
     onDisconnected,
@@ -23,22 +24,24 @@ type CreateCustomElementParams<
     onConnectedMove: (callback: () => Promise<void> | void) => void;
     onAdopted: (callback: () => Promise<void> | void) => void;
     defineShadow: (callback: () => ShadowRootInit) => void;
-    /**
-     * Reactive signals keyed by the original props definition.
-     * Each key retains its literal/union type without collapsing into a global union.
-     */
     props: PropsSignals<Props>;
+    emit: <K extends keyof Emits>(
+      eventName: K,
+      detail: ReturnType<Emits[K]>
+    ) => void;
   }) => Node;
 };
 
 const createCustomElement = <
-  const T extends `${string}-${string}`,
+  const Emits extends Record<string, (event: CustomEventInit<any>) => any>,
+  const TagName extends `${string}-${string}`,
   const Props extends PropsDictionary
 >({
   tagName,
   props,
+  emits: _emits,
   render,
-}: CreateCustomElementParams<T, Props>) => {
+}: CreateCustomElementParams<Emits, TagName, Props>) => {
   class CustomElement extends HTMLElement {
     #onConnectedFunctions: Array<() => Promise<void> | void> = [];
     #onDisconnectedFunctions: Array<() => Promise<void> | void> = [];
@@ -51,6 +54,10 @@ const createCustomElement = <
 
     static readonly __props_type__ = "" as unknown as {
       [K in keyof Props]: Props[K]["__props_type__"] | undefined;
+    } & {
+      [K in keyof Emits as CamelCase<`on-${K & string}`>]?: (
+        event: ReturnType<Emits[K]>
+      ) => void;
     };
 
     constructor() {
@@ -83,6 +90,19 @@ const createCustomElement = <
           this.#defineShadow = callback;
         },
         props: this.#props,
+        emit: (eventName, detail) => {
+          if (typeof eventName !== "string") {
+            throw Error("Event name must be a string");
+          }
+
+          const event = new CustomEvent(eventName, {
+            bubbles: true,
+            composed: true,
+            ...detail,
+          });
+
+          this.dispatchEvent(event);
+        },
       });
 
       if (this.#defineShadow) {
@@ -147,16 +167,22 @@ const createCustomElement = <
     }
   }
 
-  const customElementName = toPascalCase(`${tagName}-element`);
-  const CustomElementComponentName = toPascalCase(tagName);
+  const customElementName = pascalCase(`${tagName}-element`);
+  const CustomElementComponentName = pascalCase(tagName);
   const CustomElementComponent = computed(
     () =>
-      (props: {
-        [K in keyof Props]:
-          | Signal<Props[K]["__props_type__"]>
-          | Computed<Props[K]["__props_type__"]>
-          | Props[K]["__props_type__"];
-      }) => {
+      (
+        props: {
+          [K in keyof Props]:
+            | Signal<Props[K]["__props_type__"]>
+            | Computed<Props[K]["__props_type__"]>
+            | Props[K]["__props_type__"];
+        } & {
+          [K in keyof Emits as CamelCase<`on-${K & string}`>]?: (
+            event: ReturnType<Emits[K]>
+          ) => void;
+        }
+      ) => {
         if (!customElements.get(tagName)) {
           customElements.define(tagName, CustomElement);
         }
@@ -171,7 +197,8 @@ const createCustomElement = <
   } as Record<typeof customElementName, typeof CustomElement> &
     Record<typeof CustomElementComponentName, typeof CustomElementComponent>;
 
-  return value;
+  return value as Record<typeof customElementName, typeof CustomElement> &
+    Record<typeof CustomElementComponentName, typeof CustomElementComponent>;
 };
 
 export { createCustomElement };

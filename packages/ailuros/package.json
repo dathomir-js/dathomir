@@ -47,6 +47,11 @@
       "import": "./dist/reactivity/index.js",
       "require": "./dist/reactivity/index.cjs",
       "types": "./dist/reactivity/index.d.ts"
+    },
+    "./shared": {
+      "import": "./dist/shared/index.js",
+      "require": "./dist/shared/index.cjs",
+      "types": "./dist/shared/index.d.ts"
     }
   },
   "files": [
@@ -65,6 +70,7 @@
   },
   "dependencies": {
     "@ailuros/reactivity": "workspace:*",
-    "@ailuros/runtime": "workspace:*"
+    "@ailuros/runtime": "workspace:*",
+    "@ailuros/shared": "workspace:*"
   }
 }

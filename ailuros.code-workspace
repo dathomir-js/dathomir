@@ -45,6 +45,10 @@
       "path": "./packages/transformer"
     },
         {
+      "name": "📦 @ailuros/shared",
+      "path": "./packages/shared"
+    },
+    {
       "name": "=== 🎮 playgrounds ===",
       "path": "=== 🎮 playgrounds ==="
     },

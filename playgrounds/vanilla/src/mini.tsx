@@ -1,4 +1,4 @@
-import { computed, effect, signal } from "@ailuros/core/reactivity";
+import { computed, signal } from "@ailuros/core/reactivity";
 import { Fragment } from "@ailuros/core/runtime";
 import { createCustomElement, Props } from "@ailuros/core";
 
@@ -12,7 +12,10 @@ const {
     unit: Props.Union(["seconds", "minutes"]),
     initValue: Props.Number()
   },
-  render: ({ onConnected, defineShadow, props }) => {
+  emits: {
+    "another-event": (event: CustomEventInit<{ info: string }>) => event
+  },
+  render: ({ onConnected, defineShadow, props, emit }) => {
     const count = signal(new Date().toLocaleString());
     const connectedState = signal("disconnected");
     const constantText = "Hello, World!";
@@ -30,6 +33,7 @@ const {
         await new Promise((resolve) => {
           setTimeout(() => {
             console.log("Async operation completed");
+            emit("another-event", { detail: { info: count.value } });
             connectedState.set("connected");
             resolve(0);
           }, 2000);
@@ -45,6 +49,9 @@ const {
 
     return (
       <Fragment>
+        <style>
+          {"div { margin: 4px; }"}
+        </style>
         <div>{count.value}</div>
         <div>{connectedState.value}</div>
         <div>{constantText}</div>
@@ -86,11 +93,14 @@ const MyApp = (
   <Fragment>
     {count.value}
     {location.value}
-    <my-timer location={location.value} unit="seconds" initValue={0} />
+    <my-timer location={location.value} unit="seconds" initValue={count.value} onAnotherEvent={(e) => console.log(e.detail?.info)} />
     {/* {MyTimer.value({
       location: location,
       unit: "seconds",
-      initValue: 0
+      initValue: 0,
+      onAnotherEvent: (e) => {
+        console.log("Received another-event:", e.detail?.info);
+      }
     })} */}
     <div>
       <h1>Counters that update separately</h1>

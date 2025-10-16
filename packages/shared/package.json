@@ -1,6 +1,6 @@
 {
-  "name": "@ailuros/runtime",
-  "description": "Ailuros runtime package",
+  "name": "@ailuros/shared",
+  "description": "Ailuros shared package",
   "version": "0.0.1-beta.1",
   "private": false,
   "type": "module",
@@ -27,21 +27,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
-    },
-    "./jsx-runtime": {
-      "import": "./dist/jsx-runtime.js",
-      "require": "./dist/jsx-runtime.cjs",
-      "types": "./dist/jsx-runtime.d.ts"
-    },
-    "./jsx-dev-runtime": {
-      "import": "./dist/jsx-dev-runtime.js",
-      "require": "./dist/jsx-dev-runtime.cjs",
-      "types": "./dist/jsx-dev-runtime.d.ts"
-    },
-    "./reactivity": {
-      "import": "./dist/reactivity.js",
-      "require": "./dist/reactivity.cjs",
-      "types": "./dist/reactivity.d.ts"
     }
   },
   "files": [
@@ -53,10 +38,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint"
   },
-  "dependencies": {
-    "@ailuros/reactivity": "workspace:*",
-    "@ailuros/shared": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@ailuros/config": "workspace:*"
   }

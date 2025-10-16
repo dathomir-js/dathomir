@@ -3,14 +3,15 @@
   "version": "0.0.0",
   "description": "",
   "scripts": {
-    "build": "pnpm p:reactivity build && pnpm p:runtime build && pnpm p:transformer build && pnpm p:plugin build && pnpm p:core build",
-    "dev": "concurrently 'pnpm p:reactivity dev' 'pnpm p:runtime dev' 'pnpm p:transformer dev' 'pnpm p:plugin dev' 'pnpm p:core dev'",
+    "build": "pnpm p:shared build && pnpm p:reactivity build && pnpm p:runtime build && pnpm p:transformer build && pnpm p:plugin build && pnpm p:core build",
+    "dev": "concurrently 'pnpm p:shared dev' 'pnpm p:reactivity dev' 'pnpm p:runtime dev' 'pnpm p:transformer dev' 'pnpm p:plugin dev' 'pnpm p:core dev'",
     "cfg": "pnpm --filter @ailuros/config",
     "p:core": "pnpm --filter @ailuros/core",
     "p:plugin": "pnpm --filter @ailuros/plugin",
     "p:reactivity": "pnpm --filter @ailuros/reactivity",
     "p:runtime": "pnpm --filter @ailuros/runtime",
     "p:transformer": "pnpm --filter @ailuros/transformer",
+    "p:shared": "pnpm --filter @ailuros/shared",
     "pg:vanilla": "pnpm --filter @playgrounds/vanilla",
     "version": "printf '\\033[1;36m%-10s | %-10s | %-10s\\033[0m\\n' tool version which; printf '%-10s | %-10s | %-10s\\n' ---------- ---------- ----------; printf '%-10s | %-10s | %-10s\\n' '@antfu/ni' '' \"$(which ni)\"; printf '%-10s | %-10s | %-10s\\n' node \"$(node -v)\" \"$(which node)\"; printf '%-10s | %-10s | %-10s\\n' pnpm \"v$(pnpm -v)\" \"$(which pnpm)\""
   },

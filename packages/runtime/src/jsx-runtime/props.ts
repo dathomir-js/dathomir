@@ -1,3 +1,4 @@
+import { kebabCase } from "@ailuros/shared";
 import { effect } from "../reactivity";
 import { isReactiveNode } from "./guards";
 import type { ReactiveLike } from "./guards";
@@ -18,7 +19,7 @@ const isEventProp = (key: string): boolean => {
 };
 
 const extractEventName = (key: string): string => {
-  return key.slice(2).toLowerCase();
+  return kebabCase(key.slice(2));
 };
 
 const isEventListenerObject = (

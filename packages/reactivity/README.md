@@ -1,6 +1,6 @@
-# @ailuros/reactivity
+# @dathomir/reactivity
 
-`@ailuros/reactivity` は [`alien-signals`](https://github.com/stackblitz/alien-signals) の低レベル API（`alien-signals/system`）を土台にしたリアクティビティ層です。TC39 Signals 提案に近い `signal` / `computed` / `effect` インターフェイスを提供し、設定なしで軽量・高速なリアクティビティを構築できます。
+`@dathomir/reactivity` は [`alien-signals`](https://github.com/stackblitz/alien-signals) の低レベル API（`alien-signals/system`）を土台にしたリアクティビティ層です。TC39 Signals 提案に近い `signal` / `computed` / `effect` インターフェイスを提供し、設定なしで軽量・高速なリアクティビティを構築できます。
 
 ## 特徴
 
@@ -13,7 +13,7 @@
 ## 使い方
 
 ```ts
-import { signal, computed, effect, batch } from '@ailuros/reactivity';
+import { signal, computed, effect, batch } from '@dathomir/reactivity';
 
 const count = signal(0);
 const doubled = computed(() => count.value * 2);

@@ -7,7 +7,7 @@ import { parseToAst } from "./parseToAst";
 const traverse =
   ((traverseCjs as any).default as typeof traverseCjs) || traverseCjs;
 
-const REACTIVITY_MODULE = "@ailuros/core/reactivity";
+const REACTIVITY_MODULE = "@dathomir/core/reactivity";
 const COMPUTED_EXPORT_NAME = "computed";
 
 /**

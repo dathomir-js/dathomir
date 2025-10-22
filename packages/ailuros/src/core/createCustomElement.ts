@@ -1,9 +1,9 @@
 import { PropsDictionary } from "./Props";
-import { jsx } from "@ailuros/runtime/jsx-runtime";
-import { computed, Computed, Signal, signal } from "@ailuros/reactivity";
-import { CamelCase, pascalCase } from "@ailuros/shared";
+import { jsx } from "@dathomir/runtime/jsx-runtime";
+import { computed, Computed, Signal, signal } from "@dathomir/reactivity";
+import { CamelCase, pascalCase } from "@dathomir/shared";
 
-type PropsSignals<P extends PropsDictionary> = {
+type SignaledProps<P extends PropsDictionary> = {
   [K in keyof P]: Signal<P[K]["__props_type__"] | undefined>;
 };
 
@@ -23,8 +23,9 @@ type CreateCustomElementParams<
     onDisconnected: (callback: () => Promise<void> | void) => void;
     onConnectedMove: (callback: () => Promise<void> | void) => void;
     onAdopted: (callback: () => Promise<void> | void) => void;
+    onServerLoading: (callback: () => Promise<void> | void) => void;
     defineShadow: (callback: () => ShadowRootInit) => void;
-    props: PropsSignals<Props>;
+    props: SignaledProps<Props>;
     emit: <K extends keyof Emits>(
       eventName: K,
       detail: ReturnType<Emits[K]>
@@ -50,7 +51,7 @@ const createCustomElement = <
     #defineShadow: (() => ShadowRootInit) | undefined = undefined;
     #renderNoShadow: () => void = () => {};
     static observedAttributes = Object.keys(props);
-    #props!: PropsSignals<Props>;
+    #props!: SignaledProps<Props>;
 
     static readonly __props_type__ = "" as unknown as {
       [K in keyof Props]: Props[K]["__props_type__"] | undefined;
@@ -64,7 +65,7 @@ const createCustomElement = <
       super();
 
       // Initialize signals per key; attribute value (string) is assigned raw for now.
-      this.#props = {} as PropsSignals<Props>;
+      this.#props = {} as SignaledProps<Props>;
       for (const key in props) {
         const k = key as keyof Props;
         const attr = this.getAttribute(key) || "";
@@ -89,6 +90,7 @@ const createCustomElement = <
         defineShadow: (callback) => {
           this.#defineShadow = callback;
         },
+        onServerLoading: () => {},
         props: this.#props,
         emit: (eventName, detail) => {
           if (typeof eventName !== "string") {

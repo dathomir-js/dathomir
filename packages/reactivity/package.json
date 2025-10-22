@@ -1,22 +1,22 @@
 {
-  "name": "@ailuros/reactivity",
-  "description": "Ailuros reactivity package",
+  "name": "@dathomir/reactivity",
+  "description": "dathomir reactivity package",
   "type": "module",
   "version": "0.0.1-beta.1",
   "private": false,
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com:nucoui/ailuros.git"
+    "url": "git+ssh://git@github.com:nucoui/dathomir.git"
   },
   "bugs": {
-    "url": "https://github.com/nucoui/ailuros/issues",
-    "email": "ailuros@takumaru.dev"
+    "url": "https://github.com/nucoui/dathomir/issues",
+    "email": "dathomir@takumaru.dev"
   },
-  "homepage": "https://github.com/nucoui/ailuros#readme",
+  "homepage": "https://github.com/nucoui/dathomir#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
   "keywords": [
-    "ailuros",
+    "dathomir",
     "framework",
     "frontend",
     "javascript",
@@ -40,7 +40,7 @@
     "test": "vitest run --coverage"
   },
   "devDependencies": {
-    "@ailuros/config": "workspace:*",
+    "@dathomir/config": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   },

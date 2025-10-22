@@ -7,14 +7,14 @@ priority: 0
 - [ ] 
 
 ## Packages TODOs
-### @ailuros/plugin
+### @dathomir/plugin
 - [ ]
 
-### @ailuros/reactivity
+### @dathomir/reactivity
 - [ ]
 
-### @ailuros/runtime
+### @dathomir/runtime
 - [ ]
 
-### @ailuros/transformer
+### @dathomir/transformer
 - [ ]

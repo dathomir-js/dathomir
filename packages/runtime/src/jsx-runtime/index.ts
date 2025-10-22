@@ -1,13 +1,13 @@
-import type { AilurosJSX, AilurosNode } from "../types/types";
+import type { dathomirJSX, dathomirNode } from "../types/types";
 import { appendChild } from "./children";
 import { addEventListenerFromProp, isEventProp, setDomProperty } from "./props";
 
-const FragmentSymbol = Symbol.for("ailuros.fragment");
+const FragmentSymbol = Symbol.for("dathomir.fragment");
 
 /**
  * Fragment component for JSX
  */
-function Fragment(props: { children?: AilurosNode }): DocumentFragment {
+function Fragment(props: { children?: dathomirNode }): DocumentFragment {
   const fragment = document.createDocumentFragment();
   if (props && "children" in props) {
     appendChild(fragment, props.children);
@@ -16,7 +16,7 @@ function Fragment(props: { children?: AilurosNode }): DocumentFragment {
 }
 
 // Assign the symbol to the Fragment function for runtime identification
-(Fragment as any)[Symbol.for("ailuros.fragment.symbol")] = FragmentSymbol;
+(Fragment as any)[Symbol.for("dathomir.fragment.symbol")] = FragmentSymbol;
 
 /**
  * Create a DOM element for the given host tag, falling back to a div.
@@ -32,7 +32,7 @@ const createHostElement = (tag: unknown): Element => {
 /**
  * JSX factory used by the runtime to materialize host elements and wire props.
  */
-const jsx: AilurosJSX = (tag, props, _key) => {
+const jsx: dathomirJSX = (tag, props, _key) => {
   if (tag === Fragment || tag === FragmentSymbol) {
     return Fragment(props || {});
   }

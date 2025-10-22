@@ -1,6 +1,6 @@
-import { computed, signal } from "@ailuros/core/reactivity";
-import { Fragment } from "@ailuros/core/runtime";
-import { createCustomElement, Props } from "@ailuros/core";
+import { computed, signal } from "@dathomir/core/reactivity";
+import { Fragment } from "@dathomir/core/runtime";
+import { createCustomElement, Props } from "@dathomir/core";
 
 const {
   MyTimerElement,
@@ -19,6 +19,7 @@ const {
     const count = signal(new Date().toLocaleString());
     const connectedState = signal("disconnected");
     const constantText = "Hello, World!";
+    const { location } = props;
 
     defineShadow(() => ({
       mode: "open"
@@ -55,7 +56,7 @@ const {
         <div>{count.value}</div>
         <div>{connectedState.value}</div>
         <div>{constantText}</div>
-        <div>{props.location.value}</div>
+        <div>{location.value}</div>
       </Fragment>
     )
   }
@@ -112,7 +113,7 @@ const MyApp = (
 
 document.getElementById("app")?.appendChild(MyApp)
 
-declare module "@ailuros/core/runtime" {
+declare module "@dathomir/core/runtime" {
   namespace JSX {
     interface IntrinsicElements {
       "my-timer": (typeof MyTimerElement)["__props_type__"];

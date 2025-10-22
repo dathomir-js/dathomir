@@ -9,7 +9,7 @@ type ReactiveLike<T = unknown> = {
 };
 
 /**
- * Narrow a value into a runtime reactive wrapper produced by @ailuros/reactivity.
+ * Narrow a value into a runtime reactive wrapper produced by @dathomir/reactivity.
  */
 const isReactiveNode = (value: unknown): value is ReactiveLike => {
   return (

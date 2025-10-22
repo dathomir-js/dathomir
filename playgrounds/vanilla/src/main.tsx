@@ -1,5 +1,5 @@
 import "./style.css"
-import { computed, signal } from "@ailuros/core/reactivity"
+import { computed, signal } from "@dathomir/core/reactivity"
 
 const todo = signal<{
   userId: number
@@ -62,7 +62,7 @@ const getTodo = async () => {
 await getTodo()
 
 const App = <>
-  <h1>@ailuros/core</h1>
+  <h1>@dathomir/core</h1>
   <div>
     <form
       onSubmit={(e) => {

@@ -1,22 +1,22 @@
 {
-  "name": "@ailuros/transformer",
-  "description": "Ailuros transformer package",
+  "name": "@dathomir/transformer",
+  "description": "dathomir transformer package",
   "version": "0.0.1-beta.1",
   "private": false,
   "type": "module",
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com:nucoui/ailuros.git"
+    "url": "git+ssh://git@github.com:nucoui/dathomir.git"
   },
   "bugs": {
-    "url": "https://github.com/nucoui/ailuros/issues",
-    "email": "ailuros@takumaru.dev"
+    "url": "https://github.com/nucoui/dathomir/issues",
+    "email": "dathomir@takumaru.dev"
   },
-  "homepage": "https://github.com/nucoui/ailuros#readme",
+  "homepage": "https://github.com/nucoui/dathomir#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
   "keywords": [
-    "ailuros",
+    "dathomir",
     "framework",
     "frontend",
     "javascript",
@@ -37,7 +37,7 @@
     "test": "vitest run --coverage"
   },
   "devDependencies": {
-    "@ailuros/config": "workspace:*",
+    "@dathomir/config": "workspace:*",
     "@babel/types": "^7.28.4",
     "@types/babel__generator": "^7.27.0",
     "@types/babel__traverse": "^7.28.0",

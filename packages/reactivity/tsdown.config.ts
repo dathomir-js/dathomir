@@ -1,4 +1,4 @@
-import { defineConfig } from "@ailuros/config/tsdown";
+import { defineConfig } from "@dathomir/config/tsdown";
 
 export default defineConfig({
   entry: ["src/index.ts"],

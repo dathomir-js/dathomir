@@ -1,3 +1,3 @@
 {
-  "extends": ["./node_modules/@ailuros/config/templates/oxlintrc.template.json"]
+  "extends": ["./node_modules/@dathomir/config/templates/oxlintrc.template.json"]
 }

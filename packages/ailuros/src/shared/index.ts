@@ -1,1 +1,1 @@
-export * from "@ailuros/shared";
+export * from "@dathomir/shared";

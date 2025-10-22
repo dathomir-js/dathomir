@@ -6,7 +6,7 @@ priority: 1
 # Transformer Package Instructions
 
 ## Package Overview
-The purpose of this library is to analyze jsx/tsx code, detect places inside HTML where the features `signal` and `computed` from `@ailuros/reactivity` are used, and transform all of them into reactive code.
+The purpose of this library is to analyze jsx/tsx code, detect places inside HTML where the features `signal` and `computed` from `@dathomir/reactivity` are used, and transform all of them into reactive code.
 
 ### 変換するとは
 1. Pattern 1 基本
@@ -23,7 +23,7 @@ The purpose of this library is to analyze jsx/tsx code, detect places inside HTM
   ```
   What we mean by "transform":
   From the code above, the transformer finds occurrences inside the HTML syntax that call the `count` variable created by `signal`, detects that it is used as a getter, and transforms it as follows.
-  It wraps `count.value` with `computed` provided by `@ailuros/reactivity`.
+  It wraps `count.value` with `computed` provided by `@dathomir/reactivity`.
   ```tsx
   const count = signal(0);
   const doubleCount = computed(() => count.value * 2);
@@ -35,7 +35,7 @@ The purpose of this library is to analyze jsx/tsx code, detect places inside HTM
     </div>
   );
   ```
-  The subsequent rendering is handled by a separate `@ailuros/runtime`.
+  The subsequent rendering is handled by a separate `@dathomir/runtime`.
 
 2. Pattern 2 エレメント出し分け
   ```tsx
@@ -91,5 +91,5 @@ The purpose of this library is to analyze jsx/tsx code, detect places inside HTM
 
 ## Main Instructions
 
- - Please treat the information in [`@ailuros/reactivity`](packages/reactivity/src/index.ts) as background knowledge.
+ - Please treat the information in [`@dathomir/reactivity`](packages/reactivity/src/index.ts) as background knowledge.
  - Please treat `@babel/parser` and `@babel/traverse` as background knowledge. Use context7.

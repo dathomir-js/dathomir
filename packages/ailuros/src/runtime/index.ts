@@ -1,2 +1,2 @@
-export type { JSX } from "@ailuros/runtime";
-export { Fragment } from "@ailuros/runtime/jsx-runtime";
+export type { JSX } from "@dathomir/runtime";
+export { Fragment } from "@dathomir/runtime/jsx-runtime";

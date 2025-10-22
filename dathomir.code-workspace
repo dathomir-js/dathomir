@@ -25,27 +25,27 @@
       "path": "=== 📦 packages ==="
     },
     {
-      "name": "📦 @ailuros/core",
-      "path": "./packages/ailuros"
+      "name": "📦 @dathomir/core",
+      "path": "./packages/dathomir"
     },
     {
-      "name": "📦 @ailuros/plugin",
+      "name": "📦 @dathomir/plugin",
       "path": "./packages/plugin"
     },
     {
-      "name": "📦 @ailuros/reactivity",
+      "name": "📦 @dathomir/reactivity",
       "path": "./packages/reactivity"
     },
     {
-      "name": "📦 @ailuros/runtime",
+      "name": "📦 @dathomir/runtime",
       "path": "./packages/runtime"
     },
     {
-      "name": "📦 @ailuros/transformer",
+      "name": "📦 @dathomir/transformer",
       "path": "./packages/transformer"
     },
         {
-      "name": "📦 @ailuros/shared",
+      "name": "📦 @dathomir/shared",
       "path": "./packages/shared"
     },
     {
@@ -84,7 +84,7 @@
       }
     ],
     "cSpell.words": [
-      "ailuros"
+      "dathomir"
     ],
   }
 }

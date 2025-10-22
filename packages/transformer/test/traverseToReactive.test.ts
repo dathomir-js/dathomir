@@ -4,7 +4,7 @@ import { transform } from "../src";
 describe("traverseToReactive", () => {
   it("wraps signal references inside JSX expressions with computed calls", () => {
     const source = `
-			import { signal, computed } from "@ailuros/core/reactivity";
+			import { signal, computed } from "@dathomir/core/reactivity";
 
 			const count = signal(0);
 
@@ -18,7 +18,7 @@ describe("traverseToReactive", () => {
     const output = transform(source);
 
     expect(output.code).toContain(
-      'import { signal, computed } from "@ailuros/core/reactivity";'
+      'import { signal, computed } from "@dathomir/core/reactivity";'
     );
     expect(output.code).toContain("computed(() => count.value)");
     expect(output.code.match(/computed\(\(\) => count\.value\)/g)?.length).toBe(
@@ -28,7 +28,7 @@ describe("traverseToReactive", () => {
 
   it("adds computed import when only signal is present and wraps attribute expressions", () => {
     const source = `
-			import { signal } from "@ailuros/core/reactivity";
+			import { signal } from "@dathomir/core/reactivity";
 
 			const count = signal(0);
 
@@ -40,7 +40,7 @@ describe("traverseToReactive", () => {
     const output = transform(source);
 
     expect(output.code).toContain(
-      'import { signal, computed } from "@ailuros/core/reactivity";'
+      'import { signal, computed } from "@dathomir/core/reactivity";'
     );
     expect(output.code).toContain(
       "disabled={computed(() => count.value === 0)}"
@@ -49,7 +49,7 @@ describe("traverseToReactive", () => {
 
   it("reuses namespace imports for computed and avoids double wrapping", () => {
     const source = `
-			import * as reactivity from "@ailuros/core/reactivity";
+			import * as reactivity from "@dathomir/core/reactivity";
 
 			const count = reactivity.signal(0);
 			const handleClick = reactivity.computed(() => count.set((value) => value + 1));
@@ -67,7 +67,7 @@ describe("traverseToReactive", () => {
     const output = transform(source);
 
     expect(output.code).toContain(
-      'import * as reactivity from "@ailuros/core/reactivity";'
+      'import * as reactivity from "@dathomir/core/reactivity";'
     );
     expect(output.code).toContain(
       "onClick={reactivity.computed(() => handleClick)}"
@@ -84,7 +84,7 @@ describe("traverseToReactive", () => {
 
   it("not depends with signal", () => {
     const source = `
-			import * as reactivity from "@ailuros/core/reactivity";
+			import * as reactivity from "@dathomir/core/reactivity";
 
 			const count = reactivity.signal(0);
       const double = reactivity.computed(() => count.value * 2);
@@ -114,7 +114,7 @@ describe("traverseToReactive", () => {
     const output = transform(source);
 
     expect(output.code).toContain(
-      'import * as reactivity from "@ailuros/core/reactivity";'
+      'import * as reactivity from "@dathomir/core/reactivity";'
     );
     expect(output.code).toContain(
       "onClick={reactivity.computed(() => handleClick)}"
@@ -140,7 +140,7 @@ describe("traverseToReactive", () => {
   // === Additional coverage merged ===
   it("adds computed import with renamed local when 'computed' identifier already exists", () => {
     const source = `
-			import { signal } from "@ailuros/core/reactivity";
+			import { signal } from "@dathomir/core/reactivity";
 			const computed = "shadow";
 			const count = signal(0);
 			const C = () => (<div>{count.value}</div>);
@@ -152,7 +152,7 @@ describe("traverseToReactive", () => {
 
   it("uses namespace import member when already imported as namespace", () => {
     const source = `
-			import * as reactivity from "@ailuros/core/reactivity";
+			import * as reactivity from "@dathomir/core/reactivity";
 			const count = reactivity.signal(0);
 			const C = () => (<div>{count.value}</div>);
 		`;
@@ -163,7 +163,7 @@ describe("traverseToReactive", () => {
 
   it("uses default import member when default import exists and no namespace", () => {
     const source = `
-			import reactivity from "@ailuros/core/reactivity";
+			import reactivity from "@dathomir/core/reactivity";
 			const count = reactivity.signal(0);
 			const C = () => (<div>{count.value}</div>);
 		`;
@@ -175,7 +175,7 @@ describe("traverseToReactive", () => {
 
   it("does not double wrap when direct imported computed call already present", () => {
     const source = `
-			import { computed } from "@ailuros/core/reactivity";
+			import { computed } from "@dathomir/core/reactivity";
 			const C = () => (<div>{computed(() => 1)}</div>);
 		`;
     const out = transform(source).code;
@@ -185,14 +185,14 @@ describe("traverseToReactive", () => {
 
   it("does not double wrap when namespace/default member computed call already present", () => {
     const sourceNs = `
-			import * as reactivity from "@ailuros/core/reactivity";
+			import * as reactivity from "@dathomir/core/reactivity";
 			const C = () => (<div>{reactivity.computed(() => 1)}</div>);
 		`;
     const outNs = transform(sourceNs).code;
     expect(outNs.match(/reactivity\.computed\(\(\) => 1\)/g)?.length).toBe(1);
 
     const sourceDef = `
-			import reactivity from "@ailuros/core/reactivity";
+			import reactivity from "@dathomir/core/reactivity";
 			const C = () => (<div>{reactivity.computed(() => 1)}</div>);
 		`;
     const outDef = transform(sourceDef).code;

@@ -1,4 +1,4 @@
-import { kebabCase } from "@ailuros/shared";
+import { kebabCase } from "@dathomir/shared";
 import { effect } from "../reactivity";
 import { isReactiveNode } from "./guards";
 import type { ReactiveLike } from "./guards";

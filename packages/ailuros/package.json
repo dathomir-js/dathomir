@@ -1,22 +1,22 @@
 {
-  "name": "@ailuros/core",
-  "description": "Ailuros package",
+  "name": "@dathomir/core",
+  "description": "dathomir package",
   "version": "0.0.1-beta.1",
   "private": false,
   "type": "module",
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com:nucoui/ailuros.git"
+    "url": "git+ssh://git@github.com:nucoui/dathomir.git"
   },
   "bugs": {
-    "url": "https://github.com/nucoui/ailuros/issues",
-    "email": "ailuros@takumaru.dev"
+    "url": "https://github.com/nucoui/dathomir/issues",
+    "email": "dathomir@takumaru.dev"
   },
-  "homepage": "https://github.com/nucoui/ailuros#readme",
+  "homepage": "https://github.com/nucoui/dathomir#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
   "keywords": [
-    "ailuros",
+    "dathomir",
     "framework",
     "frontend",
     "javascript",
@@ -66,11 +66,11 @@
     "version": "printf '\\033[1;36m%-10s | %-10s | %-10s\\033[0m\\n' tool version which; printf '%-10s | %-10s | %-10s\\n' ---------- ---------- ----------; printf '%-10s | %-10s | %-10s\\n' '@antfu/ni' '' \"$(which ni)\"; printf '%-10s | %-10s | %-10s\\n' node \"$(node -v)\" \"$(which node)\"; printf '%-10s | %-10s | %-10s\\n' pnpm \"v$(pnpm -v)\" \"$(which pnpm)\""
   },
   "devDependencies": {
-    "@ailuros/config": "workspace:*"
+    "@dathomir/config": "workspace:*"
   },
   "dependencies": {
-    "@ailuros/reactivity": "workspace:*",
-    "@ailuros/runtime": "workspace:*",
-    "@ailuros/shared": "workspace:*"
+    "@dathomir/reactivity": "workspace:*",
+    "@dathomir/runtime": "workspace:*",
+    "@dathomir/shared": "workspace:*"
   }
 }

@@ -3,10 +3,10 @@ applyTo: '**/packages/**'
 priority: 0
 ---
 
-# ailuros Project Packages Instructions
+# dathomir Project Packages Instructions
 
 # Overview
-The ailuros project stores its packages under `/packages/**`.
+The dathomir project stores its packages under `/packages/**`.
 Each package is independent and can be built, tested, and deployed individually.
 For the purpose and contents of each package, refer to the package's `<package-name>.instructions.md` file.
 

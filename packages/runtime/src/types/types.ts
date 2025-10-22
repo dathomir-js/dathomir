@@ -1,4 +1,4 @@
-import { Computed } from "@ailuros/reactivity";
+import { Computed } from "@dathomir/reactivity";
 import { AIntrinsicElements } from "./IntrinsicElements/A";
 import { AbbrIntrinsicElements } from "./IntrinsicElements/Abbr";
 import { AddressIntrinsicElements } from "./IntrinsicElements/Address";
@@ -118,24 +118,24 @@ import { WbrIntrinsicElements } from "./IntrinsicElements/Wbr";
 
 type PrimitiveChild = string | number | boolean | null | undefined;
 
-type AilurosJSX = (
+type dathomirJSX = (
   tag: any,
   props: {
     [key: string]: any;
-    children?: AilurosNode;
+    children?: dathomirNode;
   } | null,
   key?: string | number
 ) => Node;
 
-type AilurosNode =
+type dathomirNode =
   | PrimitiveChild
   | Computed<PrimitiveChild>
-  | AilurosJSX
+  | dathomirJSX
   | Node
   | Computed<Node>
-  | AilurosNode[];
+  | dathomirNode[];
 
-type AilurosElement = AilurosJSX;
+type dathomirElement = dathomirJSX;
 
 export namespace JSX {
   export interface IntrinsicElements {
@@ -260,11 +260,11 @@ export namespace JSX {
   export type Element = Node;
   export type ElementType =
     | keyof IntrinsicElements
-    | ((props: { children?: AilurosNode }) => DocumentFragment);
+    | ((props: { children?: dathomirNode }) => DocumentFragment);
 
   export interface ElementChildrenAttribute {
     children: {};
   }
 }
 
-export { AilurosJSX, AilurosNode, AilurosElement };
+export { dathomirJSX, dathomirNode, dathomirElement };

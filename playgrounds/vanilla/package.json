@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@ailuros/core": "workspace:*",
-    "@ailuros/plugin": "workspace:*",
+    "@dathomir/core": "workspace:*",
+    "@dathomir/plugin": "workspace:*",
     "typescript": "~5.9.3",
     "vite": "^7.1.7",
     "vite-plugin-inspect": "^11.3.3"

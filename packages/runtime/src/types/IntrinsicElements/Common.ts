@@ -1,4 +1,4 @@
-import { AilurosNode } from "@/jsx-runtime";
+import { dathomirNode } from "@/jsx-runtime";
 
 /**
  * Common event handler attributes (onXXX) for all HTML elements.
@@ -348,7 +348,7 @@ interface CommonAttributes {
 
   // Children
   /** Children nodes */
-  children?: AilurosNode;
+  children?: dathomirNode;
 }
 
 interface CommonIntrinsicElements

@@ -1,13 +1,13 @@
 import type { UnpluginFactory } from "unplugin";
 import { createUnplugin } from "unplugin";
-import { transform } from "@ailuros/transformer";
+import { transform } from "@dathomir/transformer";
 
 export interface Options {}
 
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (
   _options
 ) => ({
-  name: "@ailuros/plugin",
+  name: "@dathomir/plugin",
   enforce: "pre",
   transform: {
     filter: {
@@ -24,6 +24,6 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (
   },
 });
 
-export const ailuros = /* #__PURE__ */ createUnplugin(unpluginFactory);
+export const dathomir = /* #__PURE__ */ createUnplugin(unpluginFactory);
 
-export default ailuros;
+export default dathomir;

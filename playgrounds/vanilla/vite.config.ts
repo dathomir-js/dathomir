@@ -1,10 +1,10 @@
 import { defineConfig } from "vite";
-import { ailuros } from "@ailuros/plugin"
+import { dathomir } from "@dathomir/plugin"
 import Inspect from "vite-plugin-inspect";
 
 
 export default defineConfig({
-  plugins: [ailuros.vite(), Inspect()],
+  plugins: [dathomir.vite(), Inspect()],
   server: {
     port: 5173,
   },

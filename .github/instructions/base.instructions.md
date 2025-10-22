@@ -3,7 +3,7 @@ applyTo: '**'
 priority: 9999
 ---
 
-# ailuros Project Common Instructions
+# dathomir Project Common Instructions
 
 ## Project Overview
 This project develops a framework library that uses two primary technologies — web components and signals (tc39 signals, alien-signals) — to build modern and efficient web applications.
@@ -22,14 +22,14 @@ Read and understand these instructions before you start working.
 ## Directory Structure Instructions
 - `~/<project-root>/` : Project root
   - `./config/` : Configuration files for packages
-  - `./packages/` : The ailuros project packages
-    - `./packages/ailuros/` : The core ailuros framework package that aggregates other packages.
+  - `./packages/` : The dathomir project packages
+    - `./packages/dathomir/` : The core dathomir framework package that aggregates other packages.
     - `./packages/plugin/` : Plugins for build tools (Vite, webpack, ...)
     - `./packages/reactivity/` : Packages implementing signals functionality
     - `./packages/runtime/` : Runtime-related packages
     - `./packages/transformer/` : Compiler/transformer-related packages
   - `./.github/` : GitHub related configuration files
-  - `./ailuros.code-workspace` : VSCode workspace settings file
+  - `./dathomir.code-workspace` : VSCode workspace settings file
   - `./.tool-versions` : Tool version management file for development tools
 
 ## Commands Instructions

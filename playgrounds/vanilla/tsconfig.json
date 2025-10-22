@@ -7,7 +7,7 @@
     "types": ["vite/client"],
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "@ailuros/core/runtime",
+    "jsxImportSource": "@dathomir/core/runtime",
 
     /* Bundler mode */
     "moduleResolution": "bundler",

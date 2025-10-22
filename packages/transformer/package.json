@@ -7,13 +7,13 @@
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com:nucoui/dathomir.git"
+    "url": "git+ssh://git@github.com:dathomir-js/dathomir.git"
   },
   "bugs": {
-    "url": "https://github.com/nucoui/dathomir/issues",
+    "url": "https://github.com/dathomir-js/dathomir/issues",
     "email": "dathomir@takumaru.dev"
   },
-  "homepage": "https://github.com/nucoui/dathomir#readme",
+  "homepage": "https://github.com/dathomir-js/dathomir#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
   "keywords": [
     "dathomir",

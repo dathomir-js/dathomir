@@ -13,7 +13,7 @@ priority: 10
 	- [ ] C5. 後続に Hydration / Streaming / Edge 最適化を段階導入
 
 [ ] 1. Phase 1 Core Refactor & SSR MVP
-	- [ ] 1.1. VNode 型 & flags 最小定義
+	- [x] 1.1. VNode 型 & flags 最小定義
 	- [ ] 1.2. jsx / jsxDEV を VNode 生成へ全面移行 (旧 DOM 直生成除去)
 	- [ ] 1.3. mount(vnode, container) 実装 (イベント/props/reactive children)
 	- [ ] 1.4. unwrapReactive 最小版 (Signal/Computed/配列/オブジェクト)
@@ -54,7 +54,7 @@ priority: 10
 	- [ ] R3. XSS 防止 (escape 徹底・on* 属性除外ポリシー)
 
 [ ] K. 次アクション (Kickoff)
-	- [ ] K1. (1.1) VNode 型追加
+	- [x] K1. (1.1) VNode 型追加
 	- [ ] K2. (1.2) jsx-runtime VNode 化着手
 
 

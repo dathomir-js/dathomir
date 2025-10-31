@@ -24,24 +24,29 @@
   ],
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     },
     "./jsx-runtime": {
+      "types": "./dist/jsx-runtime.d.ts",
       "import": "./dist/jsx-runtime.js",
-      "require": "./dist/jsx-runtime.cjs",
-      "types": "./dist/jsx-runtime.d.ts"
+      "require": "./dist/jsx-runtime.cjs"
     },
     "./jsx-dev-runtime": {
+      "types": "./dist/jsx-dev-runtime.d.ts",
       "import": "./dist/jsx-dev-runtime.js",
-      "require": "./dist/jsx-dev-runtime.cjs",
-      "types": "./dist/jsx-dev-runtime.d.ts"
+      "require": "./dist/jsx-dev-runtime.cjs"
     },
     "./reactivity": {
-      "require": "./dist/reactivity.cjs",
+      "types": "./dist/reactivity.d.ts",
       "import": "./dist/reactivity.js",
-      "types": "./dist/reactivity.d.ts"
+      "require": "./dist/reactivity.cjs"
+    },
+    "./ssr/renderToString": {
+      "types": "./dist/ssr/renderToString.d.ts",
+      "import": "./dist/ssr/renderToString.js",
+      "require": "./dist/ssr/renderToString.cjs"
     }
   },
   "files": [

@@ -15,14 +15,22 @@
     "./templates/oxlintrc.template.json": "./templates/oxlintrc.template.json",
     "./templates/prettier.template.js": "./templates/prettier.template.js",
     "./templates/tsconfig.template.json": "./templates/tsconfig.template.json",
+    "./templates/eslint.template.js": "./templates/eslint.template.js",
     "./tsdown": {
       "import": "./scripts/tsdown.mjs",
       "types": "./scripts/tsdown.d.ts"
     }
   },
-  "scripts": {},
+  "scripts": {
+    "oxlint": "oxlint",
+    "lint": "oxlint && eslint ."
+  },
   "dependencies": {
+    "@typescript-eslint/parser": "^8.46.2",
     "eslint": "catalog:",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-oxlint": "^1.24.0",
+    "globals": "^16.4.0",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
     "prettier": "catalog:",

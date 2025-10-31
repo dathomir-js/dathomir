@@ -1,5 +1,5 @@
 import { computed, signal } from "@dathomir/core/reactivity";
-import { Fragment } from "@dathomir/core/runtime";
+import { Fragment, mountToNode } from "@dathomir/core/runtime";
 import { createCustomElement, Props } from "@dathomir/core";
 
 const {
@@ -111,7 +111,7 @@ const MyApp = (
   </Fragment>
 )
 
-document.getElementById("app")?.appendChild(MyApp)
+document.getElementById("app")?.appendChild(mountToNode(MyApp));
 
 declare module "@dathomir/core/runtime" {
   namespace JSX {

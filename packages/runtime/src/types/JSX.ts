@@ -116,8 +116,7 @@ import { UlIntrinsicElements } from "./IntrinsicElements/Ul";
 import { VarIntrinsicElements } from "./IntrinsicElements/Var";
 import { VideoIntrinsicElements } from "./IntrinsicElements/Video";
 import { WbrIntrinsicElements } from "./IntrinsicElements/Wbr";
-
-import type { VNode } from "../types";
+import { VNode } from "./VNode";
 
 type PrimitiveChild = string | number | boolean | null | undefined;
 

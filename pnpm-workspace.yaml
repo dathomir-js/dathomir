@@ -6,9 +6,9 @@ packages:
 catalog:
   '@vitest/browser-playwright': 4.0.4
   '@vitest/coverage-v8': 4.0.4
-  eslint: 9.35.0
-  oxlint: 1.19.0
-  oxlint-tsgolint: 0.2.0
+  eslint: 9.38.0
+  oxlint: 1.24.0
+  oxlint-tsgolint: 0.3.0
   prettier: 3.6.2
   tsdown: 0.15.6
   typescript: ^5.9.3

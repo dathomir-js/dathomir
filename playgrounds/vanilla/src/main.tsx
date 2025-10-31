@@ -1,5 +1,6 @@
 import "./style.css"
 import { computed, signal } from "@dathomir/core/reactivity"
+import { mount } from "@dathomir/core/runtime"
 
 const todo = signal<{
   userId: number
@@ -97,4 +98,7 @@ const App = <>
   </div>
 </>
 
-document.getElementById("app")?.appendChild(App)
+const appElement = document.getElementById("app")
+if (appElement) {
+  mount(App, appElement)
+}

@@ -39,8 +39,8 @@
       "types": "./dist/jsx-dev-runtime.d.ts"
     },
     "./reactivity": {
-      "import": "./dist/reactivity.js",
       "require": "./dist/reactivity.cjs",
+      "import": "./dist/reactivity.js",
       "types": "./dist/reactivity.d.ts"
     }
   },
@@ -51,7 +51,7 @@
     "dev": "tsdown --watch",
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint",
+    "lint": "oxlint && eslint .",
     "test": "vitest run --coverage"
   },
   "dependencies": {

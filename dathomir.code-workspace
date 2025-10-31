@@ -61,6 +61,7 @@
     "biome.enabled": false,
     "prettier.enable": true,
     "oxc.enable": true,
+    "eslint.enable": true,
     "chat.promptFiles": true,
     "chat.agent.todoList": {
       "position": "default"
@@ -70,7 +71,8 @@
     "editor.inlineSuggest.enabled": true,
     "github.copilot.nextEditSuggestions.enabled": true,
     "editor.codeActionsOnSave": {
-      "source.fixAll.oxc":"never"
+      "source.fixAll.oxc": "explicit",
+      "source.fixAll.eslint": "explicit"
     },
     "[typescript]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -86,5 +88,6 @@
     "cSpell.words": [
       "dathomir"
     ],
+    "eslint.useFlatConfig": true
   }
 }

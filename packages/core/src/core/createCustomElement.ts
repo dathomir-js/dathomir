@@ -2,6 +2,7 @@ import { PropsDictionary } from "./Props";
 import { jsx } from "@dathomir/runtime/jsx-runtime";
 import { computed, Computed, Signal, signal } from "@dathomir/reactivity";
 import { CamelCase, pascalCase } from "@dathomir/shared";
+import { mountToNode, VNode } from "@dathomir/runtime";
 
 type SignaledProps<P extends PropsDictionary> = {
   [K in keyof P]: Signal<P[K]["__props_type__"] | undefined>;
@@ -30,7 +31,7 @@ type CreateCustomElementParams<
       eventName: K,
       detail: ReturnType<Emits[K]>
     ) => void;
-  }) => Node;
+  }) => VNode;
 };
 
 const createCustomElement = <
@@ -109,10 +110,10 @@ const createCustomElement = <
 
       if (this.#defineShadow) {
         this.attachShadow(this.#defineShadow());
-        this.shadowRoot!.appendChild(element);
+        this.shadowRoot!.appendChild(mountToNode(element));
       } else {
         this.#renderNoShadow = () => {
-          this.appendChild(element);
+          this.appendChild(mountToNode(element));
         };
       }
     }

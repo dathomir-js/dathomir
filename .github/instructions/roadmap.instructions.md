@@ -2,6 +2,7 @@
 applyTo: '**'
 priority: 10
 ---
+
 目的: jsx を破壊的変更で VNode 生成専用に統一し、サーバー/クライアント/将来拡張 (Streaming・Hydration 差分) を単一中間表現で扱う基盤を最短で確立する。
 
 
@@ -14,12 +15,15 @@ priority: 10
 
 [ ] 1. Phase 1 Core Refactor & SSR MVP
 	- [x] 1.1. VNode 型 & flags 最小定義
-	- [ ] 1.2. jsx / jsxDEV を VNode 生成へ全面移行 (旧 DOM 直生成除去)
-	- [ ] 1.3. mount(vnode, container) 実装 (イベント/props/reactive children)
+	- [x] 1.2. jsx / jsxDEV を VNode 生成へ全面移行 (旧 DOM 直生成除去)
+	- [x] 1.3. mount(vNode, container) 実装 (イベント/props/reactive children)
 	- [ ] 1.4. unwrapReactive 最小版 (Signal/Computed/配列/オブジェクト)
 	- [ ] 1.5. renderToString 初期版 (escape / 属性除外 / Component / Fragment)
 	- [ ] 1.6. Playground を新 API (mount) に更新
 	- [ ] 1.7. 最小テスト (VNode 構造 / renderToString / unwrapReactive)
+		- [x] VNode 構造テスト
+		- [ ] renderToString 基本動作テスト
+		- [ ] unwrapReactive 基本動作テスト
 	- [ ] 1.8. ドキュメント更新 (jsx が VNode を返す破壊的変更告知)
 	- [ ] 1.9. Acceptance: renderToString と mount の構造的一貫性検証
 
@@ -52,9 +56,5 @@ priority: 10
 	- [ ] R1. 破壊的変更周知 (CHANGELOG / README 冒頭)
 	- [ ] R2. VNode 公開型最小化 (内部 flags は外部非公開)
 	- [ ] R3. XSS 防止 (escape 徹底・on* 属性除外ポリシー)
-
-[ ] K. 次アクション (Kickoff)
-	- [x] K1. (1.1) VNode 型追加
-	- [ ] K2. (1.2) jsx-runtime VNode 化着手
 
 

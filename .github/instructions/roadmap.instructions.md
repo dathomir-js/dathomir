@@ -7,23 +7,23 @@ priority: 10
 
 
 [ ] C. コア方針
-	- [ ] C1. jsx(): 常に純粋な VNode を返す
-	- [ ] C2. mount(): DOM 生成/イベント接続を担当 (jsx は純粋化)
+	- [x] C1. jsx(): 常に純粋な VNode を返す
+	- [x] C2. mount(): DOM 生成/イベント接続を担当 (jsx は純粋化)
 	- [ ] C3. renderToString(): VNode 走査で安全な HTML 出力
-	- [ ] C4. unwrapReactive(): SSR で Signal/Computed を静的値化
+	- [x] C4. toUnreactive(): SSR で Signal/Computed を静的値化
 	- [ ] C5. 後続に Hydration / Streaming / Edge 最適化を段階導入
 
 [ ] 1. Phase 1 Core Refactor & SSR MVP
 	- [x] 1.1. VNode 型 & flags 最小定義
 	- [x] 1.2. jsx / jsxDEV を VNode 生成へ全面移行 (旧 DOM 直生成除去)
 	- [x] 1.3. mount(vNode, container) 実装 (イベント/props/reactive children)
-	- [ ] 1.4. unwrapReactive 最小版 (Signal/Computed/配列/オブジェクト)
+	- [x] 1.4. toUnreactive 最小版 (Signal/Computed/配列/オブジェクト/循環/深さ制限)
 	- [ ] 1.5. renderToString 初期版 (escape / 属性除外 / Component / Fragment)
 	- [ ] 1.6. Playground を新 API (mount) に更新
-	- [ ] 1.7. 最小テスト (VNode 構造 / renderToString / unwrapReactive)
+	- [ ] 1.7. 最小テスト (VNode 構造 / renderToString / toUnreactive)
 		- [x] VNode 構造テスト
 		- [ ] renderToString 基本動作テスト
-		- [ ] unwrapReactive 基本動作テスト
+		- [x] toUnreactive 基本動作テスト (33 tests, 97.43% coverage)
 	- [ ] 1.8. ドキュメント更新 (jsx が VNode を返す破壊的変更告知)
 	- [ ] 1.9. Acceptance: renderToString と mount の構造的一貫性検証
 

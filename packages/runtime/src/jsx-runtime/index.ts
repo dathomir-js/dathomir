@@ -1,6 +1,7 @@
 import { Computed } from "@dathomir/reactivity";
 
-import { FragmentSymbol, VNodeFlags } from "@/jsx-runtime/vNode";
+import { FragmentSymbol, VNodeFlags } from "./vNode";
+
 import { VNodeChild, VNode } from "@/types";
 
 /**

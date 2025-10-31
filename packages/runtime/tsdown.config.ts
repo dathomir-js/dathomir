@@ -6,6 +6,7 @@ export default defineConfig({
     "src/jsx-runtime.ts",
     "src/jsx-dev-runtime.ts",
     "src/reactivity.ts",
+    "src/ssr/renderToString.ts",
   ],
   dts: true,
   outDir: "dist",

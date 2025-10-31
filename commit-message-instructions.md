@@ -4,6 +4,18 @@
 - Use the gitmoji format
 - Follow the commit message format below
 - Do not consider changes to `pnpm-lock.yaml` when generating commit messages
+- English only
+- Commit messages MUST be written entirely in English (no Japanese or mixed language strings).
+- Do NOT use Conventional Commit style prefixes such as `feat:`, `fix:`, `chore:`, `refactor:`, `perf:`, `test:`, `docs:`, etc. Only the gitmoji code (e.g. `:sparkles:`) must precede the message.
+
+## Forbidden Patterns
+The following patterns are explicitly forbidden in commit subject lines:
+
+- `feat:` / `fix:` / `chore:` / `refactor:` / `perf:` / `test:` / `docs:` / `style:` / `ci:` / `build:` / `revert:`
+- Any other Conventional Commits type followed by a colon (regex: `^[a-z]+!:?\s` or `^[a-z]+:\s`).
+- Mixed-language messages (English must be the sole language).
+
+If a forbidden pattern is detected, rewrite the subject to use the appropriate gitmoji code and English phrasing.
 
 ## Gitmoji format
 

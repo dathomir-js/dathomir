@@ -4,8 +4,9 @@ import { parseToAst } from "./parseToAst";
 import { traverseToReactive } from "./traverseToReactive";
 
 /**
- * Transforms JSX/TSX code by wrapping reactive references with computed().
- * @param input - The source code to transform
+ * Transforms JavaScript code (already converted from JSX) by wrapping expressions with computed().
+ * Processes jsx() function call arguments to wrap object property values.
+ * @param input - The source code to transform (post-JSX conversion)
  * @returns The generator result containing transformed code and source map
  */
 export const transform = (input: string): GeneratorResult => {

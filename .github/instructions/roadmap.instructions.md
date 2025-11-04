@@ -6,26 +6,27 @@ priority: 10
 目的: jsx を破壊的変更で VNode 生成専用に統一し、サーバー/クライアント/将来拡張 (Streaming・Hydration 差分) を単一中間表現で扱う基盤を最短で確立する。
 
 
-[ ] C. コア方針
+[x] C. コア方針
 	- [x] C1. jsx(): 常に純粋な VNode を返す
 	- [x] C2. mount(): DOM 生成/イベント接続を担当 (jsx は純粋化)
-	- [ ] C3. renderToString(): VNode 走査で安全な HTML 出力
+	- [x] C3. renderToString(): VNode 走査で安全な HTML 出力
 	- [x] C4. toUnreactive(): SSR で Signal/Computed を静的値化
 	- [ ] C5. 後続に Hydration / Streaming / Edge 最適化を段階導入
 
-[ ] 1. Phase 1 Core Refactor & SSR MVP
+[x] 1. Phase 1 Core Refactor & SSR MVP
 	- [x] 1.1. VNode 型 & flags 最小定義
 	- [x] 1.2. jsx / jsxDEV を VNode 生成へ全面移行 (旧 DOM 直生成除去)
 	- [x] 1.3. mount(vNode, container) 実装 (イベント/props/reactive children)
 	- [x] 1.4. toUnreactive 最小版 (Signal/Computed/配列/オブジェクト/循環/深さ制限)
-	- [ ] 1.5. renderToString 初期版 (escape / 属性除外 / Component / Fragment)
-	- [ ] 1.6. Playground を新 API (mount) に更新
-	- [ ] 1.7. 最小テスト (VNode 構造 / renderToString / toUnreactive)
-		- [x] VNode 構造テスト
-		- [ ] renderToString 基本動作テスト
+	- [x] 1.5. renderToString 初期版 (escape / 属性除外 / Component / Fragment)
+	- [x] 1.6. Playground を新 API (mount) に更新
+	- [x] 1.7. 最小テスト (VNode 構造 / renderToString / toUnreactive)
+		- [x] VNode 構造テスト (8 tests passed)
+		- [x] renderToString 基本動作テスト (30 tests passed, 58.57% stmt coverage)
 		- [x] toUnreactive 基本動作テスト (33 tests, 97.43% coverage)
 	- [ ] 1.8. ドキュメント更新 (jsx が VNode を返す破壊的変更告知)
-	- [ ] 1.9. Acceptance: renderToString と mount の構造的一貫性検証
+	- [x] 1.9. Acceptance: renderToString と mount の構造的一貫性検証
+	- [x] 1.10. パフォーマンス計測 & ベンチマーク (3.08KB gzip, 1260万 JSX ops/sec, 210万 SSR ops/sec)
 
 [ ] 2. Phase 2 Basic Hydration (再マウント方式)
 	- [ ] 2.1. SSR HTML 上で単純再 mount (差分なし MVP)

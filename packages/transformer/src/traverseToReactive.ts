@@ -180,32 +180,133 @@ const getComputedCallee = (state: TransformState): t.Expression => {
 };
 
 /**
- * Wraps ALL JSX expressions with computed().
- * @param path - The JSX expression container path
+ * Checks if an expression is already a computed() call by examining the node directly.
+ * @param expression - The expression to check
+ * @param state - The transform state
+ * @returns True if the expression is already wrapped with computed()
+ */
+const isAlreadyComputedExpression = (
+  expression: t.Expression,
+  state: TransformState
+): boolean => {
+  if (!t.isCallExpression(expression)) {
+    return false;
+  }
+
+  const callee = expression.callee;
+
+  // Check direct computed identifier
+  if (t.isIdentifier(callee)) {
+    if (state.computedImportName && callee.name === state.computedImportName) {
+      return true;
+    }
+  }
+
+  // Check namespace/default member expression
+  if (
+    t.isMemberExpression(callee) &&
+    !callee.computed &&
+    t.isIdentifier(callee.property) &&
+    callee.property.name === COMPUTED_EXPORT_NAME &&
+    t.isIdentifier(callee.object) &&
+    (state.namespaceImports.has(callee.object.name) ||
+      state.defaultImports.has(callee.object.name))
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+/**
+ * Wraps an expression with computed(), handling arrays specially.
+ * @param expression - The expression to wrap
+ * @param state - The transform state
+ * @returns The wrapped expression
+ */
+const wrapWithComputed = (
+  expression: t.Expression,
+  state: TransformState
+): t.Expression => {
+  const callee = getComputedCallee(state);
+
+  // If it's an array expression, wrap each element individually
+  if (t.isArrayExpression(expression)) {
+    const wrappedElements = expression.elements.map((element) => {
+      if (!element) return element;
+
+      // Skip if already a SpreadElement
+      if (t.isSpreadElement(element)) {
+        return element;
+      }
+
+      // Skip if already wrapped with computed()
+      if (isAlreadyComputedExpression(element, state)) {
+        return element;
+      }
+
+      // Recursively wrap array elements
+      const clonedElement = t.cloneNode(element, true);
+      const arrow = t.arrowFunctionExpression([], clonedElement);
+      return t.callExpression(callee, [arrow]);
+    });
+
+    return t.arrayExpression(wrappedElements);
+  }
+
+  // For non-array expressions, wrap normally
+  const clonedValue = t.cloneNode(expression, true);
+  const arrow = t.arrowFunctionExpression([], clonedValue);
+  return t.callExpression(callee, [arrow]);
+};
+
+/**
+ * Wraps object property values inside jsx() calls with computed().
+ * Specifically targets the props object (second argument of jsx()).
+ * @param path - The call expression path
  * @param state - The transform state
  */
-const wrapExpressionWithComputed = (
-  path: NodePath<t.JSXExpressionContainer>,
+const wrapJsxPropsWithComputed = (
+  path: NodePath<t.CallExpression>,
   state: TransformState
 ) => {
-  const expressionPath = path.get("expression");
+  const callee = path.node.callee;
 
-  if (!expressionPath || expressionPath.isJSXEmptyExpression()) {
+  // Check if this is a jsx() or jsxDEV() call
+  if (!t.isIdentifier(callee) || !["jsx", "jsxDEV"].includes(callee.name)) {
     return;
   }
 
-  if (!expressionPath.isExpression()) {
+  // jsx(type, props, key) - props is the second argument
+  const propsArg = path.node.arguments[1];
+
+  if (!propsArg || !t.isObjectExpression(propsArg)) {
     return;
   }
 
-  if (isComputedCallExpression(expressionPath, state)) {
-    return;
-  }
+  // Iterate through each property in the props object
+  for (const prop of propsArg.properties) {
+    if (!t.isObjectProperty(prop) || prop.computed) {
+      continue;
+    }
 
-  const callee = getComputedCallee(state);
-  const clonedExpression = t.cloneNode(expressionPath.node, true);
-  const arrow = t.arrowFunctionExpression([], clonedExpression);
-  expressionPath.replaceWith(t.callExpression(callee, [arrow]));
+    // Skip if the value is already wrapped with computed()
+    if (t.isCallExpression(prop.value)) {
+      const valuePath = path.get("arguments.1.properties") as any;
+      const propPath = Array.isArray(valuePath)
+        ? valuePath.find((p: any) => p.node === prop)
+        : null;
+
+      if (propPath && isComputedCallExpression(propPath.get("value"), state)) {
+        continue;
+      }
+    }
+
+    // Wrap the property value with computed()
+    if (t.isExpression(prop.value)) {
+      prop.value = wrapWithComputed(prop.value, state);
+    }
+  }
 };
 
 const visitor: TraverseOptions<TransformState> = {
@@ -238,13 +339,14 @@ const visitor: TraverseOptions<TransformState> = {
       }
     }
   },
-  JSXExpressionContainer(path, state) {
-    wrapExpressionWithComputed(path, state);
+  CallExpression(path, state) {
+    wrapJsxPropsWithComputed(path, state);
   },
 };
 
 /**
- * Traverses an AST and wraps reactive references in JSX with computed().
+ * Traverses an AST and wraps jsx() function call prop values with computed().
+ * Processes JavaScript code that has already been transformed from JSX.
  * @param ast - The parsed AST from parseToAst
  */
 export const traverseToReactive = (ast: ReturnType<typeof parseToAst>) => {

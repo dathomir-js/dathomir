@@ -42,6 +42,9 @@
     "@dathomir/config": "workspace:*"
   },
   "dependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/plugin-transform-react-jsx": "^7.27.1",
+    "@babel/preset-typescript": "^7.28.5",
     "@dathomir/transformer": "workspace:*",
     "unplugin": "^2.3.10"
   }

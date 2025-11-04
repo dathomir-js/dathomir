@@ -8,7 +8,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (
   _options
 ) => ({
   name: "@dathomir/plugin",
-  enforce: "pre",
+  enforce: "post",
   transform: {
     filter: {
       id: {

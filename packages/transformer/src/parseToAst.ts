@@ -1,14 +1,15 @@
 import { parse } from "@babel/parser";
 
 /**
- * Parses JSX/TSX code into a Babel AST.
+ * Parses JavaScript/TypeScript code into a Babel AST.
+ * Expects code that has already been transformed from JSX to JS.
  * @param code - The source code to parse
  * @returns The parsed AST
  */
 export const parseToAst = (code: string) => {
   const ast = parse(code, {
     sourceType: "module",
-    plugins: ["jsx", "typescript"],
+    plugins: ["typescript"],
   });
 
   return ast;

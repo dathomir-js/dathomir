@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 
 import { mount, type VNode } from "../src";
-import { FragmentSymbol } from "../src/jsx-runtime";
 import { signal, computed } from "../src/reactivity";
 
 // Helper to build VNode manually (simulate jsx output)
@@ -10,7 +9,7 @@ const h = (
   p?: Record<string, any>,
   c?: any[],
   k?: any,
-  f?: number
+  f?: number,
 ): VNode => ({ t, p, c, k, f });
 
 describe("mount basic", () => {
@@ -19,31 +18,6 @@ describe("mount basic", () => {
     const container = document.createElement("div");
     mount(vNode, container);
     expect(container.innerHTML).toBe('<div id="root">hello</div>');
-  });
-
-  it("mounts fragment with multiple children", () => {
-    const vNode = h(
-      FragmentSymbol,
-      {},
-      [
-        h("span", {}, ["A"], undefined, 1),
-        " ",
-        h("span", {}, ["B"], undefined, 1),
-      ],
-      undefined,
-      4
-    );
-    const container = document.createElement("div");
-    mount(vNode, container);
-    expect(container.innerHTML).toBe("<span>A</span> <span>B</span>");
-  });
-
-  it("mounts component returning element", () => {
-    const Comp = () => h("p", { class: "x" }, ["ok"], undefined, 1);
-    const vNode = h(Comp, {}, [], undefined, 2);
-    const container = document.createElement("div");
-    mount(vNode, container);
-    expect(container.innerHTML).toBe('<p class="x">ok</p>');
   });
 });
 
@@ -55,7 +29,7 @@ describe("mount reactive props", () => {
       { class: computed(() => cls.value) },
       ["x"],
       undefined,
-      1 | 16
+      1 | 16,
     );
     const container = document.createElement("div");
     mount(vNode, container);
@@ -73,17 +47,17 @@ describe("mount reactive props", () => {
       { style: computed(() => ({ fontSize: size.value + "px" })) },
       ["x"],
       undefined,
-      1 | 16
+      1 | 16,
     );
     const container = document.createElement("div");
     mount(vNode, container);
     expect(container.firstElementChild?.getAttribute("style")).toBe(
-      "font-size: 10px;"
+      "font-size: 10px;",
     );
     size.set(12);
     await Promise.resolve();
     expect(container.firstElementChild?.getAttribute("style")).toBe(
-      "font-size: 12px;"
+      "font-size: 12px;",
     );
   });
 });
@@ -96,7 +70,7 @@ describe("mount reactive child", () => {
       {},
       [computed(() => String(n.value))],
       undefined,
-      1 | 32
+      1 | 32,
     );
     const container = document.createElement("div");
     mount(vNode, container);
@@ -113,7 +87,7 @@ describe("mount reactive child", () => {
       {},
       [computed(() => (mode.value ? "A" : h("span", {}, ["B"], undefined, 1)))],
       undefined,
-      1 | 32
+      1 | 32,
     );
     const container = document.createElement("div");
     mount(vNode, container);
@@ -136,7 +110,7 @@ describe("mount reactive child", () => {
         }),
       ],
       undefined,
-      1 | 32
+      1 | 32,
     );
     const container = document.createElement("div");
     mount(vNode, container);
@@ -150,22 +124,6 @@ describe("mount reactive child", () => {
   });
 });
 
-describe("mount component with reactive inside", () => {
-  it("component returns reactive child", async () => {
-    const count = signal(0);
-    const Child = () =>
-      h("strong", {}, [computed(() => String(count.value))], undefined, 1 | 32);
-    const App = () =>
-      h("div", {}, [h(Child, {}, [], undefined, 2)], undefined, 1);
-    const container = document.createElement("div");
-    mount(h(App, {}, [], undefined, 2), container);
-    expect(container.innerHTML).toBe("<div><strong>0</strong></div>");
-    count.set(2);
-    await Promise.resolve();
-    expect(container.innerHTML).toBe("<div><strong>2</strong></div>");
-  });
-});
-
 describe("mount event listeners", () => {
   it("onClick handler fires", () => {
     let clicked = 0;
@@ -174,7 +132,7 @@ describe("mount event listeners", () => {
       { onClick: () => clicked++ },
       ["click me"],
       undefined,
-      1
+      1,
     );
     const container = document.createElement("div");
     mount(vNode, container);
@@ -196,7 +154,7 @@ describe("mount event listeners", () => {
       },
       [],
       undefined,
-      1
+      1,
     );
     const container = document.createElement("div");
     mount(vNode, container);
@@ -247,7 +205,7 @@ describe("mount event listeners", () => {
       { onMouseover: [() => count1++, () => count2++] },
       ["hover"],
       undefined,
-      1
+      1,
     );
     const container = document.createElement("div");
     mount(vNode, container);
@@ -264,7 +222,7 @@ describe("mount event listeners", () => {
       { onClick: { listener: () => count++, once: true } },
       ["once"],
       undefined,
-      1
+      1,
     );
     const container = document.createElement("div");
     mount(vNode, container);

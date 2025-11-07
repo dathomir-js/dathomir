@@ -1,7 +1,7 @@
 import { signal, computed } from "@dathomir/reactivity";
 import { describe, it, expect } from "vitest";
 
-import { jsx, Fragment, FragmentSymbol } from "../src/jsx-runtime/index";
+import { jsx } from "../src/jsx-runtime/index";
 import { VNodeFlags } from "../src/jsx-runtime/vNode";
 
 // Combined test suite for jsx-runtime VNode generation
@@ -66,48 +66,6 @@ describe("jsx-runtime VNode generation", () => {
         "y",
       ],
       f: VNodeFlags.ELEMENT | VNodeFlags.REACTIVE_CHILD,
-    });
-    expect((node.f! & VNodeFlags.REACTIVE_PROP) === 0).toBe(true);
-  });
-
-  it("Fragment with reactive child and static text", () => {
-    const count = signal(2);
-    const node = jsx(Fragment, {
-      children: [computed(() => count.value), "plain"],
-    });
-    expect(node).toMatchObject({
-      t: FragmentSymbol,
-      c: [
-        expect.objectContaining({
-          __type__: "computed",
-          value: 2,
-          peek: expect.any(Function),
-        }),
-        "plain",
-      ],
-      f: VNodeFlags.FRAGMENT | VNodeFlags.REACTIVE_CHILD,
-    });
-  });
-
-  it("Component node with reactive child", () => {
-    const C = (props?: { children?: unknown; label?: string }) =>
-      jsx("span", { children: props?.children, "data-label": props?.label });
-    const count = signal(3);
-    const node = jsx(C, {
-      children: computed(() => count.value),
-      label: "lbl",
-    });
-    expect(node).toMatchObject({
-      t: C,
-      p: { label: "lbl" },
-      c: [
-        expect.objectContaining({
-          __type__: "computed",
-          value: 3,
-          peek: expect.any(Function),
-        }),
-      ],
-      f: VNodeFlags.COMPONENT | VNodeFlags.REACTIVE_CHILD,
     });
     expect((node.f! & VNodeFlags.REACTIVE_PROP) === 0).toBe(true);
   });

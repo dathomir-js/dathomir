@@ -10,9 +10,7 @@
 import { toUnreactive } from "@dathomir/reactivity";
 import { kebabCase } from "@dathomir/shared"; // style(object) で使用
 
-import { FragmentSymbol } from "../jsx-runtime";
-
-import type { VNode, VNodeChild, ComponentFn } from "@/types";
+import type { VNode, VNodeChild } from "@/types";
 
 /** HTML テキストエスケープ (&, <, >, \", ') */
 function defaultEscape(value: unknown): string {
@@ -138,16 +136,6 @@ function renderVNode(
   escape: (v: unknown) => string,
   opts: RenderToStringOptions
 ): string {
-  // Component
-  if (typeof vNode.t === "function") {
-    const rendered = (vNode.t as ComponentFn)(vNode.p);
-    return renderVNode(rendered, escape, opts);
-  }
-  // Fragment
-  if (vNode.t === FragmentSymbol) {
-    const children = normalizeChildren(vNode.c);
-    return children.map((c) => renderChild(c, escape, opts)).join("");
-  }
   // Host element
   if (typeof vNode.t === "string") {
     const tag = vNode.t;

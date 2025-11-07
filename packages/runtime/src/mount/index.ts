@@ -1,12 +1,11 @@
-import { FragmentSymbol } from "../jsx-runtime";
 import { effect } from "../reactivity";
 
 import { mountChildren } from "./children";
-import { addEventFromProp, eventNameFromProp } from "./events";
+import { addEventFromProp } from "./events";
 import { isReactiveChild } from "./guards";
 import { applyProperty } from "./props";
 
-import type { VNode, ComponentFn } from "@/types";
+import type { VNode } from "@/types";
 
 /**
  * Mount reactive property - wraps property updates in an effect
@@ -14,7 +13,7 @@ import type { VNode, ComponentFn } from "@/types";
 const mountReactiveProp = (
   el: Element,
   key: string,
-  reactive: { value: unknown; peek: () => unknown }
+  reactive: { value: unknown; peek: () => unknown },
 ) => {
   effect(() => {
     applyProperty(el, key, reactive.value);
@@ -25,17 +24,6 @@ const mountReactiveProp = (
  * Core VNode -> Node conversion
  */
 const mountToNode = (vNode: VNode): Node => {
-  // Component
-  if (typeof vNode.t === "function") {
-    const rendered = (vNode.t as ComponentFn)(vNode.p);
-    return mountToNode(rendered);
-  }
-  // Fragment
-  if (vNode.t === FragmentSymbol) {
-    const frag = document.createDocumentFragment();
-    mountChildren(frag, vNode.c, mountToNode);
-    return frag;
-  }
   // Host element
   if (typeof vNode.t === "string") {
     const el = document.createElement(vNode.t);
@@ -45,8 +33,8 @@ const mountToNode = (vNode: VNode): Node => {
       for (const key in props) {
         const value = props[key];
         if (key === "children") continue; // shouldn't exist, but safeguard
-        // Check event props first before reactive prop handling
-        if (eventNameFromProp(key)) {
+        // Check event props first (on* prefix is fastest check)
+        if (key.startsWith("on") && key.length > 2) {
           addEventFromProp(el, key, value);
           continue;
         }

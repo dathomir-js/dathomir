@@ -126,7 +126,7 @@ type dathomirJSX = (
     [key: string]: any;
     children?: dathomirNode;
   } | null,
-  key?: string | number
+  key?: string | number,
 ) => VNode;
 
 type dathomirNode =
@@ -259,9 +259,7 @@ export namespace JSX {
   }
 
   export type Element = VNode;
-  export type ElementType =
-    | keyof IntrinsicElements
-    | ((props: { children?: dathomirNode }) => VNode);
+  export type ElementType = keyof IntrinsicElements;
 
   export interface ElementChildrenAttribute {
     children: {};

@@ -1,5 +1,5 @@
 import { computed, signal } from "@dathomir/core/reactivity";
-import { Fragment, mountToNode } from "@dathomir/core/runtime";
+import {  mountToNode } from "@dathomir/core/runtime";
 import { createCustomElement, Props } from "@dathomir/core";
 
 const {
@@ -49,7 +49,7 @@ const {
     });
 
     return (
-      <Fragment>
+      <div>
         <style>
           {"div { margin: 4px; }"}
         </style>
@@ -57,7 +57,7 @@ const {
         <div>{connectedState.value}</div>
         <div>{constantText}</div>
         <div>{location.value}</div>
-      </Fragment>
+      </div>
     )
   }
 })
@@ -91,7 +91,7 @@ setInterval(() => {
 }, 1000);
 
 const MyApp = (
-  <Fragment>
+  <div>
     {count.value}
     {location.value}
     <my-timer location={location.value} unit="seconds" initValue={count.value} onAnotherEvent={(e) => console.log(e.detail?.info)} />
@@ -108,7 +108,7 @@ const MyApp = (
       {MyButton.value()}
       {MyButton.value()}
     </div>
-  </Fragment>
+  </div>
 )
 
 document.getElementById("app")?.appendChild(mountToNode(MyApp));

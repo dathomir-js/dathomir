@@ -17,11 +17,6 @@ import type { Computed } from "@dathomir/reactivity";
 type Key = string | number;
 
 /**
- * Component function type: accepts props and returns VNode.
- */
-type ComponentFn<P = any> = (props?: P) => VNode;
-
-/**
  * VNode: Virtual node representing JSX element structure.
  * Pure data structure with no side effects (DOM operations happen in mount).
  */
@@ -41,9 +36,9 @@ type VNodeChild =
 
 interface VNode {
   /**
-   * Tag: string (host element), ComponentFn, or FragmentSymbol.
+   * Tag: string (host element).
    */
-  t: string | ComponentFn | symbol;
+  t: string;
 
   /**
    * Props (excluding children). May contain reactive values.
@@ -73,4 +68,4 @@ interface VNode {
   f?: number;
 }
 
-export type { VNode, VNodeChild, ComponentFn, Key };
+export type { VNode, VNodeChild, Key };

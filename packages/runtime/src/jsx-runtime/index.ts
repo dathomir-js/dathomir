@@ -1,6 +1,6 @@
 import { Computed } from "@dathomir/reactivity";
 
-import { FragmentSymbol, VNodeFlags } from "./vNode";
+import { VNodeFlags } from "./vNode";
 
 import { VNodeChild, VNode } from "@/types";
 
@@ -45,19 +45,11 @@ function normalizeChildren(children: unknown): VNodeChild[] {
  * Compute VNode flags based on tag and props/children content.
  */
 function computeFlags(
-  tag: string | Function | symbol,
+  tag: string,
   props: Record<string, any> | null | undefined,
-  children: VNodeChild[]
+  children: VNodeChild[],
 ): number {
-  let flags = 0;
-
-  if (typeof tag === "string") {
-    flags |= VNodeFlags.ELEMENT;
-  } else if (typeof tag === "function") {
-    flags |= VNodeFlags.COMPONENT;
-  } else if (tag === FragmentSymbol) {
-    flags |= VNodeFlags.FRAGMENT;
-  }
+  let flags = VNodeFlags.ELEMENT;
 
   // Check for reactive props
   if (props) {
@@ -84,20 +76,17 @@ function computeFlags(
  * JSX factory: creates VNode (pure data structure, no DOM side effects).
  */
 function jsx(
-  tag: string | Function | symbol,
+  tag: string,
   props: Record<string, any> | null,
-  key?: string | number
+  key?: string | number,
 ): VNode {
-  // Handle Fragment: if tag is Fragment function, use FragmentSymbol instead
-  const actualTag = tag === Fragment ? FragmentSymbol : tag;
-
   const children = normalizeChildren(props?.children);
   const { children: _, ...restProps } = props || {};
 
-  const flags = computeFlags(actualTag, restProps, children);
+  const flags = computeFlags(tag, restProps, children);
 
   return {
-    t: actualTag as any,
+    t: tag,
     p: Object.keys(restProps).length > 0 ? restProps : undefined,
     c: children.length > 0 ? children : undefined,
     k: key,
@@ -107,11 +96,4 @@ function jsx(
 
 const jsxs = jsx;
 
-/**
- * Fragment component (now returns VNode instead of DocumentFragment).
- */
-function Fragment(props: { children?: unknown }): VNode {
-  return jsx(FragmentSymbol, props);
-}
-
-export { jsx, jsxs, Fragment, FragmentSymbol };
+export { jsx, jsxs };

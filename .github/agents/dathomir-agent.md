@@ -1,6 +1,6 @@
 ---
 name: "dathomir agent"
-description: 
+description: github copilot coding agent for dathomir projects
 ---
 
 # Dathomir Agent

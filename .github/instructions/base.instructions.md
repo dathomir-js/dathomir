@@ -1,6 +1,7 @@
 ---
 applyTo: '**'
 priority: 9999
+# latestUpdated: "2025-10-28"
 ---
 
 # dathomir Project Common Instructions

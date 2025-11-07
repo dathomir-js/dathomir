@@ -1,5 +1,5 @@
 ---
-applyTo: '**'
+applyTo: '**/packages/transformer/**'
 priority: 1
 lastUpdated: '2025-10-28'
 ---

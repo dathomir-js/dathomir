@@ -338,7 +338,7 @@ function createSignalNode<T>(initialValue: T): SignalNode<T> {
 }
 
 function createComputedNode<T>(
-  getter: (previousValue?: T) => T
+  getter: (previousValue?: T) => T,
 ): ComputedNode<T> {
   return {
     kind: "computed",

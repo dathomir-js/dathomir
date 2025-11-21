@@ -2,7 +2,7 @@ import { Computed } from "@dathomir/reactivity";
 
 import { VNodeFlags } from "./vNode";
 
-import { VNodeChild, VNode } from "@/types";
+import { VNodeChild, VNode, ComponentFunction } from "@/types";
 
 /**
  * Check if a value is reactive (Signal/Computed).
@@ -74,12 +74,19 @@ function computeFlags(
 
 /**
  * JSX factory: creates VNode (pure data structure, no DOM side effects).
+ * If tag is a function (component), calls it with props and returns the Computed<VNode>.
  */
 function jsx(
-  tag: string,
+  tag: string | ComponentFunction,
   props: Record<string, any> | null,
   key?: string | number,
-): VNode {
+): VNode | Computed<VNode> {
+  // Handle component functions
+  if (typeof tag === "function") {
+    const componentProps = props || {};
+    return tag(componentProps);
+  }
+
   const children = normalizeChildren(props?.children);
   const { children: _, ...restProps } = props || {};
 

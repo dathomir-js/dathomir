@@ -11,7 +11,7 @@ type SignaledProps<P extends PropsDictionary> = {
 type CreateCustomElementParams<
   Emits extends Record<string, (event: CustomEventInit<any>) => any>,
   TagName extends `${string}-${string}`,
-  Props extends PropsDictionary
+  Props extends PropsDictionary,
 > = {
   tagName: TagName;
   props: Props;
@@ -29,7 +29,7 @@ type CreateCustomElementParams<
     props: SignaledProps<Props>;
     emit: <K extends keyof Emits>(
       eventName: K,
-      detail: ReturnType<Emits[K]>
+      detail: ReturnType<Emits[K]>,
     ) => void;
   }) => VNode;
 };
@@ -37,7 +37,7 @@ type CreateCustomElementParams<
 const createCustomElement = <
   const Emits extends Record<string, (event: CustomEventInit<any>) => any>,
   const TagName extends `${string}-${string}`,
-  const Props extends PropsDictionary
+  const Props extends PropsDictionary,
 >({
   tagName,
   props,
@@ -58,7 +58,7 @@ const createCustomElement = <
       [K in keyof Props]: Props[K]["__props_type__"] | undefined;
     } & {
       [K in keyof Emits as CamelCase<`on-${K & string}`>]?: (
-        event: ReturnType<Emits[K]>
+        event: ReturnType<Emits[K]>,
       ) => void;
     };
 
@@ -71,7 +71,7 @@ const createCustomElement = <
         const k = key as keyof Props;
         const attr = this.getAttribute(key) || "";
         this.#props[k] = signal<Props[typeof k]["__props_type__"] | undefined>(
-          attr as any
+          attr as any,
         );
       }
 
@@ -141,7 +141,7 @@ const createCustomElement = <
     attributeChangedCallback(
       name: string,
       oldValue: string | null,
-      newValue: string | null
+      newValue: string | null,
     ) {
       if (!(name in this.#props)) {
         return;
@@ -158,8 +158,8 @@ const createCustomElement = <
             return newValue === "true"
               ? true
               : newValue === "false"
-              ? false
-              : undefined;
+                ? false
+                : undefined;
           case "string":
           case "union":
             return newValue ? newValue : undefined;
@@ -172,36 +172,43 @@ const createCustomElement = <
 
   const customElementName = pascalCase(`${tagName}-element`);
   const CustomElementComponentName = pascalCase(tagName);
-  const CustomElementComponent = computed(
-    () =>
-      (
-        props: {
-          [K in keyof Props]:
-            | Signal<Props[K]["__props_type__"]>
-            | Computed<Props[K]["__props_type__"]>
-            | Props[K]["__props_type__"];
-        } & {
-          [K in keyof Emits as CamelCase<`on-${K & string}`>]?: (
-            event: ReturnType<Emits[K]>
-          ) => void;
-        }
-      ) => {
-        if (!customElements.get(tagName)) {
-          customElements.define(tagName, CustomElement);
-        }
-
-        return jsx(tagName, props);
+  const CustomElementComponent = (
+    props: {
+      [K in keyof Props]:
+        | Signal<Props[K]["__props_type__"]>
+        | Computed<Props[K]["__props_type__"]>
+        | Props[K]["__props_type__"];
+    } & {
+      [K in keyof Emits as CamelCase<`on-${K & string}`>]?: (
+        event: ReturnType<Emits[K]>,
+      ) => void;
+    },
+  ) =>
+    computed(() => {
+      if (!customElements.get(tagName)) {
+        customElements.define(tagName, CustomElement);
       }
-  );
+
+      return jsx(tagName, props) as VNode;
+    });
+
+  type ElementType = typeof CustomElement;
+  type ComponentType = typeof CustomElementComponent;
 
   const value = {
     [customElementName]: CustomElement,
     [CustomElementComponentName]: CustomElementComponent,
-  } as Record<typeof customElementName, typeof CustomElement> &
-    Record<typeof CustomElementComponentName, typeof CustomElementComponent>;
+  } as {
+    [K in typeof customElementName]: ElementType;
+  } & {
+    [K in typeof CustomElementComponentName]: ComponentType;
+  };
 
-  return value as Record<typeof customElementName, typeof CustomElement> &
-    Record<typeof CustomElementComponentName, typeof CustomElementComponent>;
+  return value as {
+    [K in typeof customElementName]: ElementType;
+  } & {
+    [K in typeof CustomElementComponentName]: ComponentType;
+  };
 };
 
 export { createCustomElement };

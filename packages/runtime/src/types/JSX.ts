@@ -259,7 +259,9 @@ export namespace JSX {
   }
 
   export type Element = VNode;
-  export type ElementType = keyof IntrinsicElements;
+  export type ElementType =
+    | keyof IntrinsicElements
+    | ((props?: any) => Computed<VNode>);
 
   export interface ElementChildrenAttribute {
     children: {};

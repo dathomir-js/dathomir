@@ -1,104 +1,43 @@
-import "./style.css"
-import { computed, signal } from "@dathomir/core/reactivity"
-import { mount } from "@dathomir/core/runtime"
+import { signal } from "@dathomir/core/reactivity";
+import { mount } from "@dathomir/core/runtime";
+import { MyTimer } from "./components/MyTimer";
+import { Component } from "./components/Component";
+import { AppButton } from "./components/Button";
 
-const todo = signal<{
-  userId: number
-  id: number
-  title: string
-  body?: string
-} | undefined>(undefined)
+const count = signal(0);
 
-const postStatus = signal<"idle" | "loading" | "error" | "success">("idle")
+setInterval(() => {
+  count.set(prev => prev + 1);
+}, 1000);
 
-const postStatusText = computed(() => {
-  switch (postStatus.value) {
-    case "idle":
-      return "Idle"
-    case "loading":
-      return "Loading..."
-    case "error":
-      return <span style={{ color: "red" }}>Error!</span>
-    case "success":
-      return <span style={{ color: "green" }}>Success!</span>
-    default:
-      return ""
-  }
-})
+const location = signal<"JST" | "UTC">("JST");
 
-const updateTodo = async (arg: number) => {
-  postStatus.set("loading")
+setInterval(() => {
+  location.set(prev => prev === "JST" ? "UTC" : "JST");
+}, 1000);
 
-  await fetch(`https://jsonplaceholder.typicode.com/posts/${arg}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      userId: 1,
-      id: arg,
-      title: todo.value?.title,
-      body: todo.value?.body,
-    }),
-    headers: {
-      "Content-type": "application/json; charset=UTF-8",
-    },
-  }).then(res => res.json()).then(json => {
-    postStatus.set("success")
-    console.log(json)
-    todo.set(json)
-
-    setTimeout(() => {
-      postStatus.set("idle")
-    }, 2000)
-  }).catch(() => {
-    postStatus.set("error")
-  })
-
-  return;
-}
-
-const getTodo = async () => {
-  const res = await fetch("https://jsonplaceholder.typicode.com/posts/1").then(res => res.json())
-  todo.set(res)
-  return 0
-}
-await getTodo()
-
-const App = <>
-  <h1>@dathomir/core</h1>
+const MyApp = (
   <div>
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        updateTodo(todo.value?.id || 1)
-      }}
-    >
-      <span>User ID : {todo.value?.userId}</span>
-      <span>ID : {todo.value?.id}</span>
-      <span>Title : {todo.value?.title}</span>
-      <label for="title">
-        <span style={{ marginRight: "0.5rem" }}>
-          Body :
-        </span>
-        <input
-          name="body"
-          type="text"
-          value={todo.value?.body || ""}
-          onInput={(e) => {
-            if (e.target?.value === undefined || todo.value === undefined) {
-              return;
-            }
-            todo.set({ ...todo.value, body: e.target.value})
-          }}
-        />
-      </label>
-      <button type="submit">Submit</button>
-    </form>
     <p>
-      {postStatusText.value}
+      {count.value}
     </p>
+    <p>
+      {location.value}
+    </p>
+    <MyTimer location={location.value} unit="minutes" initValue={count.value} onAnotherEvent={(e) => console.log(e.detail?.info)} />
+    <Component message={location.value} />
+    <Component message={location.value} />
+    {/* <Button onClick={() => alert(`Button clicked! Count is ${count.value}`)} label="Click Me" /> */}
+    <AppButton label={location.value} />
   </div>
-</>
+)
 
-const appElement = document.getElementById("app")
-if (appElement) {
-  mount(App, appElement)
-}
+mount(MyApp, document.getElementById("app")!);
+
+// declare module "@dathomir/core/runtime" {
+//   namespace JSX {
+//     interface IntrinsicElements {
+//       "my-timer": (typeof MyTimerElement)["__props_type__"];
+//     }
+//   }
+// }

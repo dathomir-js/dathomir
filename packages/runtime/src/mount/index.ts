@@ -6,6 +6,7 @@ import { isReactiveChild } from "./guards";
 import { applyProperty } from "./props";
 
 import type { VNode } from "@/types";
+import type { Computed } from "@dathomir/reactivity";
 
 /**
  * Mount reactive property - wraps property updates in an effect
@@ -23,7 +24,49 @@ const mountReactiveProp = (
 /**
  * Core VNode -> Node conversion
  */
-const mountToNode = (vNode: VNode): Node => {
+const mountToNode = (
+  vNode: VNode | Computed<VNode>,
+): Node | DocumentFragment => {
+  // Check if it's a Computed<VNode> (component instance)
+  if (isReactiveChild(vNode)) {
+    const fragment = document.createDocumentFragment();
+    const startMarker = document.createComment("component-start");
+    const endMarker = document.createComment("component-end");
+
+    fragment.appendChild(startMarker);
+    fragment.appendChild(endMarker);
+
+    let currentNodes: Node[] = [];
+
+    effect(() => {
+      const nextVNode = (vNode as Computed<VNode>).value;
+      const nextNode = mountToNode(nextVNode);
+
+      // Remove current nodes
+      for (const node of currentNodes) {
+        if (node.parentNode) {
+          node.parentNode.removeChild(node);
+        }
+      }
+      currentNodes = [];
+
+      // Insert new nodes between markers
+      if (endMarker.parentNode) {
+        const nodes =
+          nextNode instanceof DocumentFragment
+            ? Array.from(nextNode.childNodes)
+            : [nextNode];
+
+        for (const node of nodes) {
+          endMarker.parentNode.insertBefore(node, endMarker);
+          currentNodes.push(node);
+        }
+      }
+    });
+
+    return fragment;
+  }
+
   // Host element
   if (typeof vNode.t === "string") {
     const el = document.createElement(vNode.t);
@@ -55,7 +98,7 @@ const mountToNode = (vNode: VNode): Node => {
 /**
  * Public API: mount a VNode tree into a container element
  */
-const mount = (vNode: VNode, container: Element) => {
+const mount = (vNode: VNode | Computed<VNode>, container: Element) => {
   const node = mountToNode(vNode);
   container.appendChild(node);
   return node;

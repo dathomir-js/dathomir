@@ -17,6 +17,13 @@ import type { Computed } from "@dathomir/reactivity";
 type Key = string | number;
 
 /**
+ * Component function type: accepts props and returns a Computed<VNode>.
+ * The component body runs once on initial call, allowing local state (signals)
+ * to persist across reactive re-renders of the returned VNode.
+ */
+type ComponentFunction<P = any> = (props: P) => Computed<VNode>;
+
+/**
  * VNode: Virtual node representing JSX element structure.
  * Pure data structure with no side effects (DOM operations happen in mount).
  */
@@ -68,4 +75,4 @@ interface VNode {
   f?: number;
 }
 
-export type { VNode, VNodeChild, Key };
+export type { VNode, VNodeChild, Key, ComponentFunction };

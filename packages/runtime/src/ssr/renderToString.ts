@@ -11,6 +11,7 @@ import { toUnreactive } from "@dathomir/reactivity";
 import { kebabCase } from "@dathomir/shared"; // style(object) で使用
 
 import type { VNode, VNodeChild } from "@/types";
+import type { Computed } from "@dathomir/reactivity";
 
 /** HTML テキストエスケープ (&, <, >, \", ') */
 function defaultEscape(value: unknown): string {
@@ -51,7 +52,7 @@ const VOID_ELEMENTS = new Set([
 function serializeProps(
   props: Record<string, any> | undefined,
   escape: (v: unknown) => string,
-  attrFilter?: (key: string, value: unknown) => boolean
+  attrFilter?: (key: string, value: unknown) => boolean,
 ): string {
   if (!props) return "";
   let out = "";
@@ -97,6 +98,17 @@ function isVNode(value: unknown): value is VNode {
   return !!value && typeof value === "object" && "t" in value;
 }
 
+function isReactive(value: unknown): value is Computed<unknown> {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "__type__" in value &&
+    (value as any).__type__ === "computed" &&
+    "value" in value &&
+    "peek" in value
+  );
+}
+
 function normalizeChildren(children: VNodeChild[] | undefined): VNodeChild[] {
   if (!children) return [];
   return children.flatMap((ch) => {
@@ -108,8 +120,14 @@ function normalizeChildren(children: VNodeChild[] | undefined): VNodeChild[] {
 function renderChild(
   child: VNodeChild,
   escape: (v: unknown) => string,
-  opts: RenderToStringOptions
+  opts: RenderToStringOptions,
 ): string {
+  // Check if reactive first, then unwrap
+  if (isReactive(child)) {
+    const unwrapped = toUnreactive(child);
+    return renderChild(unwrapped as VNodeChild, escape, opts);
+  }
+
   // VNode はそのまま、その他は reactive unwrap
   const staticVal = isVNode(child) ? child : toUnreactive(child);
   // Primitive text
@@ -134,7 +152,7 @@ function renderChild(
 function renderVNode(
   vNode: VNode,
   escape: (v: unknown) => string,
-  opts: RenderToStringOptions
+  opts: RenderToStringOptions,
 ): string {
   // Host element
   if (typeof vNode.t === "string") {
@@ -156,8 +174,21 @@ function renderVNode(
 /**
  * Convert a VNode tree to HTML string (SSR initial version).
  */
-function renderToString(vNode: VNode, options?: RenderToStringOptions): string {
+function renderToString(
+  vNode: VNode | Computed<VNode>,
+  options?: RenderToStringOptions,
+): string {
   const escape = options?.escape ?? defaultEscape;
+
+  // If vNode is a Computed<VNode>, unwrap it
+  if (isReactive(vNode)) {
+    const unwrapped = toUnreactive(vNode);
+    if (isVNode(unwrapped)) {
+      return renderVNode(unwrapped, escape, options || {});
+    }
+    return "";
+  }
+
   return renderVNode(vNode, escape, options || {});
 }
 

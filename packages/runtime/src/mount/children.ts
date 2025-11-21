@@ -3,6 +3,48 @@ import { effect } from "../reactivity";
 import { isReactiveChild } from "./guards";
 
 import type { VNode, VNodeChild } from "@/types";
+import type { Computed } from "@dathomir/reactivity";
+
+/**
+ * Helper to flatten children into DOM nodes.
+ * Handles arrays, primitives, reactive values, and VNodes.
+ */
+const flattenToNodes = (
+  val: unknown,
+  mountToNode: (vnode: VNode | Computed<VNode>) => Node | DocumentFragment,
+  result: Node[],
+) => {
+  if (val === null || val === undefined || val === false) return;
+
+  if (Array.isArray(val)) {
+    for (let i = 0; i < val.length; i++) {
+      flattenToNodes(val[i], mountToNode, result);
+    }
+    return;
+  }
+
+  if (typeof val === "string" || typeof val === "number") {
+    result.push(document.createTextNode(String(val)));
+    return;
+  }
+
+  // Handle reactive values (computed wrapped)
+  if (isReactiveChild(val)) {
+    flattenToNodes(val.value, mountToNode, result);
+    return;
+  }
+
+  if (typeof val === "object" && (val as any).t) {
+    // VNode
+    result.push(mountToNode(val as VNode));
+    return;
+  }
+
+  if (val instanceof Node) {
+    result.push(val);
+    return;
+  }
+};
 
 /**
  * Mount children (static + reactive) with range anchor for reactive nodes.
@@ -11,7 +53,7 @@ import type { VNode, VNodeChild } from "@/types";
 const mountChildren = (
   parent: Element | DocumentFragment,
   children: VNodeChild[] | undefined,
-  mountToNode: (vnode: VNode) => Node
+  mountToNode: (vnode: VNode | Computed<VNode>) => Node | DocumentFragment,
 ) => {
   if (!children || children.length === 0) return;
   for (const child of children) {
@@ -64,26 +106,21 @@ const mountChildren = (
           cleanup();
           return;
         }
-        const produce = (val: unknown): Node[] => {
-          if (Array.isArray(val)) return val.flatMap(produce);
-          if (typeof val === "string" || typeof val === "number")
-            return [document.createTextNode(String(val))];
-          if (val === null || val === undefined || val === false) return [];
-          if (typeof val === "object" && val && (val as any).t) {
-            // VNode
-            return [mountToNode(val as VNode)];
-          }
-          if (val instanceof Node) return [val];
-          return [];
-        };
+        const nextNodes: Node[] = [];
+        flattenToNodes(v, mountToNode, nextNodes);
         cleanup();
-        const nextNodes = produce(v);
         insertNodes(nextNodes);
       });
       continue;
     }
     if (typeof child === "string" || typeof child === "number") {
       parent.appendChild(document.createTextNode(String(child)));
+      continue;
+    }
+    // Handle reactive child at top level
+    if (Array.isArray(child)) {
+      // Process array elements that might be reactive
+      mountChildren(parent, child, mountToNode);
       continue;
     }
     if (typeof child === "object" && child && (child as any).t) {

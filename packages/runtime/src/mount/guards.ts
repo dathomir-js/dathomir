@@ -5,9 +5,7 @@ import type { Computed } from "@dathomir/reactivity";
  * Runtime reactive predicate - checks if a value is a Computed node.
  * Optimized: checks __type__ first as it's the fastest discriminator.
  */
-export const isReactiveChild = (
-  value: VNodeChild,
-): value is Computed<unknown> => {
+export const isReactiveChild = (value: unknown): value is Computed<unknown> => {
   if (value == null || typeof value !== "object") return false;
   const type = (value as any).__type__;
   return type === "computed";

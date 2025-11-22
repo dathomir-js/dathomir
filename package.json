@@ -17,6 +17,7 @@
     "release:all": "nr p:shared release && nr p:reactivity release && nr p:runtime release && nr p:core release && nr p:transformer release && nr p:plugin release"
   },
   "license": "MPL-2.0",
+  "packageManager": "pnpm@10.17.1",
   "devDependencies": {
     "concurrently": "^9.2.1"
   }

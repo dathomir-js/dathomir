@@ -2,6 +2,9 @@
   "name": "@dathomir/config",
   "version": "0.0.0",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "tsc": "./bin/tsc.js",

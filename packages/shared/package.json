@@ -1,7 +1,7 @@
 {
   "name": "@dathomir/shared",
   "description": "dathomir shared package",
-  "version": "0.0.1-beta.1",
+  "version": "0.0.0",
   "private": false,
   "type": "module",
   "license": "MPL-2.0",
@@ -36,10 +36,11 @@
     "dev": "tsdown --watch",
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint"
+    "lint": "oxlint",
+    "release": "rlse"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@dathomir/config": "workspace:*"
+    "@dathomir/config": "workspace:*",
+    "@takuma-ru/rlse": "catalog:"
   }
 }

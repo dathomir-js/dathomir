@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    '@takuma-ru/rlse':
+      specifier: 0.0.1-beta.8
+      version: 0.0.1-beta.8
     '@vitest/browser-playwright':
       specifier: 4.0.4
       version: 4.0.4
@@ -90,6 +93,9 @@ importers:
       '@dathomir/config':
         specifier: workspace:*
         version: link:../../config
+      '@takuma-ru/rlse':
+        specifier: 'catalog:'
+        version: 0.0.1-beta.8
 
   packages/plugin:
     dependencies:
@@ -112,6 +118,9 @@ importers:
       '@dathomir/config':
         specifier: workspace:*
         version: link:../../config
+      '@takuma-ru/rlse':
+        specifier: 'catalog:'
+        version: 0.0.1-beta.8
 
   packages/reactivity:
     dependencies:
@@ -122,6 +131,9 @@ importers:
       '@dathomir/config':
         specifier: workspace:*
         version: link:../../config
+      '@takuma-ru/rlse':
+        specifier: 'catalog:'
+        version: 0.0.1-beta.8
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.0.4(@vitest/browser@4.0.4(vite@7.1.9(jiti@2.6.1))(vitest@4.0.4))(vitest@4.0.4)
@@ -141,6 +153,9 @@ importers:
       '@dathomir/config':
         specifier: workspace:*
         version: link:../../config
+      '@takuma-ru/rlse':
+        specifier: 'catalog:'
+        version: 0.0.1-beta.8
       '@vitest/browser-playwright':
         specifier: 'catalog:'
         version: 4.0.4(playwright@1.56.1)(vite@7.1.9(jiti@2.6.1))(vitest@4.0.4)
@@ -159,6 +174,9 @@ importers:
       '@dathomir/config':
         specifier: workspace:*
         version: link:../../config
+      '@takuma-ru/rlse':
+        specifier: 'catalog:'
+        version: 0.0.1-beta.8
 
   packages/transformer:
     dependencies:
@@ -178,6 +196,9 @@ importers:
       '@dathomir/config':
         specifier: workspace:*
         version: link:../../config
+      '@takuma-ru/rlse':
+        specifier: 'catalog:'
+        version: 0.0.1-beta.8
       '@types/babel__generator':
         specifier: ^7.27.0
         version: 7.27.0
@@ -906,6 +927,10 @@ packages:
   '@standard-schema/spec@1.0.0':
     resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
 
+  '@takuma-ru/rlse@0.0.1-beta.8':
+    resolution: {integrity: sha512-YbqMM+aoIIEJ7xWqlByJ9BIv5IiSmD6aPkNDLdnrCGXV3lFZokziJH9mLTo3Bj2L1EVPw49Zeab5HRRiFCEtTg==}
+    hasBin: true
+
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
@@ -1164,6 +1189,10 @@ packages:
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
 
+  commander@12.1.0:
+    resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
+    engines: {node: '>=18'}
+
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
@@ -1171,6 +1200,10 @@ packages:
     resolution: {integrity: sha512-fsfrO0MxV64Znoy8/l1vVIjjHa29SZyyqPgQBwhiDcaW8wJc2W3XWVOGx4M3oJBnv/zdUZIIp1gDeS98GzP8Ng==}
     engines: {node: '>=18'}
     hasBin: true
+
+  consola@3.4.2:
+    resolution: {integrity: sha512-5IKcdX0nnYavi6G7TtOhwkYzyjfJlatbjMjuLSfE2kYT5pMDOilZ4OvMhi637CcDICTmz3wARPoyhqyX1Y+XvA==}
+    engines: {node: ^14.18.0 || >=16.10.0}
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
@@ -2449,6 +2482,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@babel/code-frame@7.27.1':
@@ -3038,6 +3074,13 @@ snapshots:
 
   '@standard-schema/spec@1.0.0': {}
 
+  '@takuma-ru/rlse@0.0.1-beta.8':
+    dependencies:
+      commander: 12.1.0
+      consola: 3.4.2
+      semver: 7.7.3
+      zod: 3.25.76
+
   '@tybys/wasm-util@0.10.1':
     dependencies:
       tslib: 2.8.1
@@ -3375,6 +3418,8 @@ snapshots:
 
   color-name@1.1.4: {}
 
+  commander@12.1.0: {}
+
   concat-map@0.0.1: {}
 
   concurrently@9.2.1:
@@ -3385,6 +3430,8 @@ snapshots:
       supports-color: 8.1.1
       tree-kill: 1.2.2
       yargs: 17.7.2
+
+  consola@3.4.2: {}
 
   convert-source-map@2.0.0: {}
 
@@ -4804,3 +4851,5 @@ snapshots:
       yargs-parser: 21.1.1
 
   yocto-queue@0.1.0: {}
+
+  zod@3.25.76: {}

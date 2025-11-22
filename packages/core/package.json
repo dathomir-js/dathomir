@@ -1,7 +1,7 @@
 {
   "name": "@dathomir/core",
   "description": "dathomir package",
-  "version": "0.0.1-beta.1",
+  "version": "0.0.0",
   "private": false,
   "type": "module",
   "license": "MPL-2.0",
@@ -63,10 +63,12 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "test": "vitest run --coverage",
-    "version": "printf '\\033[1;36m%-10s | %-10s | %-10s\\033[0m\\n' tool version which; printf '%-10s | %-10s | %-10s\\n' ---------- ---------- ----------; printf '%-10s | %-10s | %-10s\\n' '@antfu/ni' '' \"$(which ni)\"; printf '%-10s | %-10s | %-10s\\n' node \"$(node -v)\" \"$(which node)\"; printf '%-10s | %-10s | %-10s\\n' pnpm \"v$(pnpm -v)\" \"$(which pnpm)\""
+    "version": "printf '\\033[1;36m%-10s | %-10s | %-10s\\033[0m\\n' tool version which; printf '%-10s | %-10s | %-10s\\n' ---------- ---------- ----------; printf '%-10s | %-10s | %-10s\\n' '@antfu/ni' '' \"$(which ni)\"; printf '%-10s | %-10s | %-10s\\n' node \"$(node -v)\" \"$(which node)\"; printf '%-10s | %-10s | %-10s\\n' pnpm \"v$(pnpm -v)\" \"$(which pnpm)\"",
+    "release": "rlse"
   },
   "devDependencies": {
-    "@dathomir/config": "workspace:*"
+    "@dathomir/config": "workspace:*",
+    "@takuma-ru/rlse": "catalog:"
   },
   "dependencies": {
     "@dathomir/reactivity": "workspace:*",

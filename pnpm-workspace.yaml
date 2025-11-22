@@ -1,11 +1,10 @@
-# yaml-language-server: schema: https://raw.githubusercontent.com/pnpm/pnpm/main/schemas/workspace.yaml
-
 packages:
   - packages/**
   - config
   - playgrounds/**
 
 catalog:
+  '@takuma-ru/rlse': 0.0.1-beta.8
   '@vitest/browser-playwright': 4.0.4
   '@vitest/coverage-v8': 4.0.4
   eslint: 9.38.0

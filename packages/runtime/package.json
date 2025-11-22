@@ -1,7 +1,7 @@
 {
   "name": "@dathomir/runtime",
   "description": "dathomir runtime package",
-  "version": "0.0.1-beta.1",
+  "version": "0.0.0",
   "private": false,
   "type": "module",
   "license": "MPL-2.0",
@@ -58,7 +58,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint && eslint .",
     "test": "vitest run --coverage",
-    "bench": "vitest bench --run --config vitest.bench.config.ts"
+    "bench": "vitest bench --run --config vitest.bench.config.ts",
+    "release": "rlse"
   },
   "dependencies": {
     "@dathomir/reactivity": "workspace:*",
@@ -66,6 +67,7 @@
   },
   "devDependencies": {
     "@dathomir/config": "workspace:*",
+    "@takuma-ru/rlse": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "playwright": "^1.56.1",

@@ -13,7 +13,8 @@
     "p:transformer": "pnpm --filter @dathomir/transformer",
     "p:shared": "pnpm --filter @dathomir/shared",
     "pg:vanilla": "pnpm --filter @playgrounds/vanilla",
-    "version": "printf '\\033[1;36m%-10s | %-10s | %-10s\\033[0m\\n' tool version which; printf '%-10s | %-10s | %-10s\\n' ---------- ---------- ----------; printf '%-10s | %-10s | %-10s\\n' '@antfu/ni' '' \"$(which ni)\"; printf '%-10s | %-10s | %-10s\\n' node \"$(node -v)\" \"$(which node)\"; printf '%-10s | %-10s | %-10s\\n' pnpm \"v$(pnpm -v)\" \"$(which pnpm)\""
+    "version": "printf '\\033[1;36m%-10s | %-10s | %-10s\\033[0m\\n' tool version which; printf '%-10s | %-10s | %-10s\\n' ---------- ---------- ----------; printf '%-10s | %-10s | %-10s\\n' '@antfu/ni' '' \"$(which ni)\"; printf '%-10s | %-10s | %-10s\\n' node \"$(node -v)\" \"$(which node)\"; printf '%-10s | %-10s | %-10s\\n' pnpm \"v$(pnpm -v)\" \"$(which pnpm)\"",
+    "release:all": "nr p:shared release && nr p:reactivity release && nr p:runtime release && nr p:core release && nr p:transformer release && nr p:plugin release"
   },
   "license": "MPL-2.0",
   "devDependencies": {

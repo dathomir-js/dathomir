@@ -2,7 +2,7 @@
   "name": "@dathomir/reactivity",
   "description": "dathomir reactivity package",
   "type": "module",
-  "version": "0.0.1-beta.1",
+  "version": "0.0.0",
   "private": false,
   "license": "MPL-2.0",
   "repository": {
@@ -37,10 +37,12 @@
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "release": "rlse"
   },
   "devDependencies": {
     "@dathomir/config": "workspace:*",
+    "@takuma-ru/rlse": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   },

@@ -5,5 +5,4 @@ export default defineConfig({
   buildCmd: "pnpm build",
   gitUserName: "github-actions[bot]",
   gitUserEmail: "41898282+github-actions[bot]@users.noreply.github.com",
-  skipStep: ["config"],
 });

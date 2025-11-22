@@ -47,6 +47,7 @@ jobs:
         uses: jdx/mise-action@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          install_args: "node pnpm"
           cache: true
 
       - uses: pnpm/action-setup@v4

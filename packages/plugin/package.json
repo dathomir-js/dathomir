@@ -3,6 +3,9 @@
   "description": "dathomir plugin package",
   "version": "0.0.0",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MPL-2.0",
   "type": "module",
   "repository": {

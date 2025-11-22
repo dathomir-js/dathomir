@@ -1,7 +1,7 @@
 {
   "name": "@dathomir/transformer",
   "description": "dathomir transformer package",
-  "version": "0.0.0",
+  "version": "0.0.1-beta.0",
   "private": false,
   "publishConfig": {
     "access": "public"

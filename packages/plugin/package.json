@@ -4,7 +4,9 @@
   "version": "0.0.1-beta.0",
   "private": false,
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "provenance": true
   },
   "license": "MPL-2.0",
   "type": "module",

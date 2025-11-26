@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "./Common";
+import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 /**
  * Attributes for the `<textarea>` element, which represents a multi-line plain text editing control.

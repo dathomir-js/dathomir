@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "./Common";
+import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 /**
  * Attributes for the `<option>` element, which defines an item in a select, optgroup, or datalist.

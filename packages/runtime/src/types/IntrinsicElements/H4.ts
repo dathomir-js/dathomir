@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "./Common";
+import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 /**
  * Attributes for the `<h4>` element, which represents a level 4 heading.

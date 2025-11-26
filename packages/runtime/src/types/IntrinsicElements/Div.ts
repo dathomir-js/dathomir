@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "./Common";
+import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 interface DivIntrinsicElements extends CommonIntrinsicElements {}
 

@@ -1,5 +1,6 @@
 import tsParser from '@typescript-eslint/parser';
 import * as importPlugin from 'eslint-plugin-import';
+import noRelativeImportPaths from 'eslint-plugin-no-relative-import-paths';
 import oxlint from 'eslint-plugin-oxlint';
 import globals from 'globals';
 
@@ -29,7 +30,7 @@ export const eslint = () => {
             groups: ['builtin', 'external', 'parent', 'sibling', 'index', 'object', 'type'],
             pathGroups: [
               {
-                pattern: '@src/**',
+                pattern: '@/**',
                 group: 'parent',
                 position: 'before',
               },
@@ -41,6 +42,31 @@ export const eslint = () => {
             'newlines-between': 'always',
           },
         ],
+        "import/no-relative-parent-imports": "error",
+        "no-restricted-imports": ["error", { "patterns": ["../*"] }]
+      },
+    },
+    {
+      plugins: {
+        'no-relative-import-paths': noRelativeImportPaths,
+      },
+      rules: {
+        'no-relative-import-paths/no-relative-import-paths': [
+          'error',
+          {
+            allowSameFolder: false,
+            rootDir: 'src',
+            prefix: '@/',
+          }
+        ]
+      },
+    },
+    {
+      files: ["test/**"],
+      rules: {
+        "import/no-relative-parent-imports": "off",
+        "no-restricted-imports": "off",
+        "no-relative-import-paths/no-relative-import-paths": "off",
       },
     },
     // ...oxlint.buildFromOxlintConfigFile(`${cwd()}/.oxlintrc.json`),

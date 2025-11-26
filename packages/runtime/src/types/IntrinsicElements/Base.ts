@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "./Common";
+import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 /**
  * Attributes supported by the `<base>` element for resolving relative URLs.

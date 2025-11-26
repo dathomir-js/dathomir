@@ -1,10 +1,9 @@
 import { Computed } from "@dathomir/reactivity";
 
-import { VNodeFlags } from "./vNode";
-import { isReactive } from "../utils";
-
-import { VNodeChild, VNode, ComponentFunction, dathomirNode } from "@/types";
-export type { JSX } from "@/types";
+import { dathomirNode } from "@/jsx-runtime";
+import { VNodeFlags } from "@/jsx-runtime/vNode";
+import { ComponentFunction, VNode, VNodeChild } from "@/types";
+import { isReactive } from "@/utils";
 
 const FragmentSymbol = Symbol.for("dathomir.fragment");
 export const Fragment = FragmentSymbol as unknown as ComponentFunction<{

@@ -1,4 +1,4 @@
-import { normalizeStyle } from "../utils";
+import { normalizeStyle } from "@/utils";
 
 /**
  * Apply a non-reactive property to a host element.

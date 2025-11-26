@@ -1,11 +1,12 @@
+import { resolve } from "node:path";
+
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
-import path from "node:path";
 
 export default defineConfig({
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@/": resolve(__dirname, "./src/"),
     },
   },
   test: {

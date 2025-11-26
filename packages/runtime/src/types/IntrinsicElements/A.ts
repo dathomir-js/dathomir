@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "./Common";
+import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 type ATarget = "_self" | "_blank" | "_parent" | "_top" | (string & {});
 
@@ -38,4 +38,4 @@ interface AIntrinsicElements extends CommonIntrinsicElements {
   referrerPolicy?: AReferrerPolicy;
 }
 
-export { AIntrinsicElements, ATarget, AReferrerPolicy };
+export { AIntrinsicElements, AReferrerPolicy, ATarget };

@@ -1,11 +1,10 @@
 import { toUnreactive } from "@dathomir/reactivity";
 
-import { isReactive, isVNode, normalizeStyle, VOID_ELEMENTS } from "../utils";
-
-import type { VNode, VNodeChild } from "@/types";
-import type { Computed } from "@dathomir/reactivity";
-
 import { Fragment } from "@/jsx-runtime/index";
+import type { VNode, VNodeChild } from "@/types";
+import { isReactive, isVNode, normalizeStyle, VOID_ELEMENTS } from "@/utils";
+
+import type { Computed } from "@dathomir/reactivity";
 
 /** HTML テキストエスケープ (&, <, >, \", ') */
 function defaultEscape(value: unknown): string {
@@ -142,5 +141,5 @@ function renderToString(
   return renderVNode(vNode, escape, options || {});
 }
 
-export type { RenderToStringOptions };
 export { renderToString };
+export type { RenderToStringOptions };

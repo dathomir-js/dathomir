@@ -20,7 +20,8 @@
     "outDir": "${configDir}/dist",
     "paths": {
       "@/*": ["${configDir}/src/*"]
-    }
+    },
+    "types": ["@types/node"]
   },
   "include": ["${configDir}/src"],
   "exclude": ["${configDir}/dist", "${configDir}/node_modules"]

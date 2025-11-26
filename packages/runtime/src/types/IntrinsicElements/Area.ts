@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "./Common";
+import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 type AreaTarget = "_self" | "_blank" | "_parent" | "_top" | (string & {});
 

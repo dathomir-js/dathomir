@@ -1,12 +1,11 @@
-import { Fragment } from "../jsx-runtime";
-import { effect } from "../reactivity";
-import { isReactiveChild } from "../utils";
-
-import { mountChildren } from "./children";
-import { addEventFromProp } from "./events";
-import { applyProperty } from "./props";
-
+import { Fragment } from "@/jsx-runtime";
+import { mountChildren } from "@/mount/children";
+import { addEventFromProp } from "@/mount/events";
+import { applyProperty } from "@/mount/props";
+import { effect } from "@/reactivity";
 import type { VNode } from "@/types";
+import { isReactiveChild } from "@/utils";
+
 import type { Computed } from "@dathomir/reactivity";
 
 /**
@@ -113,4 +112,4 @@ const mount = (vNode: VNode | Computed<VNode>, container: Element) => {
   return node;
 };
 
-export { mount, mountToNode, mountReactiveProp };
+export { mount, mountReactiveProp, mountToNode };

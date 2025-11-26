@@ -1,5 +1,6 @@
-import { effect } from "../reactivity";
-import { eventNameFromProp, isReactiveChild } from "../utils";
+import { effect } from "@dathomir/reactivity";
+
+import { eventNameFromProp, isReactiveChild } from "@/utils";
 
 /**
  * Check if value is EventListenerObject (has handleEvent method)
@@ -157,4 +158,4 @@ const addEventFromProp = (el: Element, propKey: string, value: unknown) => {
   }
 };
 
-export { eventNameFromProp, addEventFromProp };
+export { addEventFromProp, eventNameFromProp };

@@ -72,13 +72,17 @@
     "github.copilot.nextEditSuggestions.enabled": true,
     "editor.codeActionsOnSave": {
       "source.fixAll.oxc": "explicit",
-      "source.fixAll.eslint": "explicit"
+      "source.fixAll.eslint": "explicit",
+      "source.addMissingImports.ts": "always",
+      "source.organizeImports": "always"
     },
     "[typescript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "typescript.preferences.importModuleSpecifier": "non-relative"
     },
     "[typescriptreact]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "typescript.preferences.importModuleSpecifier": "non-relative"
     },
     "github.copilot.chat.commitMessageGeneration.instructions": [
       {

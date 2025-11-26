@@ -1,9 +1,8 @@
-import { Fragment } from "../jsx-runtime";
-import { effect } from "../reactivity";
-import { isReactiveChild, isVNode } from "../utils";
+import { Computed, effect } from "@dathomir/reactivity";
 
-import type { VNode, VNodeChild } from "@/types";
-import type { Computed } from "@dathomir/reactivity";
+import { Fragment } from "@/jsx-runtime";
+import { VNode, VNodeChild } from "@/types";
+import { isReactiveChild, isVNode } from "@/utils";
 
 /**
  * Helper to flatten children into DOM nodes.

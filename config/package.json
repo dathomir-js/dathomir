@@ -29,9 +29,11 @@
     "lint": "oxlint && eslint ."
   },
   "dependencies": {
+    "@types/node": "24.2.0",
     "@typescript-eslint/parser": "^8.46.2",
     "eslint": "catalog:",
     "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-no-relative-import-paths": "^1.6.1",
     "eslint-plugin-oxlint": "^1.24.0",
     "globals": "^16.4.0",
     "oxlint": "catalog:",

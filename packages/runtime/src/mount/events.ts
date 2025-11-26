@@ -1,17 +1,5 @@
 import { effect } from "../reactivity";
-
-import { isReactiveChild } from "./guards";
-
-/**
- * Normalize event prop name: onClick -> click, onMouseOver -> mouseover
- */
-const eventNameFromProp = (propKey: string): string | null => {
-  if (!propKey.startsWith("on") || propKey.length < 3) return null;
-  const name = propKey.slice(2); // "onClick" -> "Click"
-  // Convert first char to lowercase, then kebab-case the rest
-  const firstLower = name[0].toLowerCase() + name.slice(1); // "Click" -> "click"
-  return firstLower.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`); // "mouseOver" -> "mouse-over"
-};
+import { eventNameFromProp, isReactiveChild } from "../utils";
 
 /**
  * Check if value is EventListenerObject (has handleEvent method)

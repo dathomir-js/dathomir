@@ -53,12 +53,12 @@ describe("mount reactive props", () => {
     const container = document.createElement("div");
     mount(vNode, container);
     expect(container.firstElementChild?.getAttribute("style")).toBe(
-      "font-size: 10px;",
+      "font-size:10px",
     );
     size.set(12);
     await Promise.resolve();
     expect(container.firstElementChild?.getAttribute("style")).toBe(
-      "font-size: 12px;",
+      "font-size:12px",
     );
   });
 });

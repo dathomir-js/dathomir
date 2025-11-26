@@ -1,6 +1,7 @@
 import { Computed } from "@dathomir/reactivity";
 
 import { VNodeFlags } from "./vNode";
+import { isReactive } from "../utils";
 
 import { VNodeChild, VNode, ComponentFunction, dathomirNode } from "@/types";
 export type { JSX } from "@/types";
@@ -9,20 +10,6 @@ const FragmentSymbol = Symbol.for("dathomir.fragment");
 export const Fragment = FragmentSymbol as unknown as ComponentFunction<{
   children?: dathomirNode;
 }>;
-
-/**
- * Check if a value is reactive (Signal/Computed).
- */
-function isReactive(value: unknown): value is Computed<unknown> {
-  if (value == null || typeof value !== "object") return false;
-  // perform direct property checks on the narrowed value
-  return (
-    "__type__" in value &&
-    value.__type__ === "computed" &&
-    "value" in value &&
-    "peek" in value
-  );
-}
 
 /**
  * Normalize children into VNode array format.

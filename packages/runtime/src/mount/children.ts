@@ -1,7 +1,6 @@
 import { Fragment } from "../jsx-runtime";
 import { effect } from "../reactivity";
-
-import { isReactiveChild } from "./guards";
+import { isReactiveChild, isVNode } from "../utils";
 
 import type { VNode, VNodeChild } from "@/types";
 import type { Computed } from "@dathomir/reactivity";
@@ -35,9 +34,9 @@ const flattenToNodes = (
     return;
   }
 
-  if (typeof val === "object" && (val as any).t) {
+  if (isVNode(val)) {
     // VNode
-    result.push(mountToNode(val as VNode));
+    result.push(mountToNode(val));
     return;
   }
 

@@ -1,7 +1,7 @@
 import { signal, computed } from "@dathomir/reactivity";
 import { describe, it, expect } from "vitest";
 
-import { jsx as _jsx, jsxs as _jsxs } from "../src/jsx-runtime/index"; // mimic compiled output
+import { jsx as _jsx, jsxs as _jsxs, Fragment } from "../src/jsx-runtime/index"; // mimic compiled output
 import { renderToString } from "../src/ssr/renderToString";
 
 describe("renderToString", () => {
@@ -73,6 +73,20 @@ describe("renderToString", () => {
       _jsx("button", { onClick: () => {}, ref: () => {}, type: "button" }),
     );
     expect(html).toBe('<button type="button"></button>');
+  });
+
+  it("renders fragment children", () => {
+    const vNode = _jsx(Fragment, { children: ["A", "B"] });
+    const html = renderToString(vNode);
+    expect(html).toBe("AB");
+  });
+
+  it("renders nested fragments", () => {
+    const vNode = _jsx(Fragment, {
+      children: ["A", _jsx(Fragment, { children: ["B", "C"] }), "D"],
+    });
+    const html = renderToString(vNode);
+    expect(html).toBe("ABCD");
   });
 });
 

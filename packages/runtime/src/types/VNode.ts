@@ -43,9 +43,9 @@ type VNodeChild =
 
 interface VNode {
   /**
-   * Tag: string (host element).
+   * Tag: string (host element) or Symbol (Fragment).
    */
-  t: string;
+  t: string | symbol;
 
   /**
    * Props (excluding children). May contain reactive values.

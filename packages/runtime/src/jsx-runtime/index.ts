@@ -2,7 +2,13 @@ import { Computed } from "@dathomir/reactivity";
 
 import { VNodeFlags } from "./vNode";
 
-import { VNodeChild, VNode, ComponentFunction } from "@/types";
+import { VNodeChild, VNode, ComponentFunction, dathomirNode } from "@/types";
+export type { JSX } from "@/types";
+
+const FragmentSymbol = Symbol.for("dathomir.fragment");
+export const Fragment = FragmentSymbol as unknown as ComponentFunction<{
+  children?: dathomirNode;
+}>;
 
 /**
  * Check if a value is reactive (Signal/Computed).
@@ -45,10 +51,14 @@ function normalizeChildren(children: unknown): VNodeChild[] {
  * Compute VNode flags based on tag and props/children content.
  */
 function computeFlags(
-  tag: string,
+  tag: string | symbol | ComponentFunction,
   props: Record<string, any> | null | undefined,
   children: VNodeChild[],
 ): number {
+  if (tag === FragmentSymbol) {
+    return VNodeFlags.FRAGMENT;
+  }
+
   let flags = VNodeFlags.ELEMENT;
 
   // Check for reactive props
@@ -77,7 +87,7 @@ function computeFlags(
  * If tag is a function (component), calls it with props and returns the Computed<VNode>.
  */
 function jsx(
-  tag: string | ComponentFunction,
+  tag: string | ComponentFunction | symbol,
   props: Record<string, any> | null,
   key?: string | number,
 ): VNode | Computed<VNode> {
@@ -93,7 +103,7 @@ function jsx(
   const flags = computeFlags(tag, restProps, children);
 
   return {
-    t: tag,
+    t: tag as string | symbol,
     p: Object.keys(restProps).length > 0 ? restProps : undefined,
     c: children.length > 0 ? children : undefined,
     k: key,

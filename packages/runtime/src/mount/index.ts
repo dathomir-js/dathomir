@@ -1,3 +1,4 @@
+import { Fragment } from "../jsx-runtime";
 import { effect } from "../reactivity";
 
 import { mountChildren } from "./children";
@@ -64,6 +65,14 @@ const mountToNode = (
       }
     });
 
+    return fragment;
+  }
+
+  // Fragment
+  // Cast Fragment to any because it's typed as ComponentFunction but runtime is symbol
+  if (vNode.t === (Fragment as any)) {
+    const fragment = document.createDocumentFragment();
+    mountChildren(fragment, vNode.c, mountToNode);
     return fragment;
   }
 

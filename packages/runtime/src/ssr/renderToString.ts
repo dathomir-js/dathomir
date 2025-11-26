@@ -1,17 +1,10 @@
-/**
- * SSR rendering: Convert a VNode tree into an HTML string.
- * 実装ポリシー (Phase 1 初期版):
- * - 副作用なし純粋関数
- * - reactive 値は @dathomir/reactivity の toUnreactive で静的化
- * - 危険な on* / ref / style=(object)/boolean/null/undefined の扱いを明示
- * - XSS 対策: テキスト / 属性値に escape を適用
- */
-
 import { toUnreactive } from "@dathomir/reactivity";
-import { kebabCase } from "@dathomir/shared"; // style(object) で使用
+import { kebabCase } from "@dathomir/shared";
 
 import type { VNode, VNodeChild } from "@/types";
 import type { Computed } from "@dathomir/reactivity";
+
+import { Fragment } from "@/jsx-runtime/index";
 
 /** HTML テキストエスケープ (&, <, >, \", ') */
 function defaultEscape(value: unknown): string {
@@ -109,14 +102,6 @@ function isReactive(value: unknown): value is Computed<unknown> {
   );
 }
 
-function normalizeChildren(children: VNodeChild[] | undefined): VNodeChild[] {
-  if (!children) return [];
-  return children.flatMap((ch) => {
-    if (ch === null || ch === undefined || ch === false) return [];
-    return [ch];
-  });
-}
-
 function renderChild(
   child: VNodeChild,
   escape: (v: unknown) => string,
@@ -154,12 +139,18 @@ function renderVNode(
   escape: (v: unknown) => string,
   opts: RenderToStringOptions,
 ): string {
+  // Fragment
+  if (vNode.t === (Fragment as any)) {
+    const children = vNode.c || [];
+    return children.map((c) => renderChild(c, escape, opts)).join("");
+  }
+
   // Host element
   if (typeof vNode.t === "string") {
     const tag = vNode.t;
     const unwrappedProps = toUnreactive(vNode.p);
     const attrs = serializeProps(unwrappedProps, escape, opts.attributeFilter);
-    const children = normalizeChildren(vNode.c);
+    const children = vNode.c || [];
     const inner = VOID_ELEMENTS.has(tag)
       ? ""
       : children.map((c) => renderChild(c, escape, opts)).join("");

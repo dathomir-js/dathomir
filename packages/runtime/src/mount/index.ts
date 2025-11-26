@@ -1,9 +1,9 @@
 import { Fragment } from "../jsx-runtime";
 import { effect } from "../reactivity";
+import { isReactiveChild } from "../utils";
 
 import { mountChildren } from "./children";
 import { addEventFromProp } from "./events";
-import { isReactiveChild } from "./guards";
 import { applyProperty } from "./props";
 
 import type { VNode } from "@/types";

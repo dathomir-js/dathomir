@@ -1,5 +1,6 @@
 import { toUnreactive } from "@dathomir/reactivity";
-import { kebabCase } from "@dathomir/shared";
+
+import { isReactive, isVNode, normalizeStyle, VOID_ELEMENTS } from "../utils";
 
 import type { VNode, VNodeChild } from "@/types";
 import type { Computed } from "@dathomir/reactivity";
@@ -22,24 +23,6 @@ interface RenderToStringOptions {
   /** 将来: 属性フィルタ拡張用 */
   attributeFilter?: (key: string, value: unknown) => boolean;
 }
-
-/** void 要素 (子要素/終了タグ不要) */
-const VOID_ELEMENTS = new Set([
-  "area",
-  "base",
-  "br",
-  "col",
-  "embed",
-  "hr",
-  "img",
-  "input",
-  "link",
-  "meta",
-  "param",
-  "source",
-  "track",
-  "wbr",
-]);
 
 /** 属性シリアライズ: フィルタリングと変換 */
 function serializeProps(
@@ -64,20 +47,11 @@ function serializeProps(
     }
 
     // style object -> kebab-case + escape
-    if (key === "style" && typeof value === "object" && !Array.isArray(value)) {
-      const styleObj = value as Record<string, unknown>;
-      const styleStr = Object.keys(styleObj)
-        .map((prop) => {
-          const cssVal = styleObj[prop];
-          if (cssVal === null || cssVal === undefined || cssVal === false) {
-            return ""; // 削除対象は省略
-          }
-          const name = kebabCase(prop);
-          return `${name}:${String(cssVal)}`;
-        })
-        .filter(Boolean)
-        .join(";");
-      out += ` style="${escape(styleStr)}"`;
+    if (key === "style") {
+      const styleStr = normalizeStyle(value);
+      if (styleStr !== null) {
+        out += ` style="${escape(styleStr)}"`;
+      }
       continue;
     }
 
@@ -85,21 +59,6 @@ function serializeProps(
     out += ` ${key}="${escaped}"`;
   }
   return out;
-}
-
-function isVNode(value: unknown): value is VNode {
-  return !!value && typeof value === "object" && "t" in value;
-}
-
-function isReactive(value: unknown): value is Computed<unknown> {
-  return (
-    !!value &&
-    typeof value === "object" &&
-    "__type__" in value &&
-    (value as any).__type__ === "computed" &&
-    "value" in value &&
-    "peek" in value
-  );
 }
 
 function renderChild(

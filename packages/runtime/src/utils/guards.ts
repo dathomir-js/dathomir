@@ -1,15 +1,18 @@
-import type { VNodeChild } from "@/types";
+import type { VNode, VNodeChild } from "@/types";
 import type { Computed } from "@dathomir/reactivity";
 
-/**
- * Runtime reactive predicate - checks if a value is a Computed node.
- * Optimized: checks __type__ first as it's the fastest discriminator.
- */
-export const isReactiveChild = (value: unknown): value is Computed<unknown> => {
+export const isVNode = (value: unknown): value is VNode => {
+  return !!value && typeof value === "object" && "t" in value;
+};
+
+export const isReactive = (value: unknown): value is Computed<unknown> => {
   if (value == null || typeof value !== "object") return false;
   const type = (value as any).__type__;
   return type === "computed";
 };
+
+// Alias for compatibility
+export const isReactiveChild = isReactive;
 
 /**
  * Unwrap nested reactive values recursively.
@@ -17,11 +20,7 @@ export const isReactiveChild = (value: unknown): value is Computed<unknown> => {
  */
 export const unwrapReactive = (value: unknown): unknown => {
   let v = value;
-  while (
-    v != null &&
-    typeof v === "object" &&
-    isReactiveChild(v as VNodeChild)
-  ) {
+  while (v != null && typeof v === "object" && isReactive(v as VNodeChild)) {
     v = (v as Computed<unknown>).value;
   }
   return v;

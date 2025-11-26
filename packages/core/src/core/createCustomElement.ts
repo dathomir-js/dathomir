@@ -1,5 +1,5 @@
 import { PropsDictionary } from "./Props";
-import { jsx } from "@dathomir/runtime/jsx-runtime";
+import { dathomirNode, jsx } from "@dathomir/runtime/jsx-runtime";
 import { computed, Computed, Signal, signal } from "@dathomir/reactivity";
 import { CamelCase, pascalCase } from "@dathomir/shared";
 import { mountToNode, VNode } from "@dathomir/runtime";
@@ -182,6 +182,8 @@ const createCustomElement = <
       [K in keyof Emits as CamelCase<`on-${K & string}`>]?: (
         event: ReturnType<Emits[K]>,
       ) => void;
+    } & {
+      children?: dathomirNode;
     },
   ) =>
     computed(() => {

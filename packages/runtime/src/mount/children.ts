@@ -1,3 +1,4 @@
+import { Fragment } from "../jsx-runtime";
 import { effect } from "../reactivity";
 
 import { isReactiveChild } from "./guards";
@@ -124,7 +125,13 @@ const mountChildren = (
       continue;
     }
     if (typeof child === "object" && child && (child as any).t) {
-      parent.appendChild(mountToNode(child as VNode));
+      const vNode = child as VNode;
+      // Optimization: Flatten Fragments to avoid DocumentFragment creation
+      if (vNode.t === (Fragment as any)) {
+        mountChildren(parent, vNode.c, mountToNode);
+        continue;
+      }
+      parent.appendChild(mountToNode(vNode));
       continue;
     }
   }

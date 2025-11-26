@@ -261,7 +261,8 @@ export namespace JSX {
   export type Element = VNode;
   export type ElementType =
     | keyof IntrinsicElements
-    | ((props?: any) => Computed<VNode>);
+    | ((props?: any) => Computed<VNode>)
+    | symbol;
 
   export interface ElementChildrenAttribute {
     children: {};

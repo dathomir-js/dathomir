@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { mount, type VNode } from "../src";
+import { jsx, Fragment } from "../src/jsx-runtime";
 import { signal, computed } from "../src/reactivity";
 
 // Helper to build VNode manually (simulate jsx output)
@@ -231,5 +232,23 @@ describe("mount event listeners", () => {
     expect(count).toBe(1);
     btn.click();
     expect(count).toBe(1); // Should not fire again
+  });
+});
+
+describe("Fragment mount", () => {
+  it("mounts fragment children directly to parent", () => {
+    const vNode = jsx(Fragment, { children: ["A", "B"] });
+    const container = document.createElement("div");
+    mount(vNode, container);
+    expect(container.innerHTML).toBe("AB");
+  });
+
+  it("mounts nested fragments", () => {
+    const vNode = jsx(Fragment, {
+      children: ["A", jsx(Fragment, { children: ["B", "C"] }), "D"],
+    });
+    const container = document.createElement("div");
+    mount(vNode, container);
+    expect(container.innerHTML).toBe("ABCD");
   });
 });

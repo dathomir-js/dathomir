@@ -3,6 +3,7 @@
  */
 enum VNodeFlags {
   ELEMENT = 1 << 0, // 1: Host element (div, span, etc.)
+  FRAGMENT = 1 << 1, // 2: Fragment
   TEXT = 1 << 3, // 8: Text node (primitive value)
   REACTIVE_PROP = 1 << 4, // 16: Contains reactive props
   REACTIVE_CHILD = 1 << 5, // 32: Contains reactive children

@@ -1,7 +1,7 @@
 import { signal, computed } from "@dathomir/reactivity";
 import { describe, it, expect } from "vitest";
 
-import { jsx } from "../src/jsx-runtime/index";
+import { jsx, Fragment } from "../src/jsx-runtime/index";
 import { VNodeFlags } from "../src/jsx-runtime/vNode";
 
 // Combined test suite for jsx-runtime VNode generation
@@ -110,6 +110,15 @@ describe("jsx-runtime VNode generation", () => {
         VNodeFlags.ELEMENT |
         VNodeFlags.REACTIVE_PROP |
         VNodeFlags.REACTIVE_CHILD,
+    });
+  });
+
+  it("Fragment VNode generation", () => {
+    const node = jsx(Fragment, { children: ["A", "B"] });
+    expect(node).toMatchObject({
+      t: Fragment,
+      c: ["A", "B"],
+      f: VNodeFlags.FRAGMENT,
     });
   });
 });

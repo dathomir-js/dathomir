@@ -7,18 +7,16 @@ type RemoveFirstOfString<S extends string> = S extends `${string}${infer R}`
   : never;
 type IsUpper<S extends string> = S extends Uppercase<S> ? true : false;
 type IsLower<S extends string> = S extends Lowercase<S> ? true : false;
-type SameLetterCase<
-  X extends string,
-  Y extends string
-> = IsUpper<X> extends IsUpper<Y>
-  ? true
-  : IsLower<X> extends IsLower<Y>
-  ? true
-  : false;
+type SameLetterCase<X extends string, Y extends string> =
+  IsUpper<X> extends IsUpper<Y>
+    ? true
+    : IsLower<X> extends IsLower<Y>
+      ? true
+      : false;
 type CapitalizedWords<
   T extends readonly string[],
   Accumulator extends string = "",
-  Normalize extends boolean | undefined = false
+  Normalize extends boolean | undefined = false,
 > = T extends readonly [infer F extends string, ...infer R extends string[]]
   ? CapitalizedWords<
       R,
@@ -29,7 +27,7 @@ type CapitalizedWords<
 type JoinLowercaseWords<
   T extends readonly string[],
   Joiner extends string,
-  Accumulator extends string = ""
+  Accumulator extends string = "",
 > = T extends readonly [infer F extends string, ...infer R extends string[]]
   ? Accumulator extends ""
     ? JoinLowercaseWords<R, Joiner, `${Accumulator}${Lowercase<F>}`>
@@ -48,95 +46,98 @@ export type CaseOptions = {
 export type SplitByCase<
   T,
   Separator extends string = Splitter,
-  Accumulator extends unknown[] = []
+  Accumulator extends unknown[] = [],
 > = string extends Separator
   ? string[]
   : T extends `${infer F}${infer R}`
-  ? [LastOfArray<Accumulator>] extends [never]
-    ? SplitByCase<R, Separator, [F]>
-    : LastOfArray<Accumulator> extends string
-    ? R extends ""
-      ? SplitByCase<
-          R,
-          Separator,
-          [...RemoveLastOfArray<Accumulator>, `${LastOfArray<Accumulator>}${F}`]
-        >
-      : SameLetterCase<F, FirstOfString<R>> extends true
-      ? F extends Separator
-        ? FirstOfString<R> extends Separator
-          ? SplitByCase<R, Separator, [...Accumulator, ""]>
-          : IsUpper<FirstOfString<R>> extends true
+    ? [LastOfArray<Accumulator>] extends [never]
+      ? SplitByCase<R, Separator, [F]>
+      : LastOfArray<Accumulator> extends string
+        ? R extends ""
           ? SplitByCase<
-              RemoveFirstOfString<R>,
+              R,
               Separator,
-              [...Accumulator, FirstOfString<R>]
+              [
+                ...RemoveLastOfArray<Accumulator>,
+                `${LastOfArray<Accumulator>}${F}`,
+              ]
             >
-          : SplitByCase<R, Separator, [...Accumulator, ""]>
-        : SplitByCase<
-            R,
-            Separator,
-            [
-              ...RemoveLastOfArray<Accumulator>,
-              `${LastOfArray<Accumulator>}${F}`
-            ]
-          >
-      : IsLower<F> extends true
-      ? SplitByCase<
-          RemoveFirstOfString<R>,
-          Separator,
-          [
-            ...RemoveLastOfArray<Accumulator>,
-            `${LastOfArray<Accumulator>}${F}`,
-            FirstOfString<R>
-          ]
-        >
-      : SplitByCase<R, Separator, [...Accumulator, F]>
-    : never
-  : Accumulator extends []
-  ? T extends ""
-    ? []
-    : string[]
-  : Accumulator;
+          : SameLetterCase<F, FirstOfString<R>> extends true
+            ? F extends Separator
+              ? FirstOfString<R> extends Separator
+                ? SplitByCase<R, Separator, [...Accumulator, ""]>
+                : IsUpper<FirstOfString<R>> extends true
+                  ? SplitByCase<
+                      RemoveFirstOfString<R>,
+                      Separator,
+                      [...Accumulator, FirstOfString<R>]
+                    >
+                  : SplitByCase<R, Separator, [...Accumulator, ""]>
+              : SplitByCase<
+                  R,
+                  Separator,
+                  [
+                    ...RemoveLastOfArray<Accumulator>,
+                    `${LastOfArray<Accumulator>}${F}`,
+                  ]
+                >
+            : IsLower<F> extends true
+              ? SplitByCase<
+                  RemoveFirstOfString<R>,
+                  Separator,
+                  [
+                    ...RemoveLastOfArray<Accumulator>,
+                    `${LastOfArray<Accumulator>}${F}`,
+                    FirstOfString<R>,
+                  ]
+                >
+              : SplitByCase<R, Separator, [...Accumulator, F]>
+        : never
+    : Accumulator extends []
+      ? T extends ""
+        ? []
+        : string[]
+      : Accumulator;
 
 export type JoinByCase<T, Joiner extends string> = string extends T
   ? string
   : string[] extends T
-  ? string
-  : T extends string
-  ? SplitByCase<T> extends readonly string[]
-    ? JoinLowercaseWords<SplitByCase<T>, Joiner>
-    : never
-  : T extends readonly string[]
-  ? JoinLowercaseWords<T, Joiner>
-  : never;
+    ? string
+    : T extends string
+      ? SplitByCase<T> extends readonly string[]
+        ? JoinLowercaseWords<SplitByCase<T>, Joiner>
+        : never
+      : T extends readonly string[]
+        ? JoinLowercaseWords<T, Joiner>
+        : never;
 
 export type PascalCase<
   T,
-  Normalize extends boolean | undefined = false
+  Normalize extends boolean | undefined = false,
 > = string extends T
   ? string
   : string[] extends T
-  ? string
-  : T extends string
-  ? SplitByCase<T> extends readonly string[]
-    ? CapitalizedWords<SplitByCase<T>, "", Normalize>
-    : never
-  : T extends readonly string[]
-  ? CapitalizedWords<T, "", Normalize>
-  : never;
+    ? string
+    : T extends string
+      ? SplitByCase<T> extends readonly string[]
+        ? CapitalizedWords<SplitByCase<T>, "", Normalize>
+        : never
+      : T extends readonly string[]
+        ? CapitalizedWords<T, "", Normalize>
+        : never;
 
 export type CamelCase<
   T,
-  Normalize extends boolean | undefined = false
+  Normalize extends boolean | undefined = false,
 > = string extends T
   ? string
   : string[] extends T
-  ? string
-  : Uncapitalize<PascalCase<T, Normalize>>;
+    ? string
+    : Uncapitalize<PascalCase<T, Normalize>>;
 
 export type KebabCase<
   T extends string | readonly string[],
-  Joiner extends string = "-"
+  Joiner extends string = "-",
 > = JoinByCase<T, Joiner>;
 
 export type SnakeCase<T extends string | readonly string[]> = JoinByCase<
@@ -147,22 +148,22 @@ export type SnakeCase<T extends string | readonly string[]> = JoinByCase<
 export type TrainCase<
   T,
   Normalize extends boolean | undefined = false,
-  Joiner extends string = "-"
+  Joiner extends string = "-",
 > = string extends T
   ? string
   : string[] extends T
-  ? string
-  : T extends string
-  ? SplitByCase<T> extends readonly string[]
-    ? CapitalizedWords<SplitByCase<T>, Joiner>
-    : never
-  : T extends readonly string[]
-  ? CapitalizedWords<T, Joiner, Normalize>
-  : never;
+    ? string
+    : T extends string
+      ? SplitByCase<T> extends readonly string[]
+        ? CapitalizedWords<SplitByCase<T>, Joiner>
+        : never
+      : T extends readonly string[]
+        ? CapitalizedWords<T, Joiner, Normalize>
+        : never;
 
 export type FlatCase<
   T extends string | readonly string[],
-  Joiner extends string = ""
+  Joiner extends string = "",
 > = JoinByCase<T, Joiner>;
 
 const NUMBER_CHAR_RE = /\d/;
@@ -178,11 +179,11 @@ export function isUppercase(char = ""): boolean | undefined {
 export function splitByCase<T extends string>(str: T): SplitByCase<T>;
 export function splitByCase<
   T extends string,
-  Separator extends readonly string[]
+  Separator extends readonly string[],
 >(str: T, separators: Separator): SplitByCase<T, Separator[number]>;
 export function splitByCase<
   T extends string,
-  Separator extends readonly string[]
+  Separator extends readonly string[],
 >(str: T, separators?: Separator) {
   const splitters = separators ?? STR_SPLITTERS;
   const parts: string[] = [];
@@ -247,11 +248,11 @@ export function lowerFirst<S extends string>(str: S): Uncapitalize<S> {
 export function pascalCase(): "";
 export function pascalCase<
   T extends string | readonly string[],
-  UserCaseOptions extends CaseOptions = CaseOptions
+  UserCaseOptions extends CaseOptions = CaseOptions,
 >(str: T, opts?: CaseOptions): PascalCase<T, UserCaseOptions["normalize"]>;
 export function pascalCase<
   T extends string | readonly string[],
-  UserCaseOptions extends CaseOptions = CaseOptions
+  UserCaseOptions extends CaseOptions = CaseOptions,
 >(str?: T, opts?: UserCaseOptions) {
   return str
     ? ((Array.isArray(str) ? str : splitByCase(str as string))
@@ -263,11 +264,11 @@ export function pascalCase<
 export function camelCase(): "";
 export function camelCase<
   T extends string | readonly string[],
-  UserCaseOptions extends CaseOptions = CaseOptions
+  UserCaseOptions extends CaseOptions = CaseOptions,
 >(str: T, opts?: UserCaseOptions): CamelCase<T, UserCaseOptions["normalize"]>;
 export function camelCase<
   T extends string | readonly string[],
-  UserCaseOptions extends CaseOptions = CaseOptions
+  UserCaseOptions extends CaseOptions = CaseOptions,
 >(str?: T, opts?: UserCaseOptions) {
   return lowerFirst(pascalCase(str || "", opts)) as CamelCase<
     T,
@@ -277,15 +278,15 @@ export function camelCase<
 
 export function kebabCase(): "";
 export function kebabCase<T extends string | readonly string[]>(
-  str: T
+  str: T,
 ): KebabCase<T>;
 export function kebabCase<
   T extends string | readonly string[],
-  Joiner extends string
+  Joiner extends string,
 >(str: T, joiner: Joiner): KebabCase<T, Joiner>;
 export function kebabCase<
   T extends string | readonly string[],
-  Joiner extends string
+  Joiner extends string,
 >(str?: T, joiner?: Joiner) {
   return str
     ? ((Array.isArray(str) ? str : splitByCase(str as string))
@@ -296,7 +297,7 @@ export function kebabCase<
 
 export function snakeCase(): "";
 export function snakeCase<T extends string | readonly string[]>(
-  str: T
+  str: T,
 ): SnakeCase<T>;
 export function snakeCase<T extends string | readonly string[]>(str?: T) {
   return kebabCase(str || "", "_") as SnakeCase<T>;
@@ -304,7 +305,7 @@ export function snakeCase<T extends string | readonly string[]>(str?: T) {
 
 export function flatCase(): "";
 export function flatCase<T extends string | readonly string[]>(
-  str: T
+  str: T,
 ): FlatCase<T>;
 export function flatCase<T extends string | readonly string[]>(str?: T) {
   return kebabCase(str || "", "") as FlatCase<T>;
@@ -313,11 +314,11 @@ export function flatCase<T extends string | readonly string[]>(str?: T) {
 export function trainCase(): "";
 export function trainCase<
   T extends string | readonly string[],
-  UserCaseOptions extends CaseOptions = CaseOptions
+  UserCaseOptions extends CaseOptions = CaseOptions,
 >(str: T, opts?: UserCaseOptions): TrainCase<T, UserCaseOptions["normalize"]>;
 export function trainCase<
   T extends string | readonly string[],
-  UserCaseOptions extends CaseOptions = CaseOptions
+  UserCaseOptions extends CaseOptions = CaseOptions,
 >(str?: T, opts?: UserCaseOptions) {
   return (Array.isArray(str) ? str : splitByCase(str as string))
     .filter(Boolean)
@@ -331,21 +332,21 @@ const titleCaseExceptions =
 export function titleCase(): "";
 export function titleCase<
   T extends string | readonly string[],
-  UserCaseOptions extends CaseOptions = CaseOptions
+  UserCaseOptions extends CaseOptions = CaseOptions,
 >(
   str: T,
-  opts?: UserCaseOptions
+  opts?: UserCaseOptions,
 ): TrainCase<T, UserCaseOptions["normalize"], " ">;
 export function titleCase<
   T extends string | readonly string[],
-  UserCaseOptions extends CaseOptions = CaseOptions
+  UserCaseOptions extends CaseOptions = CaseOptions,
 >(str?: T, opts?: UserCaseOptions) {
   return (Array.isArray(str) ? str : splitByCase(str as string))
     .filter(Boolean)
     .map((p) =>
       titleCaseExceptions.test(p)
         ? p.toLowerCase()
-        : upperFirst(opts?.normalize ? p.toLowerCase() : p)
+        : upperFirst(opts?.normalize ? p.toLowerCase() : p),
     )
     .join(" ") as TrainCase<T, UserCaseOptions["normalize"]>;
 }

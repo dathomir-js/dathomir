@@ -3,7 +3,7 @@ type FromEntries<T extends [PropertyKey, unknown][]> = {
 };
 
 const fromEntries = <T extends [PropertyKey, unknown][]>(
-  entries: T
+  entries: T,
 ): FromEntries<T> => {
   return entries.reduce((acc, cur) => {
     return {

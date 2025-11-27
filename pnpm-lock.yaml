@@ -9,6 +9,9 @@ catalogs:
     '@takuma-ru/rlse':
       specifier: 0.0.1-beta.8
       version: 0.0.1-beta.8
+    '@types/node':
+      specifier: 24.2.0
+      version: 24.2.0
     '@vitest/browser-playwright':
       specifier: 4.0.4
       version: 4.0.4
@@ -186,6 +189,9 @@ importers:
       '@takuma-ru/rlse':
         specifier: 'catalog:'
         version: 0.0.1-beta.8
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.2.0
 
   packages/transformer:
     dependencies:

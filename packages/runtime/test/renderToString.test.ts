@@ -1,5 +1,5 @@
-import { signal, computed } from "@dathomir/reactivity";
-import { describe, it, expect } from "vitest";
+import { computed, signal } from "@dathomir/reactivity";
+import { describe, expect, it } from "vitest";
 
 import { jsx as _jsx, jsxs as _jsxs, Fragment } from "../src/jsx-runtime/index"; // mimic compiled output
 import { renderToString } from "../src/ssr/renderToString";
@@ -7,28 +7,30 @@ import { renderToString } from "../src/ssr/renderToString";
 describe("renderToString", () => {
   it("escapes string and number children", () => {
     const html = renderToString(_jsxs("div", { children: ["<script>", 10] }));
-    expect(html).toBe("<div>&lt;script&gt;10</div>");
+    expect(html).toBe('<div data-hk="0">&lt;script&gt;10</div>');
   });
 
   it("omits boolean children", () => {
     const html = renderToString(
       _jsxs("span", { children: [true, false, "ok"] }),
     );
-    expect(html).toBe("<span>ok</span>");
+    expect(html).toBe('<span data-hk="0">ok</span>');
   });
 
   it("serializes basic attributes (string/number/boolean true)", () => {
     const html = renderToString(
       _jsx("input", { type: "text", value: "abc", disabled: true, size: 3 }),
     );
-    expect(html).toBe('<input type="text" value="abc" disabled size="3">');
+    expect(html).toBe(
+      '<input data-hk="0" type="text" value="abc" disabled size="3">',
+    );
   });
 
   it("excludes null/undefined/false attributes", () => {
     const html = renderToString(
       _jsx("div", { a: null as any, b: undefined as any, c: false as any }),
     );
-    expect(html).toBe("<div></div>");
+    expect(html).toBe('<div data-hk="0"></div>');
   });
 
   it("serializes style object with kebab-case keys", () => {
@@ -36,13 +38,13 @@ describe("renderToString", () => {
       _jsx("div", { style: { backgroundColor: "red", fontSize: "12px" } }),
     );
     expect(html).toBe(
-      '<div style="background-color:red;font-size:12px"></div>',
+      '<div data-hk="0" style="background-color:red;font-size:12px"></div>',
     );
   });
 
   it("renders void element without closing tag", () => {
     const html = renderToString(_jsx("br", {}));
-    expect(html).toBe("<br>");
+    expect(html).toBe('<br data-hk="0">');
   });
 
   it("unwraps reactive signal/computed values", () => {
@@ -53,31 +55,32 @@ describe("renderToString", () => {
         children: [computed(() => cnt.value), "-", computed(() => dbl.value)],
       }),
     );
-    expect(html).toBe("<div>1-2</div>");
+    expect(html).toBe('<div data-hk="0">1-2</div>');
   });
 
   it("flattens nested array children", () => {
     const html = renderToString(
       _jsxs("div", { children: [["a", ["b"], "c"]] }),
     );
-    expect(html).toBe("<div>abc</div>");
+    expect(html).toBe('<div data-hk="0">abc</div>');
   });
 
   it("renders empty style object as empty attribute value", () => {
     const html = renderToString(_jsx("div", { style: {} }));
-    expect(html).toBe('<div style=""></div>');
+    expect(html).toBe('<div data-hk="0" style=""></div>');
   });
 
   it("excludes dangerous on* and ref attributes", () => {
     const html = renderToString(
       _jsx("button", { onClick: () => {}, ref: () => {}, type: "button" }),
     );
-    expect(html).toBe('<button type="button"></button>');
+    expect(html).toBe('<button data-hk="0" type="button"></button>');
   });
 
   it("renders fragment children", () => {
     const vNode = _jsx(Fragment, { children: ["A", "B"] });
     const html = renderToString(vNode);
+    // Fragment は data-hk を持たず、子のテキストのみ
     expect(html).toBe("AB");
   });
 
@@ -96,32 +99,34 @@ describe("renderToString (extra)", () => {
     const html = renderToString(_jsx("div", { children: '5 < 6 & "x"' }), {
       escape: (v: unknown) => `__${String(v)}__`,
     });
-    expect(html).toBe('<div>__5 < 6 & "x"__</div>');
+    expect(html).toBe('<div data-hk="0">__5 < 6 & "x"__</div>');
   });
   it("applies attributeFilter to remove attributes", () => {
     const html = renderToString(
       _jsx("div", { a: "keep", b: "drop", c: true }),
       { attributeFilter: (k: string) => k !== "b" },
     );
-    expect(html).toBe('<div a="keep" c></div>');
+    expect(html).toBe('<div data-hk="0" a="keep" c></div>');
   });
   it("handles void element with attributes", () => {
     const html = renderToString(_jsx("img", { src: "x.png", alt: "x" }));
-    expect(html).toBe('<img src="x.png" alt="x">');
+    expect(html).toBe('<img data-hk="0" src="x.png" alt="x">');
   });
   it("quotes escaping in attribute values", () => {
     const html = renderToString(_jsx("div", { title: 'He said: "Hi"' }));
-    expect(html).toBe('<div title="He said: &quot;Hi&quot;"></div>');
+    expect(html).toBe(
+      '<div data-hk="0" title="He said: &quot;Hi&quot;"></div>',
+    );
   });
   it("numeric zero attribute value", () => {
     const html = renderToString(_jsx("div", { ["data-count"]: 0 }));
-    expect(html).toBe('<div data-count="0"></div>');
+    expect(html).toBe('<div data-hk="0" data-count="0"></div>');
   });
   it("reactive computed returning array children flattened", () => {
     const a = signal("x");
     const arrComp = computed(() => [a.value, "y"]);
     const html = renderToString(_jsx("div", { children: arrComp }));
-    expect(html).toBe("<div>xy</div>");
+    expect(html).toBe('<div data-hk="0">xy</div>');
   });
   it("style skips falsy entries", () => {
     const html = renderToString(
@@ -134,7 +139,9 @@ describe("renderToString (extra)", () => {
         },
       }),
     );
-    expect(html).toBe('<div style="color:red;line-height:1.2"></div>');
+    expect(html).toBe(
+      '<div data-hk="0" style="color:red;line-height:1.2"></div>',
+    );
   });
   it("attributeFilter blocks true boolean attribute entirely", () => {
     const html = renderToString(
@@ -143,27 +150,29 @@ describe("renderToString (extra)", () => {
         attributeFilter: (k: string) => k !== "required",
       },
     );
-    expect(html).toBe("<input disabled>");
+    expect(html).toBe('<input data-hk="0" disabled>');
   });
   it("empty props object on host element", () => {
     const html = renderToString(_jsx("div", {}));
-    expect(html).toBe("<div></div>");
+    expect(html).toBe('<div data-hk="0"></div>');
   });
   it("attributeFilter removes style attribute entirely", () => {
     const html = renderToString(_jsx("div", { style: { color: "red" } }), {
       attributeFilter: (k: string) => k !== "style",
     });
-    expect(html).toBe("<div></div>");
+    expect(html).toBe('<div data-hk="0"></div>');
   });
   it("array children including vnodes and primitives", () => {
     const html = renderToString(
       _jsxs("div", { children: ["A", [_jsx("span", { children: "B" }), "C"]] }),
     );
-    expect(html).toBe("<div>A<span>B</span>C</div>");
+    // data-hk はルートと span に付与される (span は新しいスコープ)
+    // 先頭テキスト "A" がインデックス0を消費するため span はインデックス1 -> data-hk="0.1"
+    expect(html).toBe('<div data-hk="0">A<span data-hk="0.1">B</span>C</div>');
   });
   it("default escape handles single quotes in text child", () => {
     const html = renderToString(_jsx("div", { children: "Bob's" }));
-    expect(html).toBe("<div>Bob&#39;s</div>");
+    expect(html).toBe('<div data-hk="0">Bob&#39;s</div>');
   });
   it("attributeFilter removes true boolean attribute", () => {
     const html = renderToString(
@@ -172,6 +181,6 @@ describe("renderToString (extra)", () => {
         attributeFilter: (k: string) => k !== "autofocus",
       },
     );
-    expect(html).toBe("<input disabled>");
+    expect(html).toBe('<input data-hk="0" disabled>');
   });
 });

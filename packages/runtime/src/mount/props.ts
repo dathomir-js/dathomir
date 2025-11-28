@@ -13,12 +13,15 @@ const applyProperty = (el: Element, key: string, value: unknown) => {
     }
     return;
   }
-  if (key === "class" || key === "className") {
+  if (key === "class") {
     if (value === false || value === null || value === undefined) {
       el.removeAttribute("class");
     } else {
       el.setAttribute("class", String(value));
     }
+    return;
+  }
+  if (key === "className") {
     return;
   }
   if (key === "style") {

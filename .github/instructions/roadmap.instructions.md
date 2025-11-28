@@ -29,7 +29,11 @@ priority: 10
 	- [x] 1.10. パフォーマンス計測 & ベンチマーク (3.08KB gzip, 1260万 JSX ops/sec, 210万 SSR ops/sec)
 
 [ ] 2. Phase 2 Basic Hydration (再マウント方式)
-	- [ ] 2.1. SSR HTML 上で単純再 mount (差分なし MVP)
+	- [x] 2.1. SSR HTML 上で単純再 mount (差分なし MVP)
+		- [x] hydrate(vNode, container) 関数実装 (packages/runtime/src/hydrate/index.ts)
+		- [x] 公開 API エクスポート (packages/runtime/src/index.ts)
+		- [x] hydrate テスト 13 件追加、100% カバレッジ
+		- [x] Playground デモ (playgrounds/vanilla/hydration-demo.html)
 	- [ ] 2.2. 差分 hydration 用 data-key 仕様草案作成
 
 [ ] 3. Phase 3 Diff Hydration & State Transfer

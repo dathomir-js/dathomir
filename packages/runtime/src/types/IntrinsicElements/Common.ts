@@ -249,7 +249,7 @@ interface CommonEventHandlers {
 interface CommonAttributes {
   // Core Attributes
   /** CSS class names (space-separated if multiple) */
-  className?: string;
+  class?: string;
   /** Specifies a unique id for the element */
   id?: string;
   /** Advisory information for the element (tooltip) */
@@ -355,4 +355,4 @@ interface CommonIntrinsicElements
   extends CommonAttributes,
     CommonEventHandlers {}
 
-export { CommonEventHandlers, CommonAttributes, CommonIntrinsicElements };
+export { CommonAttributes, CommonEventHandlers, CommonIntrinsicElements };

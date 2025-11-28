@@ -11,6 +11,8 @@
   "devDependencies": {
     "@dathomir/core": "workspace:*",
     "@dathomir/plugin": "workspace:*",
+    "@hono/node-server": "^1.19.6",
+    "hono": "^4.10.7",
     "typescript": "~5.9.3",
     "vite": "^7.1.7",
     "vite-plugin-inspect": "^11.3.3"

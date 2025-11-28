@@ -55,6 +55,10 @@
     {
       "name": "🎮 vanilla",
       "path": "./playgrounds/vanilla"
+    },
+    {
+      "name": "🎮 ssr",
+      "path": "./playgrounds/ssr"
     }
   ],
   "settings": {

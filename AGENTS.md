@@ -68,10 +68,11 @@
 
 #### JavaScript
 
-- 公開 API には JSDoc を必ず記載する
-- 重要な処理にはコメントをつける
-- 高パフォーマンスを意識して処理を組み立てる（ただし可読性を著しく下げない範囲で）
-- `async/await` を優先し、`.then()` チェーンは避ける
+- 公開 API には JSDoc を必ず記載する (JSDoc must be present on public APIs)
+- 重要な処理にはコメントをつけるが、不要な冗長コメントは避ける (Keep comments minimal and purposeful)
+- すべてのコードコメント（JSDoc / inline）は英語で記述する (All code comments MUST be in English)
+- 高パフォーマンスを意識して処理を組み立てる（ただし可読性を著しく下げない範囲で） (Optimize without sacrificing clarity)
+- `async/await` を優先し、`.then()` チェーンは避ける (Prefer async/await over promise chains)
 
 ### テスト
 

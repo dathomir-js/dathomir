@@ -1,8 +1,8 @@
-export { signal, effect, computed, batch } from "@dathomir/reactivity";
+export { batch, computed, effect, signal } from "@dathomir/reactivity";
 
 export type {
-  Signal,
   Computed,
   EffectCleanup,
+  Signal,
   SignalUpdate,
 } from "@dathomir/reactivity";

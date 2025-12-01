@@ -368,6 +368,29 @@ flowchart TD
 
 JSX が変換された JavaScript コードを解析し、`jsx()` 呼び出しの props 値を `computed()` でラップするトランスフォーマーを提供する。これにより、リアクティブな値が自動的に追跡される。
 
+#### 重要な動作仕様
+
+**@dathomir/plugin を通した JSX 変換では、動的な値は自動的に `computed()` でラップされます：**
+
+```tsx
+// ソースコード
+<div>{count.value}</div>
+<button onClick={handler} disabled={isDisabled}>Click</button>
+
+// 変換後の JavaScript
+jsx("div", { children: computed(() => count.value) })
+jsx("button", { 
+  onClick: handler,  // イベントハンドラーはラップされない
+  disabled: computed(() => isDisabled),
+  children: "Click"
+})
+```
+
+**テストを書く際の注意点：**
+- テストで `jsx()` を直接呼び出す場合、動的な値は手動で `computed()` でラップする必要がある
+- 静的な値（文字列、数値リテラルなど）はラップ不要
+- イベントハンドラー (`onClick`, `onInput` など) はラップ不要
+
 #### ToDo
 - [ ] ...
 

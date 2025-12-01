@@ -1,5 +1,3 @@
-import { Computed } from "@dathomir/reactivity";
-
 import { AIntrinsicElements } from "@/types/IntrinsicElements/A";
 import { AbbrIntrinsicElements } from "@/types/IntrinsicElements/Abbr";
 import { AddressIntrinsicElements } from "@/types/IntrinsicElements/Address";
@@ -116,27 +114,12 @@ import { UlIntrinsicElements } from "@/types/IntrinsicElements/Ul";
 import { VarIntrinsicElements } from "@/types/IntrinsicElements/Var";
 import { VideoIntrinsicElements } from "@/types/IntrinsicElements/Video";
 import { WbrIntrinsicElements } from "@/types/IntrinsicElements/Wbr";
-import { VNode } from "@/types/VNode";
 
-type PrimitiveChild = string | number | boolean | null | undefined;
+type dathomirJSX = unknown;
 
-type dathomirJSX = (
-  tag: any,
-  props: {
-    [key: string]: any;
-    children?: dathomirNode;
-  } | null,
-  key?: string | number,
-) => VNode;
+type dathomirNode = unknown;
 
-type dathomirNode =
-  | PrimitiveChild
-  | Computed<PrimitiveChild>
-  | VNode
-  | Computed<VNode>
-  | dathomirNode[];
-
-type dathomirElement = VNode;
+type dathomirElement = unknown;
 
 export namespace JSX {
   export interface IntrinsicElements {
@@ -258,15 +241,12 @@ export namespace JSX {
     wbr: WbrIntrinsicElements;
   }
 
-  export type Element = VNode;
-  export type ElementType =
-    | keyof IntrinsicElements
-    | ((props?: any) => Computed<VNode>)
-    | symbol;
+  export type Element = unknown;
+  export type ElementType = unknown;
 
   export interface ElementChildrenAttribute {
     children: {};
   }
 }
 
-export { dathomirJSX, dathomirNode, dathomirElement };
+export { dathomirElement, dathomirJSX, dathomirNode };

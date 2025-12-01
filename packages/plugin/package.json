@@ -46,7 +46,8 @@
   },
   "devDependencies": {
     "@dathomir/config": "workspace:*",
-    "@takuma-ru/rlse": "catalog:"
+    "@takuma-ru/rlse": "catalog:",
+    "@types/node": "catalog:"
   },
   "dependencies": {
     "@babel/core": "^7.28.5",

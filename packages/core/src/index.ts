@@ -1,1 +1,2 @@
-export * from "./core";
+export * from "@/reactivity/index";
+export * from "@/shared/index";

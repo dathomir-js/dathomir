@@ -12,6 +12,6 @@ catalog:
   oxlint: 1.24.0
   oxlint-tsgolint: 0.3.0
   prettier: 3.6.2
-  tsdown: 0.16.4
+  tsdown: 0.16.8
   typescript: ^5.9.3
   vitest: 4.0.4

@@ -3,63 +3,354 @@ applyTo: '**'
 priority: 10
 ---
 
-目的: jsx を破壊的変更で VNode 生成専用に統一し、サーバー/クライアント/将来拡張 (Streaming・Hydration 差分) を単一中間表現で扱う基盤を最短で確立する。
+# Dathomir Roadmap - Architecture Rewrite (2025-2026)
 
+## 目的
 
-[x] C. コア方針
-	- [x] C1. jsx(): 常に純粋な VNode を返す
-	- [x] C2. mount(): DOM 生成/イベント接続を担当 (jsx は純粋化)
-	- [x] C3. renderToString(): VNode 走査で安全な HTML 出力
-	- [x] C4. toUnreactive(): SSR で Signal/Computed を静的値化
-	- [ ] C5. 後続に Hydration / Streaming / Edge 最適化を段階導入
+VNode ベースアーキテクチャから **SolidJS スタイルの Fine-grained Reactivity + Direct DOM** への全面移行。
+TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでどこよりも高速・軽量・独自性のあるフレームワークを構築する。
 
-[x] 1. Phase 1 Core Refactor & SSR MVP
-	- [x] 1.1. VNode 型 & flags 最小定義
-	- [x] 1.2. jsx / jsxDEV を VNode 生成へ全面移行 (旧 DOM 直生成除去)
-	- [x] 1.3. mount(vNode, container) 実装 (イベント/props/reactive children)
-	- [x] 1.4. toUnreactive 最小版 (Signal/Computed/配列/オブジェクト/循環/深さ制限)
-	- [x] 1.5. renderToString 初期版 (escape / 属性除外 / Component / Fragment)
-	- [x] 1.6. Playground を新 API (mount) に更新
-	- [x] 1.7. 最小テスト (VNode 構造 / renderToString / toUnreactive)
-		- [x] VNode 構造テスト (8 tests passed)
-		- [x] renderToString 基本動作テスト (30 tests passed, 58.57% stmt coverage)
-		- [x] toUnreactive 基本動作テスト (33 tests, 97.43% coverage)
-	- [ ] 1.8. ドキュメント更新 (jsx が VNode を返す破壊的変更告知)
-	- [x] 1.9. Acceptance: renderToString と mount の構造的一貫性検証
-	- [x] 1.10. パフォーマンス計測 & ベンチマーク (3.08KB gzip, 1260万 JSX ops/sec, 210万 SSR ops/sec)
+**破壊的変更度**: 100% (完全な書き直し)
+**期待パフォーマンス向上**: 3-5x
+**目標バンドルサイズ**: <2KB (現在 3.08KB)
 
-[ ] 2. Phase 2 Basic Hydration (再マウント方式)
-	- [x] 2.1. SSR HTML 上で単純再 mount (差分なし MVP)
-		- [x] hydrate(vNode, container) 関数実装 (packages/runtime/src/hydrate/index.ts)
-		- [x] 公開 API エクスポート (packages/runtime/src/index.ts)
-		- [x] hydrate テスト 13 件追加、100% カバレッジ
-		- [x] Playground デモ (playgrounds/vanilla/hydration-demo.html)
-	- [ ] 2.2. 差分 hydration 用 data-key 仕様草案作成
+---
 
-[ ] 3. Phase 3 Diff Hydration & State Transfer
-	- [ ] 3.1. data-key 埋め込み & DOM 走査で既存ノード対応付け
-	- [ ] 3.2. window.__ZABRAK_STATE__ へ初期 Signal 値シリアライズ
-	- [ ] 3.3. 差分適用アルゴリズム & 不整合時フォールバック (再マウント)
+## 🏗️ Architecture Decision (2025-12-01)
 
-[ ] 4. Phase 4 Streaming & Edge Adaptation
-	- [ ] 4.1. renderToReadableStream チャンク逐次出力
-	- [ ] 4.2. Edge (workerd 等) 対応 build / noExternal 調整
-	- [ ] 4.3. ストリーミング中 Signal 一貫性ガード
+**採用するアプローチ**: SolidJS ベースの Fine-grained Reactivity
+- VNode システムを完全削除
+- JSX → Direct DOM compilation
+- Template cloning + createElement のハイブリッド戦略
+- Compiler-assisted SSR state serialization
 
-[ ] 5. Phase 5 Environment & Optimization
-	- [ ] 5.1. Vite Environment API 深度活用 (client/ssr/edge 分離)
-	- [ ] 5.2. 環境 define (__ZABRAK_ENV__) 注入
-	- [ ] 5.3. パフォーマンス計測 & キャッシュ層導入
+**独自性**:
+1. TC39 Signals API (`.value` アクセス)
+2. alien-signals (50% 高速)
+3. 自動 Signal シリアライズ (SSR→CSR)
+4. Web Components first-class support
+5. Edge runtime 最適化
+6. より明示的なコンパイル出力
 
-[ ] 6. Phase 6 DX & Advanced Features
-	- [ ] 6.1. CLI テンプレート (create zabrak)
-	- [ ] 6.2. 型統合 (SSR/CSR jsx 差異吸収オーバーロード整理)
-	- [ ] 6.3. Suspense / Async (Promise) 下地
-	- [ ] 6.4. DevTools Hook / ドキュメント拡充 / サンプル集
+---
 
-[ ] R. リスク対策
-	- [ ] R1. 破壊的変更周知 (CHANGELOG / README 冒頭)
-	- [ ] R2. VNode 公開型最小化 (内部 flags は外部非公開)
-	- [ ] R3. XSS 防止 (escape 徹底・on* 属性除外ポリシー)
+## 📋 Phase R1: コンパイラ書き直し (第1-3週)
+
+**目標**: JSX を Direct DOM 生成コードにコンパイルする新しいトランスフォーマーを実装
+
+### R1.1 トランスフォーマーアーキテクチャ設計
+- [ ] R1.1.1. Babel AST visitor 設計
+- [ ] R1.1.2. JSX Element → createElement / template 判定ロジック
+- [ ] R1.1.3. 静的解析: 動的/静的の判別アルゴリズム
+- [ ] R1.1.4. Effect 生成ルール策定 (リアクティブ vs 静的)
+
+### R1.2 基本的な JSX コンパイル
+- [ ] R1.2.1. 静的要素 → `createElement` チェーン生成
+- [ ] R1.2.2. 動的テキスト → `effect(() => node.textContent = ...)` 生成
+- [ ] R1.2.3. 動的属性 → `effect(() => node.setAttribute(...))` 生成
+- [ ] R1.2.4. イベントハンドラ → `addEventListener` 生成 (委譲なし MVP)
+
+### R1.3 コンポーネントコンパイル
+- [ ] R1.3.1. コンポーネント呼び出し検出 (関数型チェック)
+- [ ] R1.3.2. Props 受け渡し (リアクティブ props 処理)
+- [ ] R1.3.3. Children 解決
+- [ ] R1.3.4. コンポーネント境界最適化
+
+### R1.4 Fragment & 制御フロー
+- [ ] R1.4.1. Fragment → コメントマーカー (`<!---->`) 生成
+- [ ] R1.4.2. 条件分岐レンダリング戦略 (if/else/switch)
+- [ ] R1.4.3. リストレンダリング戦略 (map/for)
+- [ ] R1.4.4. 動的挿入ポイント処理
+
+### R1.5 テンプレート最適化
+- [ ] R1.5.1. 静的サブツリー検出 (連続3要素以上)
+- [ ] R1.5.2. SSR 用テンプレートリテラル生成
+- [ ] R1.5.3. CSR 用 `<template>` + cloneNode 生成
+- [ ] R1.5.4. ハイブリッド戦略: createElement vs template 選択
+
+### R1.6 テスト & 検証
+- [ ] R1.6.1. トランスフォーマーのユニットテスト (50+ ケース)
+- [ ] R1.6.2. コンパイル出力のスナップショットテスト
+- [ ] R1.6.3. ランタイムとの統合テスト
+- [ ] R1.6.4. 現行 VNode システムとのパフォーマンス比較
+
+**成果物**: `@dathomir/transformer-v2` パッケージ (テストカバレッジ 80%+)
+
+---
+
+## 📋 Phase R2: ランタイム書き直し (第4-6週)
+
+**目標**: VNode システムを削除し、Direct DOM + Signals のみのランタイムを実装
+
+### R2.1 ランタイムコアのクリーンアップ
+- [ ] R2.1.1. VNode 型定義削除 (`packages/runtime/src/jsx-runtime/`)
+- [ ] R2.1.2. mount() 削除 (`packages/runtime/src/mount/`)
+- [ ] R2.1.3. renderToString() 全面書き直し
+- [ ] R2.1.4. 不要な依存関係削除
+
+### R2.2 新しいランタイム API
+- [ ] R2.2.1. `render(fn, container)` - クライアント側エントリポイント
+- [ ] R2.2.2. `hydrate(fn, container)` - ハイドレーション処理
+- [ ] R2.2.3. `template(html)` - テンプレート生成ヘルパー
+- [ ] R2.2.4. `insert(parent, accessor)` - 動的コンテンツ挿入
+
+### R2.3 リアクティビティユーティリティ
+- [ ] R2.3.1. `effect()` ラッパー (alien-signals 統合)
+- [ ] R2.3.2. `memo()` - キャッシュ付き computed 値
+- [ ] R2.3.3. `cleanup()` - effect クリーンアップ管理
+- [ ] R2.3.4. `untrack()` - 依存関係の分離
+
+### R2.4 DOM ヘルパー (コンパイラ用)
+- [ ] R2.4.1. `setAttribute()` - 型付き属性セッター
+- [ ] R2.4.2. `setProperty()` - property vs attribute 判定
+- [ ] R2.4.3. `classList()` - class 管理
+- [ ] R2.4.4. `style()` - インラインスタイル管理
+
+### R2.5 イベントシステム
+- [ ] R2.5.1. 直接イベントリスナー (委譲なし MVP)
+- [ ] R2.5.2. コンポーネントアンマウント時のイベントクリーンアップ
+- [ ] R2.5.3. 合成イベントの検討 (将来)
+- [ ] R2.5.4. イベント委譲のオプトイン (将来)
+
+### R2.6 テスト & 検証
+- [ ] R2.6.1. ランタイム API テスト (100+ テスト)
+- [ ] R2.6.2. トランスフォーマー出力との統合
+- [ ] R2.6.3. メモリリーク検出
+- [ ] R2.6.4. パフォーマンスベンチマーク (目標: 3-5倍高速化)
+
+**成果物**: `@dathomir/runtime-v2` (バンドルサイズ <2KB)
+
+---
+
+## 📋 Phase R3: SSR 実装 (第7-8週)
+
+**目標**: テンプレートベース SSR と自動状態シリアライズの実装
+
+### R3.1 SSR コンパイラモード
+- [ ] R3.1.1. トランスフォーマーでの `__SSR__` フラグ検出
+- [ ] R3.1.2. 文字列テンプレート生成 (DOM API 不使用)
+- [ ] R3.1.3. ハイドレーション用コメントマーカー (`<!--hk:0.1-->`)
+- [ ] R3.1.4. HTML エスケープユーティリティ
+
+### R3.2 SSR ランタイム
+- [ ] R3.2.1. `renderToString(fn)` - 同期レンダリング
+- [ ] R3.2.2. `renderToStream(fn)` - 非同期ストリーミング (ReadableStream)
+- [ ] R3.2.3. SSR コンテキストでのコンポーネント解決
+- [ ] R3.2.4. SSR 用エラーバウンダリ
+
+### R3.3 状態シリアライズ (コンパイラ支援)
+- [ ] R3.3.1. Signal 登録フック (`registerSignal(id, signal)`)
+- [ ] R3.3.2. コンポーネント ID 生成 (コンパイル時)
+- [ ] R3.3.3. `window.__DATHOMIR_STATE__` 注入
+- [ ] R3.3.4. 状態復元 (`restoreSignal(id)`)
+
+### R3.4 ハイドレーション戦略
+- [ ] R3.4.1. コメントマーカーマッチング (TreeWalker)
+- [ ] R3.4.2. 既存 DOM への Effect アタッチ
+- [ ] R3.4.3. イベントリスナー復元
+- [ ] R3.4.4. ミスマッチ検出 & リカバリー
+
+### R3.5 テスト & 検証
+- [ ] R3.5.1. SSR 出力の正確性 (HTML バリデーション)
+- [ ] R3.5.2. ハイドレーション成功率テスト
+- [ ] R3.5.3. 状態シリアライズ/復元テスト
+- [ ] R3.5.4. SSR パフォーマンスベンチマーク (目標: 1000万+ ops/sec)
+
+**成果物**: 自動状態転送付き完全な SSR サポート
+
+---
+
+## 📋 Phase R4: Edge & ストリーミング (第9-10週)
+
+**目標**: Cloudflare Workers, Deno Deploy 最適化とストリーミング SSR
+
+### R4.1 Edge ランタイム互換性
+- [ ] R4.1.1. Node.js 依存ゼロの監査
+- [ ] R4.1.2. Cloudflare Workers テストスイート
+- [ ] R4.1.3. Deno Deploy テストスイート
+- [ ] R4.1.4. Edge 専用ビルド設定
+
+### R4.2 ストリーミング SSR
+- [ ] R4.2.1. `renderToReadableStream()` 実装
+- [ ] R4.2.2. チャンク単位のレンダリング
+- [ ] R4.2.3. プログレッシブハイドレーションマーカー
+- [ ] R4.2.4. アウトオブオーダーストリーミング (Suspense)
+
+### R4.3 Suspense & 非同期
+- [ ] R4.3.1. `<Suspense>` コンポーネント実装
+- [ ] R4.3.2. 非同期コンポーネントサポート (Promise ベース)
+- [ ] R4.3.3. フォールバックレンダリング
+- [ ] R4.3.4. 非同期用エラーバウンダリ
+
+### R4.4 テスト & 検証
+- [ ] R4.4.1. Edge ランタイム統合テスト
+- [ ] R4.4.2. ストリーミング正確性テスト
+- [ ] R4.4.3. 実環境デプロイ (Cloudflare Pages)
+- [ ] R4.4.4. Edge 環境でのパフォーマンスベンチマーク
+
+**成果物**: 本番環境対応の Edge ランタイムサポート
+
+---
+
+## 📋 Phase R5: Web Components & 開発者体験 (第11-12週)
+
+**目標**: Web Components ファーストクラスサポートと開発者体験の向上
+
+### R5.1 Web Components 統合
+- [ ] R5.1.1. カスタム要素登録 API
+- [ ] R5.1.2. Shadow DOM サポート
+- [ ] R5.1.3. 属性/プロパティのリフレクション
+- [ ] R5.1.4. ライフサイクルフック (connectedCallback など)
+
+### R5.2 TypeScript 統合
+- [ ] R5.2.1. Direct DOM 用 JSX 型定義
+- [ ] R5.2.2. コンポーネント型ヘルパー
+- [ ] R5.2.3. Signal 型推論の改善
+- [ ] R5.2.4. ジェネリックコンポーネントサポート
+
+### R5.3 開発者ツール
+- [ ] R5.3.1. Signal 依存グラフの可視化
+- [ ] R5.3.2. コンポーネントツリーインスペクター (DOM ベース)
+- [ ] R5.3.3. パフォーマンスプロファイリングフック
+- [ ] R5.3.4. Chrome DevTools 拡張機能 (オプション)
+
+### R5.4 ドキュメント & サンプル
+- [ ] R5.4.1. VNode アーキテクチャからの移行ガイド
+- [ ] R5.4.2. API リファレンスドキュメント
+- [ ] R5.4.3. チュートリアル: Todo アプリ、カウンターなど
+- [ ] R5.4.4. 実用例 (ダッシュボード、E コマース)
+
+### R5.5 CLI & ツール
+- [ ] R5.5.1. `create-dathomir` スキャフォールディングツール
+- [ ] R5.5.2. Vite プラグイン統合
+- [ ] R5.5.3. ビルド最適化プリセット
+- [ ] R5.5.4. 本番デプロイガイド
+
+**成果物**: 完全な開発者体験パッケージ
+
+---
+
+## 📋 Phase R6: 最適化 & 仕上げ (第13-14週)
+
+**目標**: 最終最適化、バグ修正、パフォーマンスチューニング
+
+### R6.1 バンドルサイズ最適化
+- [ ] R6.1.1. Tree-shaking 解析
+- [ ] R6.1.2. デッドコード削除
+- [ ] R6.1.3. ランタイムサイズ削減 (<2KB 目標)
+- [ ] R6.1.4. ミニフィケーション戦略
+
+### R6.2 パフォーマンスチューニング
+- [ ] R6.2.1. コンパイラ最適化パス
+- [ ] R6.2.2. Effect バッチング改善
+- [ ] R6.2.3. メモリ割り当て削減
+- [ ] R6.2.4. ベンチマークスイート拡張
+
+### R6.3 クロスブラウザテスト
+- [ ] R6.3.1. Chrome, Firefox, Safari テスト
+- [ ] R6.3.2. モバイルブラウザテスト
+- [ ] R6.3.3. レガシーブラウザサポート (オプション)
+- [ ] R6.3.4. Polyfill 戦略
+
+### R6.4 本番環境対応
+- [ ] R6.4.1. セキュリティ監査 (XSS, インジェクション)
+- [ ] R6.4.2. エラーメッセージ改善
+- [ ] R6.4.3. よくある間違いの警告システム
+- [ ] R6.4.4. 安定性テスト (長時間稼働アプリ)
+
+### R6.5 リリース準備
+- [ ] R6.5.1. CHANGELOG 作成
+- [ ] R6.5.2. 破壊的変更のドキュメント化
+- [ ] R6.5.3. 移行ツール (codemods)
+- [ ] R6.5.4. v2.0.0 リリースアナウンス
+
+**成果物**: Dathomir v2.0.0 安定版リリース
+
+---
+
+## 🎯 成功指標
+
+### パフォーマンス目標
+- [ ] JSX コンパイル: 5000万+ ops/sec (現在: 1260万)
+- [ ] SSR: 1000万+ ops/sec (現在: 210万)
+- [ ] 初期レンダリング: <1ms (現在: ~5ms)
+- [ ] Signal 更新: <0.1ms (現在: ~0.5ms)
+- [ ] ハイドレーション: <0.5ms (現在: 3.5ms)
+
+### バンドルサイズ目標
+- [ ] コアランタイム: <2KB gzip 圧縮後 (現在: 3.08KB)
+- [ ] SSR 含む: <4KB gzip 圧縮後
+- [ ] フルパッケージ: <8KB gzip 圧縮後
+
+### 開発者体験
+- [ ] TypeScript カバレッジ 100%
+- [ ] テストカバレッジ 90%+
+- [ ] 一般的なアプリのコンパイル時間 <100ms
+- [ ] コードフレーム付きの明確なエラーメッセージ
+
+---
+
+## 🚨 リスク管理
+
+### 技術的リスク
+- [ ] R1. コンパイラの複雑性 → シンプルに始め、段階的に最適化を追加
+- [ ] R2. 破壊的変更の採用 → 移行ガイド + codemods を提供
+- [ ] R3. SSR 状態シリアライズのエッジケース → 包括的なテストスイート
+- [ ] R4. Edge ランタイム互換性 → 早期に全主要プラットフォームでテスト
+
+### 対策戦略
+- [ ] M1. 比較用に現行 VNode システムを v1 ブランチで維持
+- [ ] M2. 既存コードを壊さないよう `packages/runtime-v2` でプロトタイプ作成
+- [ ] M3. 開発全体を通じて継続的にベンチマーク
+- [ ] M4. 主要決定前に RFC を通じてコミュニティフィードバック収集
+
+---
+
+## 📅 タイムラインまとめ
+
+| フェーズ | 期間 | 完了予定 |
+|---------|------|---------|
+| R1: コンパイラ | 第1-3週 | 2025-12-22 |
+| R2: ランタイム | 第4-6週 | 2026-01-12 |
+| R3: SSR | 第7-8週 | 2026-01-26 |
+| R4: Edge | 第9-10週 | 2026-02-09 |
+| R5: DX | 第11-12週 | 2026-02-23 |
+| R6: 仕上げ | 第13-14週 | 2026-03-09 |
+
+**合計**: v2.0.0 リリースまで約14週間 (3.5ヶ月)
+
+---
+
+## 🔄 v1 (VNode) から v2 (Direct DOM) への移行
+
+### 破壊的変更
+1. `jsx()` は VNode を返さない → DOM ノードを直接返す
+2. `mount()` API 削除 → `render()` を使用
+3. コンポーネント型: `(props) => Computed<VNode>` → `(props) => Element`
+4. `toUnreactive()` 削除 (不要になった)
+5. 手動の `computed()` ラッピング削除 (トランスフォーマーが処理)
+
+### 移行パス
+- [ ] よくあるパターンの自動 codemod ツール
+- [ ] v1 → v2 互換レイヤー (一時的)
+- [ ] サンプル付きステップバイステップ移行ガイド
+- [ ] 新旧比較ドキュメント
+
+---
+
+## ✅ 完了の定義
+
+各フェーズは以下の条件で完了:
+1. すべてのサブタスクにチェック
+2. テストカバレッジ >80% で全テスト通過
+3. ベンチマークで前バージョンより改善を確認
+4. ドキュメント更新済み
+5. コードレビュー承認済み
+6. ブロッキングバグなし
+
+---
+
+**最終更新**: 2025-12-01
+**ステータス**: アーキテクチャ書き直し承認、Phase R1 開始
 
 

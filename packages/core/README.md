@@ -1,5 +1,9 @@
 # @dathomir/core
 
+## 破壊前の最終コミット
+
+https://github.com/dathomir-js/dathomir/tree/e6e39d33a40e5b8bb851c588ca5c2b8301c18dc0
+
 ## Overview
 
 A full-stack JS framework that works with the new order TC39 Signals.
@@ -26,11 +30,12 @@ npm install @dathomir/core @dathomir/plugin
 ```
 
 ### 3. Configure Vite
+
 Create `vite.config.ts` in the project root with the following content:
 
 ```ts
-import { defineConfig } from 'vite';
-import { dathomir } from "@dathomir/plugin"
+import { defineConfig } from "vite";
+import { dathomir } from "@dathomir/plugin";
 
 export default defineConfig({
   plugins: [dathomir.vite()],
@@ -38,6 +43,7 @@ export default defineConfig({
 ```
 
 ### 4. Update tsconfig.json
+
 Add the following to `compilerOptions` in `tsconfig.json`:
 
 ```json
@@ -50,6 +56,7 @@ Add the following to `compilerOptions` in `tsconfig.json`:
 ```
 
 ### 5. Create app entry point
+
 Create `src/main.tsx` with the following content:
 
 ```tsx

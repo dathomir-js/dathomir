@@ -129,51 +129,6 @@ pnpm --filter @dathomir/core {任意のコマンド}
 
 #### 機能関係図
 
-```mermaid
-flowchart TD
-    subgraph 公開API["公開 API"]
-        createCustomElement["createCustomElement"]
-        Props["Props"]
-    end
-
-    subgraph エントリポイント["エントリポイント"]
-        main["@dathomir/core"]
-        reactivityExport["@dathomir/core/reactivity"]
-        runtimeExport["@dathomir/core/runtime"]
-        jsxRuntime["@dathomir/core/runtime/jsx-runtime"]
-        jsxDevRuntime["@dathomir/core/runtime/jsx-dev-runtime"]
-        sharedExport["@dathomir/core/shared"]
-    end
-
-    subgraph 外部依存["外部依存（内部パッケージ）"]
-        reactivity["@dathomir/reactivity"]
-        runtime["@dathomir/runtime"]
-        shared["@dathomir/shared"]
-    end
-
-    %% エントリポイント -> 外部依存
-    main --> createCustomElement
-    main --> Props
-    reactivityExport -->|"再エクスポート"| reactivity
-    runtimeExport -->|"再エクスポート"| runtime
-    jsxRuntime -->|"再エクスポート"| runtime
-    jsxDevRuntime -->|"再エクスポート"| runtime
-    sharedExport -->|"再エクスポート"| shared
-
-    %% createCustomElement -> 外部依存
-    createCustomElement --> signal["signal"]
-    createCustomElement --> computed["computed"]
-    createCustomElement --> jsx["jsx"]
-    createCustomElement --> mountToNode["mountToNode"]
-    createCustomElement --> pascalCase["pascalCase"]
-
-    signal --> reactivity
-    computed --> reactivity
-    jsx --> runtime
-    mountToNode --> runtime
-    pascalCase --> shared
-```
-
 ### @dathomir/plugin
 
 #### 目的
@@ -190,35 +145,6 @@ pnpm --filter @dathomir/plugin {任意のコマンド}
 ```
 
 #### 機能関係図
-
-```mermaid
-flowchart TD
-    subgraph 公開API["公開 API"]
-        dathomir["dathomir（unplugin インスタンス）"]
-        unpluginFactory["unpluginFactory"]
-    end
-
-    subgraph 外部依存["外部依存"]
-        unplugin["unplugin（createUnplugin）"]
-        transformer["@dathomir/transformer（transform）"]
-    end
-
-    subgraph バンドラー["対応バンドラー"]
-        vite["Vite"]
-        webpack["webpack"]
-        rollup["Rollup"]
-        esbuild["esbuild"]
-    end
-
-    unpluginFactory --> unplugin
-    unpluginFactory --> transformer
-    dathomir --> unpluginFactory
-
-    unplugin --> vite
-    unplugin --> webpack
-    unplugin --> rollup
-    unplugin --> esbuild
-```
 
 ### @dathomir/reactivity
 
@@ -244,44 +170,6 @@ pnpm --filter @dathomir/reactivity {任意のコマンド}
 
 #### 機能関係図
 
-```mermaid
-flowchart TD
-    subgraph 公開API["公開 API"]
-        signal["signal"]
-        computed["computed"]
-        effect["effect"]
-        batch["batch"]
-        toUnreactive["toUnreactive"]
-    end
-
-    subgraph リアクティブグラフ["リアクティブグラフ"]
-        SignalNode["SignalNode"]
-        ComputedNode["ComputedNode"]
-        EffectNode["EffectNode"]
-    end
-
-    signal --> SignalNode
-    computed --> ComputedNode
-    effect --> EffectNode
-
-    SignalNode -->|"依存登録"| ComputedNode
-    SignalNode -->|"依存登録"| EffectNode
-    ComputedNode -->|"依存登録"| ComputedNode
-    ComputedNode -->|"依存登録"| EffectNode
-
-    SignalNode -->|"変更通知"| propagate["propagate"]
-    ComputedNode -->|"変更通知"| shallowPropagate["shallowPropagate"]
-    propagate --> flush["flush"]
-    shallowPropagate --> flush
-    batch -->|"通知を遅延"| flush
-
-    flush -->|"再実行"| EffectNode
-    flush -->|"再計算"| ComputedNode
-
-    toUnreactive -->|"peek で静的値取得"| SignalNode
-    toUnreactive -->|"peek で静的値取得"| ComputedNode
-```
-
 ### @dathomir/runtime
 
 #### 目的
@@ -298,69 +186,6 @@ pnpm --filter @dathomir/runtime {任意のコマンド}
 ```
 
 #### 機能関係図
-
-```mermaid
-flowchart TD
-    subgraph 公開API["公開 API"]
-        jsx["jsx / jsxs"]
-        Fragment["Fragment"]
-        mount["mount"]
-        renderToString["renderToString"]
-    end
-
-    subgraph エントリポイント["エントリポイント"]
-        main["@dathomir/runtime"]
-        jsxRuntime["@dathomir/runtime/jsx-runtime"]
-        jsxDevRuntime["@dathomir/runtime/jsx-dev-runtime"]
-        reactivityExport["@dathomir/runtime/reactivity"]
-    end
-
-    subgraph 内部API["内部 API"]
-        mountToNode["mountToNode"]
-        mountChildren["mountChildren"]
-        mountReactiveProp["mountReactiveProp"]
-        addEventFromProp["addEventFromProp"]
-        applyProperty["applyProperty"]
-        renderVNode["renderVNode"]
-        renderChild["renderChild"]
-        serializeProps["serializeProps"]
-    end
-
-    subgraph 外部依存["外部依存（@dathomir/reactivity）"]
-        effect["effect"]
-        computed["computed"]
-        toUnreactive["toUnreactive"]
-    end
-
-    %% エントリポイント -> 公開API
-    jsxRuntime --> jsx
-    jsxRuntime --> Fragment
-    jsxDevRuntime --> jsx
-    jsxDevRuntime --> Fragment
-    main --> mount
-    main --> renderToString
-    reactivityExport -->|"再エクスポート"| effect
-    reactivityExport -->|"再エクスポート"| computed
-    reactivityExport -->|"再エクスポート"| toUnreactive
-
-    %% 公開API -> 内部API
-    mount --> mountToNode
-    mountToNode --> mountChildren
-    mountToNode --> mountReactiveProp
-    mountToNode --> addEventFromProp
-    mountToNode --> applyProperty
-    renderToString --> renderVNode
-    renderVNode --> renderChild
-    renderVNode --> serializeProps
-
-    %% 内部API -> 外部依存
-    mountToNode --> effect
-    mountReactiveProp --> effect
-    mountChildren --> effect
-    addEventFromProp --> effect
-    renderToString --> toUnreactive
-    renderChild --> toUnreactive
-```
 
 ### @dathomir/transformer
 
@@ -402,55 +227,6 @@ pnpm --filter @dathomir/transformer {任意のコマンド}
 
 #### 機能関係図
 
-```mermaid
-flowchart TD
-    subgraph 公開API["公開 API"]
-        transform["transform"]
-    end
-
-    subgraph 内部API["内部 API"]
-        parseToAst["parseToAst"]
-        traverseToReactive["traverseToReactive"]
-        wrapJsxPropsWithComputed["wrapJsxPropsWithComputed"]
-        wrapWithComputed["wrapWithComputed"]
-        ensureComputedImport["ensureComputedImport"]
-        getComputedCallee["getComputedCallee"]
-        isComputedReference["isComputedReference"]
-        isAlreadyComputedExpression["isAlreadyComputedExpression"]
-    end
-
-    subgraph 外部依存["外部依存（Babel）"]
-        babelParser["@babel/parser"]
-        babelTraverse["@babel/traverse"]
-        babelGenerator["@babel/generator"]
-        babelTypes["@babel/types"]
-    end
-
-    %% 公開API -> 内部API
-    transform --> parseToAst
-    transform --> traverseToReactive
-    transform --> babelGenerator
-
-    %% parseToAst -> Babel
-    parseToAst --> babelParser
-
-    %% traverseToReactive -> 内部API
-    traverseToReactive --> babelTraverse
-    traverseToReactive --> wrapJsxPropsWithComputed
-
-    %% wrapJsxPropsWithComputed -> 内部API
-    wrapJsxPropsWithComputed --> wrapWithComputed
-    wrapJsxPropsWithComputed --> isComputedReference
-
-    %% wrapWithComputed -> 内部API
-    wrapWithComputed --> getComputedCallee
-    wrapWithComputed --> isAlreadyComputedExpression
-    wrapWithComputed --> babelTypes
-
-    %% getComputedCallee -> 内部API
-    getComputedCallee --> ensureComputedImport
-```
-
 ### @dathomir/shared
 
 #### 目的
@@ -467,30 +243,3 @@ pnpm --filter @dathomir/shared {任意のコマンド}
 ```
 
 #### 機能関係図
-
-```mermaid
-flowchart TD
-    subgraph 公開API["公開 API"]
-        entries["entries"]
-        fromEntries["fromEntries"]
-        subgraph scule["scule（文字列変換）"]
-            splitByCase["splitByCase"]
-            upperFirst["upperFirst"]
-            lowerFirst["lowerFirst"]
-            pascalCase["pascalCase"]
-            camelCase["camelCase"]
-            kebabCase["kebabCase"]
-            snakeCase["snakeCase"]
-        end
-    end
-
-    entries -->|"型安全な Object.entries"| TypedEntries["Entries<T>"]
-    fromEntries -->|"型安全な Object.fromEntries"| TypedFromEntries["FromEntries<T>"]
-
-    splitByCase --> pascalCase
-    splitByCase --> camelCase
-    splitByCase --> kebabCase
-    splitByCase --> snakeCase
-    upperFirst --> pascalCase
-    lowerFirst --> camelCase
-```

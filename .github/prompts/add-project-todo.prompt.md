@@ -1,5 +1,0 @@
----
-mode: ["agent"]
-tools: [""]
-description: 
----

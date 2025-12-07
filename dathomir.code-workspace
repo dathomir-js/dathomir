@@ -70,7 +70,8 @@
     "chat.agent.todoList": {
       "position": "default"
     },
-
+    "chat.useAgentsMdFile": true,
+    "chat.useNestedAgentsMdFiles": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.inlineSuggest.enabled": true,
     "github.copilot.nextEditSuggestions.enabled": true,

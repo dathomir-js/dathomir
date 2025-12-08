@@ -66,10 +66,6 @@
     "prettier.enable": true,
     "oxc.enable": true,
     "eslint.enable": true,
-    "chat.promptFiles": true,
-    "chat.agent.todoList": {
-      "position": "default"
-    },
     "chat.useAgentsMdFile": true,
     "chat.useNestedAgentsMdFiles": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode",

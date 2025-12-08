@@ -56,9 +56,16 @@ copilot:
 - `applyTo`: Always set to `'**'` (applies to all files)
 - `priority`: Set to `1` (low priority, archived conversations)
 - `archived`: Set to `true` (marks this as historical reference)
+ - `copilot_mode`: Optional string with the Copilot agent mode (e.g., `agent`)
+ - `copilot_model`: Optional string with the Copilot model name (e.g., `GPT-5 mini`)
 
 4. **Include all messages**: Export the complete conversation from the beginning to the current message
 5. **Preserve formatting**: Maintain code blocks, lists, and other Markdown formatting in the messages
+6. **Copilot metadata**: Include a short header after the YAML frontmatter in the exported file containing the Copilot mode and model used for the export. Example:
+
+```
+Copilot: mode=`agent`, model=`GPT-5 mini`
+```
 6. **Confirmation**: After creating the file, confirm the export with the filename and location
 
 ## Example Usage

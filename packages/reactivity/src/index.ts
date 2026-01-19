@@ -464,7 +464,5 @@ function batch<T>(fn: () => T): T {
   }
 }
 
-export type { SignalUpdate, Signal, Computed, EffectCleanup };
-export { signal, computed, effect, batch };
-export type { Reactive, Unwrap, ToUnreactiveOptions } from "./toUnreactive";
-export { toUnreactive } from "./toUnreactive";
+export { batch, computed, effect, signal };
+export type { Computed, EffectCleanup, Signal, SignalUpdate };

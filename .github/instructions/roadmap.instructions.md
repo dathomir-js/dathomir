@@ -45,7 +45,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 
 ### SSR → Hydration（最重要）
 - [x] マーカー方式: 混在（境界はコメント、要素は `data-*`）（将来互換のバージョン含む）
-- [ ] マーカー粒度: テキスト / 属性 / 子挿入点 / ブロック境界（if/each）
+- [x] マーカー粒度: 基本は「コメント境界（text/insert/block）＋順序」で復元する（要素 `data-*` は必要時のみ）
 - [ ] 探索戦略: TreeWalker で線形探索 / key で直接参照 / 境界スコープ化
 - [x] Shadow DOM 探索範囲: ShadowRoot は open のみ対象
 - [x] Hydration 責務: Web Component が自分の ShadowRoot を担当（外部FWでも単体利用できることを優先）

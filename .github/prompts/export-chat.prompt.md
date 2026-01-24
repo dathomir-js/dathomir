@@ -67,6 +67,7 @@ copilot:
 Copilot: mode=`agent`, model=`GPT-5 mini`
 ```
 6. **Confirmation**: After creating the file, confirm the export with the filename and location
+7. **No summarization or omission**: Do not summarize, redact, or omit any part of the conversation. Export the exact, full text of every message with original formatting preserved. Do not truncate for length.
 
 ## Example Usage
 

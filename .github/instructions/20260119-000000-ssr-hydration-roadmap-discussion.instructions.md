@@ -1,3 +1,9 @@
+---
+applyTo: '**'
+priority: 1
+archived: true
+---
+
 User: このリポジトリで実現させたいこと
 
 GitHub Copilot: まずは、指定されている export-chat.prompt.md の指示内容を確認してから、それに沿った形式で「このリポジトリで実現したいこと」を要約します。

@@ -85,6 +85,9 @@
       "editor.defaultFormatter": "esbenp.prettier-vscode",
       "typescript.preferences.importModuleSpecifier": "non-relative"
     },
+    "[typst]": {
+      "editor.defaultFormatter": "myriad-dreamin.tinymist"
+    },
     "github.copilot.chat.commitMessageGeneration.instructions": [
       {
         "file": "commit-message-instructions.md",
@@ -94,6 +97,6 @@
       "dathomir",
       "Unreactive"
     ],
-    "eslint.useFlatConfig": true
+    "eslint.useFlatConfig": true,
   }
 }

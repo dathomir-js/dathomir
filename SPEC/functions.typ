@@ -1,0 +1,148 @@
+#let Status = (
+  Proposed: "Proposed",
+  Accepted: "Accepted",
+  Rejected: "Rejected",
+  Deprecated: "Deprecated",
+  Superseded: "Superseded",
+)
+
+#let header(title, status, date) = {
+  assert(
+    status in Status.values(),
+    message: "ADR status must be one of: " + repr(Status.values()) + ", got: " + repr(status),
+  )
+  [
+    === ADR: #title
+
+    *Status:* #status
+    *Date:* #date
+  ]
+}
+
+#let adr(
+  header,
+  contexts,
+  decisions,
+  consequences,
+  alternatives: none,
+  references: none,
+) = {
+  if references != none {
+    assert(
+      type(references) == array,
+      message: "references must be an array of link() calls, got: " + repr(type(references)),
+    )
+  }
+  [
+    #header
+
+    ==== Context
+    #contexts
+
+    ==== Decision
+    #decisions
+
+    ==== Consequences
+    #consequences
+
+    #if alternatives != none [
+      ==== Alternatives Considered
+      #alternatives
+    ]
+
+    #if references != none [
+      ==== References
+      #for ref in references [
+        - #ref
+      ]
+    ]
+
+    #align(start)[
+      #line(length: 80%, stroke: (paint: gray, dash: "dashed"))
+    ]
+  ]
+}
+
+// ============================================================
+// Interface Specification Template
+// ============================================================
+
+#let interface_spec(
+  name: none,
+  summary: none,
+  format: none,
+  constraints: none,
+  examples: none,
+) = {
+  assert(name != none, message: "interface_spec: name is required")
+  assert(summary != none, message: "interface_spec: summary is required")
+  [
+    === #name
+
+    #summary
+
+    #if format != none [
+      ==== Format
+      #format
+    ]
+
+    #if constraints != none [
+      ==== Constraints
+      #constraints
+    ]
+
+    #if examples != none [
+      ==== Examples
+      #examples
+    ]
+
+    #align(start)[
+      #line(length: 80%, stroke: (paint: gray, dash: "dashed"))
+    ]
+  ]
+}
+
+// ============================================================
+// Behavior Specification Template
+// ============================================================
+
+#let behavior_spec(
+  name: none,
+  summary: none,
+  preconditions: none,
+  steps: none,
+  postconditions: none,
+  errors: none,
+) = {
+  assert(name != none, message: "behavior_spec: name is required")
+  assert(summary != none, message: "behavior_spec: summary is required")
+  [
+    === #name
+
+    #summary
+
+    #if preconditions != none [
+      ==== Preconditions
+      #preconditions
+    ]
+
+    #if steps != none [
+      ==== Steps
+      #steps
+    ]
+
+    #if postconditions != none [
+      ==== Postconditions
+      #postconditions
+    ]
+
+    #if errors != none [
+      ==== Error Cases
+      #errors
+    ]
+
+    #align(start)[
+      #line(length: 80%, stroke: (paint: gray, dash: "dashed"))
+    ]
+  ]
+}

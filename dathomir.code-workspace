@@ -21,6 +21,10 @@
       "path": "./config"
     },
     {
+      "name": "⚙️ SPEC",
+      "path": "./SPEC"
+    },
+    {
       "name": "=== 📦 packages ===",
       "path": "=== 📦 packages ==="
     },
@@ -98,5 +102,6 @@
       "Unreactive"
     ],
     "eslint.useFlatConfig": true,
+    "typst.fontPaths": ["SPEC/fonts"]
   }
 }

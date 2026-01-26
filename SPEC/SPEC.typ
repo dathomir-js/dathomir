@@ -500,7 +500,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("Transformer 出力形式", Status.Proposed, "2026-01-25"),
+  header("Transformer 出力形式", Status.Accepted, "2026-01-26"),
   [
     transformer が生成するコードの形式を決定する必要がある。
 
@@ -508,18 +508,46 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - transformer の実装量
     - runtime の複雑性
     - 最適化の余地
+    - 独自性と将来の拡張性
+    - バンドルサイズ（目標 < 2KB）
   ],
   [
-    未決定。以下の選択肢を検討中：
-    - DOM 生成コード中心（transformer が複雑）
-    - テンプレ + 操作テーブル（IR）中心（runtime が複雑）
-    - ハイブリッド（バランス型）
+    *構造化配列方式* を採用する。
+
+    Svelte 5 の `from_tree` アプローチを参考に、DOM 構造を配列で表現する。
+
+    構造化配列の形式：
+    - `[tag, attrs, ...children]`
+    - `tag`: 要素名（文字列）
+    - `attrs`: 属性オブジェクト（`null` の場合もある）
+    - `children`: 文字列 または ネストした配列
+    - 動的箇所は `\{text\}`, `\{insert\}` などのプレースホルダーで表現
+
+    Transformer 出力例：
+    - `fromTree([['button', \{ class: 'btn' \}, 'Count: ', ['\{text\}', null]]], 1)`
+    - `firstChild(fragment)` でボタン要素を取得
+    - `templateEffect(() => setText(text, count.value))` でリアクティブ更新
   ],
   [
-    未定
+    *利点*:
+    - 型安全: TypeScript で構造を厳密に検証可能
+    - 拡張性: Compiler が構造を完全に理解し、高度な最適化が可能
+    - デバッグ容易性: 構造が明確で可視化しやすい
+    - 独自性: Dathomir の特徴として打ち出せる（先進的アプローチ）
+    - Compiler 制御: 静的/動的の完全な分離、特殊化が容易
+
+    *欠点*:
+    - 実績が少ない: Svelte 5 では実験的機能
+    - Runtime 実装: HTML パーサーではなく独自実装が必要
+    - 初期パフォーマンス: ブラウザ最適化の恩恵を受けにくい可能性
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    1. *HTML String 方式* (Svelte 5 デフォルト): `fromHtml()` 形式。ブラウザの HTML パーサーを活用し、実績あり（1-2KB 達成済み）。もし構造化配列方式でパフォーマンスや実装の問題が発生した場合の有力な代替案。
+    2. *Template String 方式* (SolidJS 型): `template()` + 多数の runtime helpers。バンドルサイズ 6-7KB で目標を超過するため不採用。
+  ],
+  references: (
+    link("https://svelte.dev/docs/svelte/svelte-compiler")[Svelte 5 - from_tree (experimental)],
+  ),
 )
 
 #adr(
@@ -545,29 +573,52 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("Runtime 原語の最小セット", Status.Proposed, "2026-01-25"),
+  header("Runtime 原語の最小セット", Status.Accepted, "2026-01-26"),
   [
     runtime が提供する基本操作（原語）の最小セットを決定する必要がある。
 
     検討すべき観点：
-    - transformer の実装量
-    - runtime のバンドルサイズ
-    - 拡張性
+    - 構造化配列方式（`fromTree`）の実装要件
+    - バンドルサイズ（目標 < 2KB）
+    - SSR/CSR 両対応
+    - Hydration 互換性
   ],
   [
-    未決定。候補：
-    - `template`: テンプレートクローン
-    - `insert`: ノード挿入
-    - `setAttr` / `setProp`: 属性/プロパティ設定
-    - `addEvent`: イベントリスナー追加
+    *最小セット* を以下に定める。
 
-    どこまでを必須にするか検討中。
+    *DOM 生成*:
+    - `fromTree(structure, flags)`: 構造化配列から DOM を生成
+    - `firstChild(node, isText?)`: 最初の子ノードを取得
+    - `nextSibling(node)`: 次の兄弟ノードを取得
+
+    *DOM 操作*:
+    - `setText(node, value)`: テキストノードの内容を設定
+    - `setAttr(element, name, value)`: 属性を設定
+    - `setProp(element, name, value)`: プロパティを設定
+    - `append(parent, child)`: 子ノードを追加
+    - `insert(parent, child, anchor)`: 指定位置に挿入
+
+    *リアクティビティ*:
+    - `templateEffect(fn)`: テンプレート用 effect（再実行可能）
+
+    *イベント*:
+    - `event(type, element, handler)`: イベントリスナーを追加
+
+    合計: *11 関数*（目標 2KB 以内で実装可能）
   ],
   [
-    未定
+    - Svelte 5 の最小セットを参考に、必要十分な機能を選定
+    - `fromTree` が中核となり、他は補助的な操作のみ
+    - Compiler が複雑さを担当し、Runtime はシンプルに保つ
+    - `templateEffect` は alien-signals の `effect` をラップし、バッチング制御を追加
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    1. *より多くの helper*: `remove`, `replaceWith` 等を追加。バンドルサイズが増加。
+    2. *さらに削減*: `firstChild`/`nextSibling` を Compiler でインライン化。可読性低下。
+  ],
+  references: (
+    link("https://svelte.dev/docs/svelte/svelte-internal")[Svelte 5 - Internal runtime],
+  ),
 )
 
 #adr(

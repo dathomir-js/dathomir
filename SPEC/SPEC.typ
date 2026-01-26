@@ -661,7 +661,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("イベントハンドラ表現", Status.Proposed, "2026-01-25"),
+  header("イベントハンドラ表現", Status.Accepted, "2026-01-26"),
   [
     ハンドラをどう表現するかを決定する必要がある。
 
@@ -669,16 +669,24 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - SSR 互換性
     - Hydration の容易性
     - セキュリティ
+    - イベントシステム方針（直付け）との整合性
   ],
   [
-    未決定。以下の選択肢を検討中：
-    - 関数参照（直接的だが SSR 困難）
-    - ID 参照（SSR 互換性高い）
+    *関数参照（直接）* を採用する。
+
+    - CSR: `event('click', button, () => count.value++)` で関数を直接渡す
+    - SSR → Hydration: マーカーと関数の紐付け情報を管理し、Hydration 時に復元
+    - ID 参照は不要（委譲システムがないため）
   ],
   [
-    未定
+    - 直付けイベントシステムと整合性がある
+    - シンプルで理解しやすい
+    - SSR では Hydration マーカーと関数の対応関係を保持する必要がある
+    - セキュリティ: 関数は Transformer が生成するコード内に埋め込まれる
   ],
-  alternatives: [],
+  alternatives: [
+    1. *ID 参照*: `event('click', button, 'handler_1')` 形式。委譲システムで有用だが、直付けでは不要な複雑性。
+  ],
   references: (),
 )
 
@@ -771,26 +779,37 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("Effect スケジューリング", Status.Proposed, "2026-01-25"),
+  header("Effect スケジューリング", Status.Accepted, "2026-01-26"),
   [
     effect の実行タイミングを決定する必要がある。
 
     検討すべき観点：
     - 更新の即時性 vs バッチング
     - 性能
-    - 他のライブラリとの互換性
+    - alien-signals との整合性
   ],
   [
-    未決定。以下の選択肢を検討中：
-    - 同期（即時）
-    - microtask（非同期だが早い）
-    - batched flush（効率的）
+    *batched flush* を採用する。
+
+    - alien-signals の `batch()` 関数を使用
+    - `batch()` 内での複数の signal 更新は、終了時に一度だけ effect を実行
+    - `templateEffect` は内部で `effect` をラップし、適切にバッチング
+    - Transformer が自動的に適切な箇所で `batch()` を挿入（オプション）
+    - ユーザーも手動で `batch()` を使用可能
   ],
   [
-    未定
+    - パフォーマンス効率的: 複数の signal 更新で何度も DOM 更新が走ることを防ぐ
+    - alien-signals が標準サポートしているため、実装コストが低い
+    - 明示的な制御が可能で、予測可能な挙動
+    - SolidJS と同様のアプローチで実績あり
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    1. *同期（即時）*: シンプルだが、パフォーマンスが低下する可能性
+    2. *microtask（自動バッチング）*: 自動的だが、alien-signals がサポートしておらず、実装が複雑
+  ],
+  references: (
+    link("https://github.com/stackblitz/alien-signals")[alien-signals - batch()],
+  ),
 )
 
 #adr(

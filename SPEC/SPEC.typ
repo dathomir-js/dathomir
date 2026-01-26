@@ -551,7 +551,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("IR の安定性方針", Status.Proposed, "2026-01-25"),
+  header("IR の安定性方針", Status.Accepted, "2026-01-26"),
   [
     内部表現（IR）のバージョン管理方針を決定する必要がある。
 
@@ -561,14 +561,21 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - 開発速度 vs 安定性
   ],
   [
-    未決定。以下の選択肢を検討中：
-    - 内部専用（破壊変更 OK）
-    - セマンティックバージョンで管理
+    *内部専用（破壊変更 OK）* を採用する。
+
+    - v1.0 までは IR（構造化配列形式）の破壊的変更を許容
+    - `@dathomir/transformer` と `@dathomir/runtime` のバージョンを厳密に紐付け（peerDependencies）
+    - ユーザーは手書きしない（Transformer が生成）ため、影響は限定的
   ],
   [
-    未定
+    - 開発速度を優先し、最適化を試行錯誤できる
+    - 互換性負債を回避し、将来の改善余地を確保
+    - v1.0 以降は semver で管理し、メジャーバージョンでのみ破壊変更
+    - ビルドキャッシュは transformer と runtime のバージョン組み合わせで管理
   ],
-  alternatives: [],
+  alternatives: [
+    1. *初期から semver 管理*: 安定性は高いが、v1.0 前の最適化が制約される
+  ],
   references: (),
 )
 
@@ -622,7 +629,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("イベントシステム方針", Status.Proposed, "2026-01-25"),
+  header("イベントシステム方針", Status.Accepted, "2026-01-26"),
   [
     イベントリスナーを直接付けるか、委譲するかを決定する必要がある。
 
@@ -630,17 +637,26 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - 性能（イベント数が多い場合）
     - メモリ使用量
     - SSR 互換性
+    - バンドルサイズ（目標 < 2KB）
   ],
   [
-    未決定。以下の選択肢を検討中：
-    - 直付け（シンプル）
-    - 委譲（常時）（メモリ効率）
-    - 委譲（オプトイン）（柔軟）
+    *直付け（addEventListener）* を採用する。
+
+    - `event(type, element, handler)` で要素に直接リスナーを追加
+    - 委譲システムは実装しない（v1.0）
+    - Hydration 時は関数参照を直接復元
   ],
   [
-    未定
+    - シンプルで実装コストが低い、バンドルサイズへの影響が最小
+    - SSR 互換性が高い（Hydration で関数参照を復元するだけ）
+    - Web Components パターンでは各コンポーネントが小規模のため、委譲の恩恵が少ない
+    - バブリングしないイベント（focus, blur 等）も統一的に扱える
+    - 委譲システムは 500B-1KB 必要で、目標 2KB に対して大きい
   ],
-  alternatives: [],
+  alternatives: [
+    1. *委譲（SolidJS 型）*: メモリ効率的だが、SSR で `$$click` プロパティの復元が必要。バンドルサイズ増加。
+    2. *委譲（オプトイン）*: 柔軟だが実装が複雑。v2 で検討可能。
+  ],
   references: (),
 )
 

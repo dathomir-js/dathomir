@@ -23,7 +23,7 @@
 
   set text(
     font: "UDEV Gothic 35LG",
-    size: 10pt,
+    size: 9pt,
     lang: "ja",
     spacing: 0.05em,
   )

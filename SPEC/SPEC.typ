@@ -70,6 +70,105 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
   ],
 )
 
+#interface_spec(
+  name: "構造化配列形式（IR）",
+  summary: [
+    Transformer が生成し、Runtime が消費する中間表現（IR）の形式。
+    DOM 構造を配列で表現し、静的部分と動的部分を明確に分離する。
+  ],
+  format: [
+    *基本形式*: `[tag, attrs, ...children]`
+    - `tag`: 要素名（文字列）
+    - `attrs`: 属性オブジェクト または `null`
+    - `children`: 文字列（静的テキスト）または ネストした配列
+
+    *プレースホルダー*（動的箇所）:
+    - `['\{text\}', null]`: 動的テキストノードの位置
+    - `['\{insert\}', null]`: 子の挿入点（0/1/複数ノード）
+    - `['\{each\}', null]`: リストの挿入点
+
+    *flags*（第2引数）:
+    - `1`: SVG 名前空間
+    - `2`: MathML 名前空間
+    - `0`: HTML（デフォルト）
+  ],
+  constraints: [
+    - 配列は不変（イミュータブル）として扱う
+    - プレースホルダーは必ず `['\{type\}', null]` 形式
+    - IR のバージョンは Transformer と Runtime で厳密に一致すること
+  ],
+  examples: [
+    ```javascript
+    // JSX: <button class="btn">Count: {count}</button>
+    // 構造化配列:
+    ['button', \{ class: 'btn' \}, 'Count: ', ['\{text\}', null]]
+
+    // JSX: <ul>{items.map(item => <li>{item}</li>)}</ul>
+    // 構造化配列:
+    ['ul', null, ['\{each\}', null]]
+    ```
+  ],
+)
+
+#interface_spec(
+  name: "Runtime API",
+  summary: [
+    Runtime が提供する 14 個の関数の署名と契約。
+    Compiler-First 哲学に基づき、最小限の関数セットで構成される。
+  ],
+  format: [
+    *DOM 生成*:
+    - `fromTree(structure: Tree, flags?: number): DocumentFragment`
+    - `firstChild(node: Node, isText?: boolean): Node`
+    - `nextSibling(node: Node): Node`
+
+    *DOM 操作*:
+    - `setText(node: Text, value: string): void`
+    - `setAttr(element: Element, name: string, value: any): void`
+    - `setProp(element: Element, name: string, value: any): void`
+    - `spread(element: Element, prev: object | null, next: object): object`
+    - `append(parent: Node, child: Node): void`
+    - `insert(parent: Node, child: Node, anchor: Node | null): void`
+
+    *リスト*:
+    - `reconcile(parent: Node, items: T[], keyFn: (item: T) => any, createFn: (item: T) => Node): void`
+
+    *リアクティビティ*:
+    - `templateEffect(fn: () => void): void`
+    - `createRoot(fn: () => void): () => void`
+
+    *イベント*:
+    - `event(type: string, element: Element, handler: EventListener): void`
+  ],
+  constraints: [
+    - `spread` は前回の props を返し、次回の呼び出しで差分更新に使用
+    - `createRoot` は dispose 関数を返す
+    - `templateEffect` 内の effect は `createRoot` のスコープに自動登録
+    - `event` で登録したリスナーは `createRoot` の dispose で自動解除
+  ],
+  examples: [
+    ```javascript
+    // Transformer が生成するコード例
+    const _t1 = fromTree([['button', null, 'Count: ', ['\{text\}', null]]], 0);
+
+    class MyCounter extends HTMLElement \{
+      #dispose;
+      connectedCallback() \{
+        this.#dispose = createRoot(() => \{
+          const fragment = _t1();
+          const button = firstChild(fragment);
+          const text = firstChild(button, true);
+          templateEffect(() => setText(text, this.count.value));
+          event('click', button, () => this.count.value++);
+          this.shadowRoot.append(fragment);
+        \});
+      \}
+      disconnectedCallback() \{ this.#dispose?.(); \}
+    \}
+    ```
+  ],
+)
+
 
 == 振る舞い仕様
 
@@ -133,6 +232,63 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
   ],
   errors: [
     - *DSD 非対応環境*: フォールバック処理が実行される（初期表示が遅れる可能性）
+  ],
+)
+
+#behavior_spec(
+  name: "Cleanup ライフサイクル",
+  summary: [
+    `createRoot` によるリソース管理とコンポーネントのライフサイクル統合。
+    Owner/Root ベースの自動 cleanup を実現する。
+  ],
+  preconditions: [
+    - Web Component が定義されている
+    - `connectedCallback` が呼び出された
+  ],
+  steps: [
+    1. `connectedCallback` で `createRoot(fn)` を呼び出す
+    2. `createRoot` は現在の「オーナー」をスタックにプッシュ
+    3. `fn` 内で呼ばれた `templateEffect` / `event` は自動的にオーナーに登録
+    4. `fn` 実行完了後、オーナーをスタックからポップ
+    5. `createRoot` は `dispose` 関数を返す
+    6. `disconnectedCallback` で `dispose()` を呼び出す
+    7. `dispose` は登録された全ての effect を停止し、イベントリスナーを解除
+  ],
+  postconditions: [
+    - 全ての effect が停止している
+    - 全てのイベントリスナーが解除されている
+    - メモリリークが発生しない
+  ],
+  errors: [
+    - *dispose 呼び忘れ*: メモリリークが発生（開発モードで警告を検討）
+  ],
+)
+
+#behavior_spec(
+  name: "Effect 実行",
+  summary: [
+    Signal 更新から DOM 更新までのリアクティブな実行フロー。
+    batched flush により効率的な更新を実現する。
+  ],
+  preconditions: [
+    - `templateEffect` で effect が登録されている
+    - effect 内で Signal の `.value` が読み取られている
+  ],
+  steps: [
+    1. Signal の `.value` に新しい値を代入
+    2. Signal は依存する effect を「ダーティ」としてマーク
+    3. `batch()` 内の場合: batch 終了まで実行を遅延
+    4. `batch()` 外の場合: 同期的に effect を実行
+    5. effect 内の DOM 操作（`setText`, `setAttr` 等）が実行される
+    6. DOM が更新される
+  ],
+  postconditions: [
+    - 全てのダーティな effect が実行されている
+    - DOM が最新の Signal 値を反映している
+    - 同じ effect は1回のフラッシュで1度だけ実行される
+  ],
+  errors: [
+    - *無限ループ*: effect 内で自身の依存 Signal を更新すると発生（開発モードで検出・警告）
   ],
 )
 

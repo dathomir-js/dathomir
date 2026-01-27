@@ -22,7 +22,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 *採用するアプローチ*: SolidJS ベースの Fine-grained Reactivity
 - VNode システムを完全削除
 - JSX → Direct DOM compilation
-- Template cloning + createElement のハイブリッド戦略
+- 構造化配列方式（Svelte 5 の `from_tree` アプローチを参考）
 - Compiler-assisted SSR state serialization
 
 *独自性*:
@@ -50,7 +50,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 
     *属性マーカー*（要素用、必要時のみ）:
     - `data-dh="ID"`: 要素への紐付け
-    - `data-dh-hydrated`: Hydration 済みフラグ
+    - `data-dh-hydrated`: Hydration 済みフラグ（*開発モードのみ*、本番では WeakMap で管理）
   ],
   constraints: [
     - 基本は *コメント境界＋順序* で復元する
@@ -88,13 +88,15 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
   steps: [
     1. Hydration 対象の root（ShadowRoot）を特定
     2. WeakMap で Hydration 済みかチェック。済みならスキップ（冪等性保証）
-    3. TreeWalker でコメントマーカーを線形走査
-    4. 各マーカーに対して effect とイベントを *同時に* 接続：
+    3. `createRoot()` で cleanup スコープを作成
+    4. TreeWalker でコメントマーカーを線形走査
+    5. 各マーカーに対して effect とイベントを *同時に* 接続：
       - `<!--dh:t:ID-->`: テキストノードの effect を接続
       - `<!--dh:i:ID-->`: 挿入点の effect を接続
       - `<!--dh:b:ID-->`: ブロックの effect + イベントを接続
-    5. `data-dh` 属性がある要素にはイベント/属性バインディングを接続
-    6. WeakMap に Hydration 済みとして登録
+    6. `data-dh` 属性がある要素にはイベント/属性バインディングを接続
+    7. WeakMap に Hydration 済みとして登録
+    8. `createRoot()` の dispose 関数を Web Component に保存
   ],
   postconditions: [
     - すべての動的箇所に effect/イベントが接続されている
@@ -253,7 +255,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
   [
     - React/Vue 等から使っても、WC 単体で Hydration が完結する
     - Dathomir アプリでは全体 `hydrate()` による一括最適化も可能
-    - 冪等性の保証が必須（`data-dh-hydrated` 等のフラグで管理）
+    - 冪等性の保証が必須（WeakMap で管理）
     - WC ごとに Hydration ロジックを持つため、コードが分散する
   ],
   alternatives: [
@@ -580,7 +582,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("Runtime 原語の最小セット", Status.Accepted, "2026-01-26"),
+  header("Runtime 原語の最小セット", Status.Accepted, "2026-01-27"),
   [
     runtime が提供する基本操作（原語）の最小セットを決定する必要がある。
 
@@ -589,6 +591,8 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - バンドルサイズ（目標 < 2KB）
     - SSR/CSR 両対応
     - Hydration 互換性
+    - Cleanup 契約（Owner/Root ベース）との整合性
+    - リスト差分の責務
   ],
   [
     *最小セット* を以下に定める。
@@ -602,26 +606,41 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - `setText(node, value)`: テキストノードの内容を設定
     - `setAttr(element, name, value)`: 属性を設定
     - `setProp(element, name, value)`: プロパティを設定
+    - `spread(element, prevProps, nextProps)`: 複数属性を一括設定（差分更新対応）
     - `append(parent, child)`: 子ノードを追加
     - `insert(parent, child, anchor)`: 指定位置に挿入
 
+    *リスト*:
+    - `reconcile(parent, items, keyFn, createFn)`: keyed list の差分更新
+
     *リアクティビティ*:
     - `templateEffect(fn)`: テンプレート用 effect（再実行可能）
+    - `createRoot(fn)`: cleanup スコープを作成し、dispose 関数を返す
 
     *イベント*:
     - `event(type, element, handler)`: イベントリスナーを追加
 
-    合計: *11 関数*（目標 2KB 以内で実装可能）
+    合計: *14 関数*（推定 ~1.6KB、目標 2KB 以内）
   ],
   [
-    - Svelte 5 の最小セットを参考に、必要十分な機能を選定
+    - Cleanup 契約（Owner/Root ベース）のため `createRoot` を追加
+    - リスト差分を Runtime に集約することで、出力コードを簡潔に保つ
+    - `spread` を追加し、`\{...props\}` の差分更新をサポート
     - `fromTree` が中核となり、他は補助的な操作のみ
     - Compiler が複雑さを担当し、Runtime はシンプルに保つ
     - `templateEffect` は alien-signals の `effect` をラップし、バッチング制御を追加
+
+    *バンドルサイズ推定*:
+    - DOM 生成/操作: ~580B
+    - spread: ~150B
+    - reconcile: ~400B
+    - templateEffect + createRoot: ~350B
+    - event: ~50B
+    - 合計: ~1.6KB（目標 2KB 以内、マージン ~400B）
   ],
   alternatives: [
-    1. *より多くの helper*: `remove`, `replaceWith` 等を追加。バンドルサイズが増加。
-    2. *さらに削減*: `firstChild`/`nextSibling` を Compiler でインライン化。可読性低下。
+    1. *reconcile を Compiler 展開*: 出力コードが肥大化し、重複が発生するため不採用
+    2. *createRoot なし*: Cleanup 契約と整合しないため不採用
   ],
   references: (
     link("https://svelte.dev/docs/svelte/svelte-internal")[Svelte 5 - Internal runtime],
@@ -691,7 +710,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("Cleanup 契約", Status.Proposed, "2026-01-25"),
+  header("Cleanup 契約", Status.Accepted, "2026-01-27"),
   [
     effect / event / timer 等の解除責務とスコープ単位を決定する必要がある。
 
@@ -699,22 +718,54 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - メモリリーク防止
     - コンポーネント境界との関係
     - API の明瞭性
+    - バンドルサイズ
   ],
   [
-    未決定。検討事項：
-    - 誰が cleanup を呼ぶか
-    - スコープ単位（コンポーネント / effect / グローバル）
-    - 自動 vs 手動
+    *Owner/Root ベース（SolidJS 型）* を採用する。
+
+    - `createRoot(fn)` で cleanup スコープを作成
+    - スコープ内の effect/event は自動的に追跡される
+    - `createRoot()` は dispose 関数を返し、呼び出すと全て cleanup
+    - Web Component の `disconnectedCallback` で dispose を呼ぶ
+
+    実装イメージ：
+    ```typescript
+    class MyCounter extends HTMLElement \{
+      #dispose;
+
+      connectedCallback() \{
+        this.#dispose = createRoot(() => \{
+          // このスコープ内の effect/event は自動追跡
+          templateEffect(() => setText(text, count.value));
+          event('click', button, handler);
+        \});
+      \}
+
+      disconnectedCallback() \{
+        this.#dispose?.();
+      \}
+    \}
+    ```
   ],
   [
-    未定
+    - effect/event の配列を手動管理する必要がない
+    - SolidJS と同様のパターンで実績あり
+    - 一つの `dispose()` 呼び出しで全て解決
+    - ネストしたコンポーネントも自動的に追跡
+    - `createRoot()` の実装が必要（約 200-300B のコード追加）
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    1. *alien-signals 自動追跡 + 手動イベント管理*: バンドルサイズ最小だが、イベントリスナーの手動管理が必要
+    2. *手動管理*: 完全な制御だが、忘れるとメモリリーク
+    3. *WeakMap + FinalizationRegistry*: 自動だが cleanup タイミングが不確定
+  ],
+  references: (
+    link("https://www.solidjs.com/docs/latest/api#createroot")[SolidJS - createRoot()],
+  ),
 )
 
 #adr(
-  header("コンポーネント境界の意味論", Status.Proposed, "2026-01-25"),
+  header("コンポーネント境界の意味論", Status.Accepted, "2026-01-27"),
   [
     コンポーネントが cleanup スコープを持つかを決定する必要がある。
 
@@ -722,21 +773,29 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - メモリ管理の単位
     - 再利用性
     - アンマウント時の挙動
+    - Cleanup 契約との整合性
   ],
   [
-    未決定。以下の選択肢を検討中：
-    - cleanup スコープを持つ（自動管理）
-    - 持たない（手動管理）
+    *cleanup スコープを持つ* を採用する。
+
+    - 各 Web Component は `createRoot()` で独自の cleanup スコープを作成
+    - `disconnectedCallback` で自動的に cleanup
+    - コンポーネント内の全ての effect/event はスコープに紐付く
   ],
   [
-    未定
+    - メモリリーク防止が自動的
+    - Web Components 標準のライフサイクルと統合
+    - Cleanup 契約（Owner/Root ベース）と整合性がある
+    - コンポーネント単位で完全に独立した管理が可能
   ],
-  alternatives: [],
+  alternatives: [
+    1. *cleanup スコープを持たない*: 手動管理が必要で、メモリリークのリスクが高い
+  ],
   references: (),
 )
 
 #adr(
-  header("Fragment/制御フローの境界表現", Status.Proposed, "2026-01-25"),
+  header("Fragment/制御フローの境界表現", Status.Accepted, "2026-01-27"),
   [
     Fragment / if / each の境界をどう表現するかを決定する必要がある。
 
@@ -744,22 +803,35 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - Hydration の容易性
     - 差分更新の効率
     - keyed list の要件
+    - SSR マーカープロトコルとの整合性
   ],
   [
-    未決定。検討事項：
-    - コメント境界は必須か
-    - keyed list の実装方法
-    - 範囲の特定方法
+    *SSR マーカープロトコルに準拠* する。
+
+    - `<!--dh:b:ID-->` ... `<!--/dh:b-->`: 制御フロー（if/each）の開始・終了
+    - `<!--dh:i:ID-->`: 挿入点（0/1/複数ノード）
+    - keyed list は `reconcile()` で管理し、key は要素の識別に使用
+
+    *keyed list の表現*:
+    - Compiler が `reconcile(parent, items, keyFn, createFn)` を生成
+    - 各アイテムの key は `keyFn(item)` で取得
+    - 新規/更新/削除は `reconcile` が差分計算して実行
   ],
   [
-    未定
+    - SSR マーカープロトコルと統一することで実装がシンプルに
+    - コメント境界により、Hydration 時に制御フローの範囲を特定可能
+    - `reconcile` がリスト差分を担当し、keyed/unkeyed を統一的に扱う
+    - 制御フロー境界内のノードは動的に変化するため、コメントマーカーが適切
   ],
-  alternatives: [],
+  alternatives: [
+    1. *属性マーカー*: 動的に変化するノード群の境界を属性で表現するのは困難
+    2. *マーカーなし*: Hydration 時に範囲を特定できなくなる
+  ],
   references: (),
 )
 
 #adr(
-  header("更新単位の責務分担", Status.Proposed, "2026-01-25"),
+  header("更新単位の責務分担", Status.Accepted, "2026-01-27"),
   [
     テキスト / 属性 / リスト差分の責務を runtime と transformer のどちらが持つかを決定する必要がある。
 
@@ -767,14 +839,33 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - transformer の実装量
     - runtime のバンドルサイズ
     - 最適化の余地
+    - 出力コードの簡潔さ
   ],
   [
-    未決定。責務分担の境界線を検討中。
+    *Compiler-First 哲学* に基づき、以下の責務分担を採用する。
+
+    *Compiler（Transformer）の責務*:
+    - 静的/動的の分離と判定
+    - 構造化配列（`fromTree` の引数）の生成
+    - 最適化された更新コードの生成（`setText`, `setAttr` の呼び出し）
+    - `reconcile` の呼び出しコード生成（keyed/unkeyed の判定を含む）
+
+    *Runtime の責務*:
+    - `fromTree()`: 構造化配列から DOM を生成
+    - `setText()`, `setAttr()`, `setProp()`: 単純な更新操作
+    - `reconcile()`: keyed list の差分計算と適用
+    - `templateEffect()`: リアクティブな再実行
   ],
   [
-    未定
+    - Compiler が静的解析で最適化を行い、Runtime は単純な実行のみ
+    - テキスト/属性の更新は Compiler が `templateEffect` 内に最適なコードを生成
+    - リスト差分は Runtime の `reconcile` に集約し、出力コードの重複を防ぐ
+    - `reconcile` を Runtime に持つことで ~400B 増加するが、出力コードが大幅に簡潔化
   ],
-  alternatives: [],
+  alternatives: [
+    1. *リスト差分も Compiler 展開*: 各リストに差分ロジックが埋め込まれ、出力コードが肥大化
+    2. *全て Runtime*: Compiler の最適化の恩恵が受けられず、汎用コードが増える
+  ],
   references: (),
 )
 

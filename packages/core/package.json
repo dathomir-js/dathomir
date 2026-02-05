@@ -33,10 +33,25 @@
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.mts"
     },
+    "./jsx-runtime": {
+      "import": "./dist/jsx-runtime/index.mjs",
+      "require": "./dist/jsx-runtime/index.cjs",
+      "types": "./dist/jsx-runtime/index.d.mts"
+    },
+    "./jsx-dev-runtime": {
+      "import": "./dist/jsx-runtime/index.mjs",
+      "require": "./dist/jsx-runtime/index.cjs",
+      "types": "./dist/jsx-runtime/index.d.mts"
+    },
     "./reactivity": {
       "import": "./dist/reactivity/index.mjs",
       "require": "./dist/reactivity/index.cjs",
       "types": "./dist/reactivity/index.d.mts"
+    },
+    "./runtime": {
+      "import": "./dist/runtime/index.mjs",
+      "require": "./dist/runtime/index.cjs",
+      "types": "./dist/runtime/index.d.mts"
     },
     "./shared": {
       "import": "./dist/shared/index.mjs",

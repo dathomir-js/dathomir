@@ -1,7 +1,13 @@
 import { defineConfig } from "@dathomir/config/tsdown";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/reactivity/index.ts", "src/shared/index.ts"],
+  entry: [
+    "src/index.ts",
+    "src/jsx-runtime/index.ts",
+    "src/reactivity/index.ts",
+    "src/runtime/index.ts",
+    "src/shared/index.ts",
+  ],
   dts: true,
   outDir: "dist",
   clean: true,

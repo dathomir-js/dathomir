@@ -1,0 +1,32 @@
+/**
+ * Dathomir Counter Component - JSX Example
+ *
+ * This demonstrates JSX usage with automatic reactive binding.
+ * {count.value} is automatically tracked via the transformer.
+ */
+import { computed, signal } from "@dathomir/core";
+
+export function Counter() {
+  const count = signal(0);
+  const doubled = computed(() => count.value * 2);
+
+  const increment = () => {
+    count.value++;
+  };
+
+  const decrement = () => {
+    count.value--;
+  };
+
+  return (
+    <div class="counter">
+      <h1>Dathomir Counter</h1>
+      <p>Count: {count.value}</p>
+      <p>Doubled: {doubled.value}</p>
+      <div class="buttons">
+        <button onClick={decrement}>-</button>
+        <button onClick={increment}>+</button>
+      </div>
+    </div>
+  );
+}

@@ -58,6 +58,19 @@ interface Computed<T> {
  */
 type EffectCleanup = () => void;
 
+/**
+ * Dispose function returned by {@link createRoot} that cleans up all tracked effects and events.
+ */
+type RootDispose = () => void;
+
+/**
+ * Owner scope that tracks effects and cleanup functions.
+ */
+interface Owner {
+  effects: EffectCleanup[];
+  cleanups: (() => void)[];
+}
+
 type NodeKind = "signal" | "computed" | "effect" | "scope";
 
 interface BaseNode extends ReactiveNode {
@@ -122,6 +135,7 @@ let batchDepth = 0;
 let notifyIndex = 0;
 let queuedEffectsLength = 0;
 let activeSub: BaseNode | undefined;
+let currentOwner: Owner | undefined;
 
 function setActiveSub(sub: BaseNode | undefined) {
   const previous = activeSub;
@@ -464,5 +478,79 @@ function batch<T>(fn: () => T): T {
   }
 }
 
-export { batch, computed, effect, signal };
-export type { Computed, EffectCleanup, Signal, SignalUpdate };
+/**
+ * Create a cleanup scope that tracks effects and cleanup functions.
+ * All effects and templateEffects created within the callback are automatically
+ * tracked and disposed when the returned dispose function is called.
+ * @param {(dispose: RootDispose) => void} fn Callback to run within the scope.
+ * @returns {RootDispose} Dispose function that cleans up all tracked effects.
+ */
+function createRoot(fn: (dispose: RootDispose) => void): RootDispose {
+  const owner: Owner = {
+    effects: [],
+    cleanups: [],
+  };
+  const prevOwner = currentOwner;
+  currentOwner = owner;
+
+  const dispose: RootDispose = () => {
+    for (const cleanup of owner.effects) {
+      cleanup();
+    }
+    for (const cleanup of owner.cleanups) {
+      cleanup();
+    }
+    owner.effects.length = 0;
+    owner.cleanups.length = 0;
+  };
+
+  try {
+    fn(dispose);
+  } finally {
+    currentOwner = prevOwner;
+  }
+
+  return dispose;
+}
+
+/**
+ * Register a cleanup function to be called when the current root is disposed.
+ * Must be called within a createRoot scope.
+ * @param {() => void} fn Cleanup function to register.
+ */
+function onCleanup(fn: () => void): void {
+  if (currentOwner !== undefined) {
+    currentOwner.cleanups.push(fn);
+  }
+}
+
+/**
+ * Register a template effect that re-runs when tracked dependencies change.
+ * Unlike `effect`, this is designed for template updates and is automatically
+ * tracked by the current owner scope (createRoot).
+ * @param {() => void} fn Effect function to execute and track.
+ */
+function templateEffect(fn: () => void): void {
+  const cleanup = effect(fn);
+  if (currentOwner !== undefined) {
+    currentOwner.effects.push(cleanup);
+  }
+}
+
+export {
+  batch,
+  computed,
+  createRoot,
+  effect,
+  onCleanup,
+  signal,
+  templateEffect,
+};
+export type {
+  Computed,
+  EffectCleanup,
+  Owner,
+  RootDispose,
+  Signal,
+  SignalUpdate,
+};

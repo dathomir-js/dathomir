@@ -51,6 +51,9 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     *属性マーカー*（要素用、必要時のみ）:
     - `data-dh="ID"`: 要素への紐付け
     - `data-dh-hydrated`: Hydration 済みフラグ（*開発モードのみ*、本番では WeakMap で管理）
+
+    *状態転送マーカー*:
+    - `<script type="application/json" data-dh-state>`: Web Component の初期状態（Shadow DOM 内に配置）
   ],
   constraints: [
     - 基本は *コメント境界＋順序* で復元する
@@ -106,6 +109,21 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     // JSX: <ul>{items.map(item => <li>{item}</li>)}</ul>
     // 構造化配列:
     ['ul', null, ['\{each\}', null]]
+
+    // \{each\} から reconcile への変換例:
+    // Transformer が生成するコード:
+    const ul = firstChild(fragment);
+    // reconcile は ul の子要素を管理する（アンカー不要、全子要素を対象）
+    templateEffect(() => reconcile(
+      ul,
+      items.value,
+      item => item.id,  // keyFn
+      item => \{         // createFn
+        const li = fromTree([['li', null, ['\{text\}', null]]], 0);
+        templateEffect(() => setText(firstChild(li, true), item.name));
+        return li;
+      \}
+    ));
     ```
   ],
 )
@@ -142,6 +160,9 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
   ],
   constraints: [
     - `spread` は前回の props を返し、次回の呼び出しで差分更新に使用
+    - `spread` の差分検出: `Object.keys(next)` を走査し、`prev[key] !== next[key]` なら更新
+    - `spread` でイベントハンドラ（`on` で始まるキー、例: `onClick`, `onInput`）は `setAttr` ではなく `event` として処理
+    - イベントハンドラ判定: `key.startsWith('on') && key.length > 2 && typeof value === 'function'`
     - `createRoot` は dispose 関数を返す
     - `templateEffect` 内の effect は `createRoot` のスコープに自動登録
     - `event` で登録したリスナーは `createRoot` の dispose で自動解除
@@ -170,6 +191,145 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 
+#interface_spec(
+  name: "Reactivity API",
+  summary: [
+    ユーザー向けに公開するリアクティビティ API。
+    TC39 Signals 仕様に準拠し、`.value` プロパティでアクセスする。
+  ],
+  format: [
+    *Signal 操作*:
+    - `signal<T>(initial: T): Signal<T>`: リアクティブな値を作成
+    - `computed<T>(fn: () => T): ReadonlySignal<T>`: 依存関係から派生値を計算
+    - `effect(fn: () => void): () => void`: 副作用を登録し、dispose 関数を返す
+    - `batch(fn: () => void): void`: 複数の更新を一括で実行
+    - `createRoot(fn: () => void): () => void`: cleanup スコープを作成
+
+    *型定義*:
+    ```typescript
+    interface Signal<T> \{
+      value: T;  // 読み書き可能
+    \}
+
+    interface ReadonlySignal<T> \{
+      readonly value: T;  // 読み取り専用
+    \}
+    ```
+  ],
+  constraints: [
+    - Signal の値は `.value` プロパティでアクセスする（TC39 Signals 準拠）
+    - 関数呼び出し形式 `count()` は非サポート（SolidJS とは異なる）
+    - `computed` は遅延評価（依存関係が変化するまで再計算しない）
+    - `effect` は同期的に初回実行される
+    - `batch` 内の更新は、batch 終了時に一度だけ effect を実行
+    - `createRoot` 内で作成した effect は、dispose 時に自動解除される
+  ],
+  examples: [
+    ```javascript
+    import \{ signal, computed, effect, batch \} from '@dathomir/core';
+
+    // 基本的な使用例
+    const count = signal(0);
+    const doubled = computed(() => count.value * 2);
+
+    effect(() => \{
+      console.log(`Count: $\{count.value\}, Doubled: $\{doubled.value\}`);
+    \});
+
+    // 値の更新
+    count.value++;  // "Count: 1, Doubled: 2"
+
+    // バッチ更新
+    batch(() => \{
+      count.value = 10;
+      count.value = 20;  // effect は一度だけ実行される
+    \});  // "Count: 20, Doubled: 40"
+    ```
+  ],
+)
+
+#interface_spec(
+  name: "Plugin API",
+  summary: [
+    Vite/webpack 等のビルドツール向けプラグイン API。
+    unplugin を使用して複数バンドラーに対応する。
+  ],
+  format: [
+    *エクスポート*:
+    - `dathomirPlugin(options?: PluginOptions): UnpluginInstance`
+    - `dathomirVitePlugin(options?: PluginOptions): VitePlugin`
+    - `dathomirWebpackPlugin(options?: PluginOptions): WebpackPlugin`
+
+    *オプション*:
+    ```typescript
+    interface PluginOptions \{
+      // 変換対象のファイル拡張子（デフォルト: ['.tsx', '.jsx']）
+      include?: string[];
+      // 除外パターン
+      exclude?: string[];
+    \}
+    ```
+  ],
+  constraints: [
+    - JSX/TSX ファイルのみを変換対象とする
+    - `@dathomir/transformer` を内部で使用
+    - SSR モード検出は Vite Environment API（Vite 6+）を優先
+    - フォールバック順序: `environment.name` → `options.ssr` → `import.meta.env.SSR`
+  ],
+  examples: [
+    ```javascript
+    // vite.config.js
+    import \{ dathomirVitePlugin \} from '@dathomir/plugin';
+
+    export default \{
+      plugins: [dathomirVitePlugin()],
+    \};
+    ```
+  ],
+)
+
+#interface_spec(
+  name: "Transformer API",
+  summary: [
+    JSX が変換された JavaScript コードを解析し、props 値を `computed()` でラップするトランスフォーマー。
+  ],
+  format: [
+    *エクスポート*:
+    - `transform(code: string, options?: TransformOptions): TransformResult`
+
+    *オプション*:
+    ```typescript
+    interface TransformOptions \{
+      // ソースマップを生成するか
+      sourceMap?: boolean;
+      // ファイル名（ソースマップ用）
+      filename?: string;
+    \}
+
+    interface TransformResult \{
+      code: string;
+      map?: SourceMap;
+    \}
+    ```
+  ],
+  constraints: [
+    - 入力は JSX が JavaScript に変換済みのコード
+    - `jsx()` / `jsxs()` 呼び出しの props 値を `computed()` でラップ
+    - 静的な値（リテラル）はラップしない（最適化）
+    - ES モジュール形式の出力
+  ],
+  examples: [
+    ```javascript
+    // 入力（JSX 変換後）:
+    jsx('button', \{ onClick: handler, class: count.value > 0 ? 'active' : '' \})
+
+    // 出力（Transformer 適用後）:
+    jsx('button', \{ onClick: handler, class: computed(() => count.value > 0 ? 'active' : '') \})
+    ```
+  ],
+)
+
+
 == 振る舞い仕様
 
 #behavior_spec(
@@ -187,15 +347,17 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
   steps: [
     1. Hydration 対象の root（ShadowRoot）を特定
     2. WeakMap で Hydration 済みかチェック。済みならスキップ（冪等性保証）
-    3. `createRoot()` で cleanup スコープを作成
-    4. TreeWalker でコメントマーカーを線形走査
-    5. 各マーカーに対して effect とイベントを *同時に* 接続：
+    3. `<script data-dh-state>` から初期状態を読み込み、Signal を初期化（devalue で parse）
+    4. 状態スクリプト要素を DOM から削除
+    5. `createRoot()` で cleanup スコープを作成
+    6. TreeWalker でコメントマーカーを線形走査
+    7. 各マーカーに対して effect とイベントを *同時に* 接続：
       - `<!--dh:t:ID-->`: テキストノードの effect を接続
       - `<!--dh:i:ID-->`: 挿入点の effect を接続
       - `<!--dh:b:ID-->`: ブロックの effect + イベントを接続
-    6. `data-dh` 属性がある要素にはイベント/属性バインディングを接続
-    7. WeakMap に Hydration 済みとして登録
-    8. `createRoot()` の dispose 関数を Web Component に保存
+    8. `data-dh` 属性がある要素にはイベント/属性バインディングを接続
+    9. WeakMap に Hydration 済みとして登録
+    10. `createRoot()` の dispose 関数を Web Component に保存
   ],
   postconditions: [
     - すべての動的箇所に effect/イベントが接続されている
@@ -565,7 +727,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("状態転送の範囲", Status.Proposed, "2026-01-25"),
+  header("状態転送の範囲", Status.Accepted, "2026-01-27"),
   [
     SSR → CSR で何をどこまで転送するかを決定する必要がある。
 
@@ -575,21 +737,30 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - セキュリティ（何を露出するか）
   ],
   [
-    未決定。以下の選択肢を検討中：
-    - なし（再実行のみ）
-    - 初期値のみ
-    - Signal ID + 初期値
-    - スナップショット（派生値含む）
+    *初期値のみ* を転送する。
+
+    - Signal の初期値のみを転送
+    - computed は CSR 側で再計算（軽量な処理が大半）
+    - Signal ID は転送しない（DOM 位置から暗黙的に対応付け）
+
+    将来的に重い computed のキャッシュが必要になった場合は、スナップショット方式をオプションとして v2 で検討する。
   ],
   [
-    未定
+    - 転送サイズを最小化できる
+    - 実装がシンプル
+    - ほとんどの computed は軽量で再計算コストが低い
+    - 重い派生値がある場合は性能に影響する可能性
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    ("なし（再実行のみ）", "初期値すら転送しない。最小だが、すべての状態を再構築する必要がある"),
+    ("Signal ID + 初期値", "ID で明示的に対応付け。転送サイズ増加"),
+    ("スナップショット", "computed 含む完全な状態。最大の転送サイズだが完全な再現性"),
+  ],
+  references: ("Hydration ADR", "Runtime 原語 ADR"),
 )
 
 #adr(
-  header("状態転送の注入形式", Status.Proposed, "2026-01-25"),
+  header("状態転送の注入形式", Status.Accepted, "2026-01-27"),
   [
     転送された状態をどのようにクライアントに渡すかを決定する必要がある。
 
@@ -599,20 +770,39 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - コード分割との相性
   ],
   [
-    未決定。以下の選択肢を検討中：
-    - `window.__DATHOMIR_STATE__`（グローバル汚染）
-    - `<script type="application/json">`（CSP 安全）
-    - 分割（chunk ごと）
+    *`<script type="application/json">` を各 Web Component 内に配置* する。
+
+    ```html
+    <my-counter>
+      <template shadowrootmode="open">
+        <script type="application/json" data-dh-state>{"count": 5}</script>
+        <button>Count: 5</button>
+      </template>
+    </my-counter>
+    ```
+
+    - `type="application/json"` はスクリプトとして実行されない（CSP 安全）
+    - `data-dh-state` 属性で識別
+    - 各 Web Component が自身の状態を持つ（責務分離）
+    - Hydration 時に `<script>` 要素は削除される
   ],
   [
-    未定
+    - CSP（Content Security Policy）に準拠
+    - グローバル汚染なし
+    - 各 WC が独立して Hydrate 可能
+    - パースは JSON.parse で高速
+    - Shadow DOM 内に隠蔽されるため、Light DOM を汚染しない
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    ("window.\_\_DATHOMIR\_STATE\_\_", "グローバル変数。シンプルだが汚染とスコープの問題あり"),
+    ("グローバル `<script>`", "一箇所に集約。WC の独立性を損なう"),
+    ("data 属性", "サイズ制限と複雑なデータの扱いが困難"),
+  ],
+  references: ("SSR マーカープロトコル Interface Spec", "Hydration Behavior Spec"),
 )
 
 #adr(
-  header("状態転送のエスケープ規約", Status.Proposed, "2026-01-25"),
+  header("状態転送のエスケープ規約", Status.Accepted, "2026-01-27"),
   [
     状態を文字列化・復元する際の XSS 対策を決定する必要がある。
 
@@ -622,20 +812,42 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - 性能（シリアライズコスト）
   ],
   [
-    未決定。検討事項：
-    - JSON.stringify の使用可否
-    - カスタムシリアライザの必要性
-    - 循環参照の扱い
+    *devalue ライブラリ* を使用する。
+
+    ```javascript
+    import { stringify, parse } from 'devalue';
+
+    // SSR
+    const html = `<script type="application/json">${stringify(state)}</script>`;
+
+    // CSR
+    const state = parse(jsonString);
+    ```
+
+    devalue の特徴：
+    - XSS エスケープ済み（`</script>` などを安全にエンコード）
+    - 循環参照対応
+    - Date, RegExp, Map, Set, BigInt 対応
+    - Svelte/SvelteKit での実績
+    - ~1KB のサイズ
   ],
   [
-    未定
+    - セキュリティが実証済み（Svelte が採用）
+    - 自前実装のリスクを回避
+    - 豊富な型サポート
+    - 外部依存が増える（ただし小さい）
+    - *バンドルサイズの扱い*: devalue (~1KB) は SSR 用依存であり、Runtime 目標 (< 2KB) とは別枠。CSR のみの場合は不要。
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    ("JSON.stringify + 手動エスケープ", "依存なしだが、エッジケースでの脆弱性リスク"),
+    ("superjson", "~3KB と大きめ。tRPC で使用"),
+    ("serialize-javascript", "関数対応だがセキュリティ注意が必要"),
+  ],
+  references: ("devalue: https://github.com/Rich-Harris/devalue",),
 )
 
 #adr(
-  header("状態転送の信頼境界", Status.Proposed, "2026-01-25"),
+  header("状態転送の信頼境界", Status.Accepted, "2026-01-27"),
   [
     サーバ生成データの取り扱いと改ざん耐性の要否を決定する必要がある。
 
@@ -645,16 +857,32 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - 性能への影響
   ],
   [
-    未決定。検討事項：
-    - サーバデータを信頼するか検証するか
-    - 改ざん検出が必要か
-    - どのレベルのセキュリティを目指すか
+    *サーバを信頼し、機密情報を状態に含めない* 方針を採用。
+
+    セキュリティ原則：
+    1. サーバが生成したデータは信頼する（署名/検証なし）
+    2. 機密情報（パスワード、APIキー等）は状態に含めない
+    3. 状態はすべてクライアントに露出する前提で設計
+
+    開発者ガイドライン：
+    - 認証後はセッショントークンを使用（状態に保存しない）
+    - 機密データはサーバーサイドでのみ処理
+    - 状態に含めるデータは「公開されても問題ない」ものに限定
+
+    これは SvelteKit の `_` プレフィックスによる機密フィールド除外と同様のアプローチ。
   ],
   [
-    未定
+    - 実装がシンプル（署名/検証不要）
+    - 性能への影響なし
+    - 開発者に適切なセキュリティ意識を促す
+    - 改ざんされても機密情報は漏洩しない設計
+    - 改ざんによる不正動作は防げない（ただし、これは一般的なクライアント側の制約）
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    ("署名付き状態", "改ざん検出可能だが、実装複雑化と性能低下"),
+    ("完全検証", "すべての状態をサーバーで再検証。高コスト"),
+  ],
+  references: ("SvelteKit state management: https://svelte.dev/docs/kit/state-management",),
 )
 
 #adr(
@@ -1060,7 +1288,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("公開 API の範囲", Status.Proposed, "2026-01-25"),
+  header("公開 API の範囲", Status.Accepted, "2026-02-05"),
   [
     `memo` / `untrack` / `cleanup` 等を公開 API に含めるかを決定する必要がある。
 
@@ -1070,17 +1298,38 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - 互換性コスト
   ],
   [
-    未決定。どこまで公開するか検討中。
+    *最小限の API を v1.0 で公開* する。
+
+    *v1.0 で公開*:
+    - `signal(value)`: 基本的なリアクティブな値
+    - `computed(fn)`: 派生値
+    - `effect(fn)`: 副作用
+    - `batch(fn)`: バッチ更新
+    - `createRoot(fn)`: cleanup スコープ作成
+
+    *v2 で検討*:
+    - `untrack(fn)`: 使用頻度低い
+    - `onCleanup(fn)`: createRoot で代替可能
+    - `memo`: computed のエイリアス不要
   ],
   [
-    未定
+    - API サーフェスを小さく保ち、互換性コストを最小化
+    - Web Components + リアクティビティに集中
+    - 後から追加しても破壊的変更にならない
+    - alien-signals の基本 API と整合性がある
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    ("全て公開", "API サーフェスが大きくなり、互換性コストが増大"),
+    ("signal/computed のみ", "batch や createRoot がないと実用性が低い"),
+  ],
+  references: (
+    link("https://github.com/stackblitz/alien-signals")[alien-signals API],
+    link("https://www.solidjs.com/docs/latest/api")[SolidJS API],
+  ),
 )
 
 #adr(
-  header("値読み取りの規約", Status.Proposed, "2026-01-25"),
+  header("値読み取りの規約", Status.Accepted, "2026-02-05"),
   [
     Signal の値を `.value` で読むか、アクセサ関数も許容するかを決定する必要がある。
 
@@ -1090,19 +1339,37 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - 型安全性
   ],
   [
-    未決定。以下の選択肢を検討中：
-    - `.value` 固定（TC39 準拠）
-    - アクセサ関数も許容（柔軟）
+    *`.value` 固定（TC39 準拠）* を採用する。
+
+    ```javascript
+    // ✅ 許可
+    const value = signal.value;
+    signal.value = newValue;
+    const derived = computed.value;
+
+    // ❌ 不許可
+    const value = signal();
+    signal(newValue);
+    ```
   ],
   [
-    未定
+    - TC39 Signals 仕様との整合性
+    - alien-signals がデフォルトで `.value` を推奨
+    - Dathomir の独自性として *TC39 準拠* を打ち出す
+    - 型安全性が高い（getter/setter として明確）
+    - Vue 3 Composition API とも整合性がある
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    ("アクセサ関数も許容", "柔軟だが、どちらを使うか迷いが生じる。SolidJS 型"),
+    ("関数呼び出しのみ", "TC39 仕様から逸脱し、独自性を失う"),
+  ],
+  references: (
+    link("https://github.com/tc39/proposal-signals")[TC39 Signals Proposal],
+  ),
 )
 
 #adr(
-  header("SSR 対象の範囲", Status.Proposed, "2026-01-25"),
+  header("SSR 対象の範囲", Status.Accepted, "2026-02-05"),
   [
     文字列 SSR のみか、サーバ DOM 生成も視野に入れるかを決定する必要がある。
 
@@ -1112,19 +1379,40 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - 性能
   ],
   [
-    未決定。以下の選択肢を検討中：
-    - 文字列 SSR のみ（シンプル）
-    - サーバ DOM 生成も視野に入れる（将来拡張）
+    *環境別の出力最適化* を採用する。
+
+    | 環境 | 出力形式 |
+    |------|----------|
+    | `client` | ブラウザ用 JS |
+    | `ssr` | Node.js 互換 SSR（文字列生成） |
+    | `edge` | Edge Runtime 用 SSR（Web 標準 API のみ） |
+
+    *v1.0*: 文字列 SSR のみ実装
+    - 構造化配列 → HTML 文字列生成
+    - Web 標準 API のみ使用
+    - Node.js API は使わない（`edge` 環境対応）
+
+    *v2*: サーバ DOM 生成を検討
+    - jsdom, happy-dom, linkedom 等
+    - パフォーマンステストの結果次第
   ],
   [
-    未定
+    - Edge 環境（Cloudflare Workers, Deno Deploy）で動作
+    - 文字列 SSR で十分な性能とシンプルさを実現
+    - Svelte が文字列ベース SSR で成功している実績
+    - Vite Environment API で環境別に最適化可能
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    ("サーバ DOM 生成", "実装複雑化、Edge 環境で制約。v2 で検討"),
+    ("Node.js 専用 SSR", "Edge 環境で動作しない。現代的でない"),
+  ],
+  references: (
+    link("https://vitejs.dev/guide/api-environment.html")[Vite Environment API],
+  ),
 )
 
 #adr(
-  header("Edge 環境の制約", Status.Proposed, "2026-01-25"),
+  header("Edge 環境の制約", Status.Accepted, "2026-02-05"),
   [
     Node 依存ゼロをいつから前提にするかを決定する必要がある。
 
@@ -1134,17 +1422,44 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - タイムライン
   ],
   [
-    未決定。v1 から Node ゼロか、段階的移行か検討中。
+    *v1.0 から Node.js 依存ゼロ*、Environment API で `edge` 環境を明示的にサポートする。
+
+    *実装指針*:
+    - Node.js 固有 API を使わない（`fs`, `path`, `Buffer` 等）
+    - Web 標準 API のみ使用（Fetch, URL, TextEncoder, TextDecoder 等）
+    - Vite の `edge` 環境で専用最適化
+
+    ```javascript
+    // vite.config.js
+    export default \{
+      environments: \{
+        edge: \{
+          resolve: \{
+            conditions: ['edge', 'worker']
+          \}
+        \}
+      \}
+    \}
+    ```
   ],
   [
-    未定
+    - 現代的なフレームワークの要件（Cloudflare Workers, Vercel Edge, Deno Deploy）
+    - 後から対応すると破壊的変更が必要
+    - Web 標準 API で十分実装可能
+    - Vite Environment API により環境別の条件分岐が可能
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    ("段階的移行", "v1 で Node.js 依存があると、後で破壊的変更が必要"),
+    ("Node.js 専用", "Edge 環境で動作せず、モダンでない"),
+  ],
+  references: (
+    link("https://workers.cloudflare.com/")[Cloudflare Workers],
+    link("https://deno.com/deploy")[Deno Deploy],
+  ),
 )
 
 #adr(
-  header("Web Components 属性/プロパティのリフレクション", Status.Proposed, "2026-01-25"),
+  header("Web Components 属性/プロパティのリフレクション", Status.Accepted, "2026-02-05"),
   [
     属性とプロパティの同期方法を決定する必要がある。
 
@@ -1154,17 +1469,47 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - 性能
   ],
   [
-    未決定。リフレクション規約を検討中。
+    *手動リフレクション*（v1.0 では自動サポートなし）を採用する。
+
+    - Web Components 標準の `observedAttributes` + `attributeChangedCallback` を使用
+    - Dathomir は自動リフレクションを提供しない
+    - ユーザーが必要に応じて `setAttr` / `setProp` で手動管理
+
+    ```javascript
+    class MyElement extends HTMLElement \{
+      static observedAttributes = ['count'];
+      #count = signal(0);
+
+      attributeChangedCallback(name, oldValue, newValue) \{
+        if (name === 'count') \{
+          this.#count.value = Number(newValue);
+        \}
+      \}
+
+      set count(value) \{
+        this.#count.value = value;
+        this.setAttribute('count', value);
+      \}
+    \}
+    ```
   ],
   [
-    未定
+    - 属性↔プロパティの自動同期は複雑で、実装コストが高い
+    - Web Components 標準の仕組みで十分
+    - バンドルサイズへの影響を最小化
+    - ユーザーが必要な箇所だけ実装できる柔軟性
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    ("自動リフレクション", "実装複雑、バンドルサイズ増加、すべての WC で必要とは限らない"),
+    ("デコレータベース", "Stage 3 Decorators の安定化待ち、v2 で検討可能"),
+  ],
+  references: (
+    link("https://developer.mozilla.org/en-US/docs/Web/API/Web_components")[Web Components - MDN],
+  ),
 )
 
 #adr(
-  header("診断情報の詳細度", Status.Proposed, "2026-01-25"),
+  header("診断情報の詳細度", Status.Accepted, "2026-02-05"),
   [
     ミスマッチ時にどこまで情報を出すかを決定する必要がある。
 
@@ -1174,20 +1519,43 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - バンドルサイズ
   ],
   [
-    未決定。以下を含めるか検討中：
-    - 境界の位置
-    - 期待値 vs 実際値
-    - マーカー情報
+    *開発環境でのみ詳細情報* を出力する。
+
+    | 情報 | 開発 (`__DEV__`) | 本番 |
+    |------|------------------|------|
+    | Hydration ミスマッチ位置 | ✅ | ❌ |
+    | 期待値 vs 実際値 | ✅ | ❌ |
+    | マーカー ID | ✅ | ❌ |
+    | スタックトレース | ✅ | ❌ |
+    | 警告メッセージ | ✅ | ✅ (簡易) |
+
+    ```javascript
+    if (__DEV__) \{
+      console.error(`Hydration mismatch at <!--dh:t:$\{id\}-->`, \{
+        expected: expectedText,
+        actual: actualText,
+        element: node.parentElement
+      \});
+    \} else \{
+      console.warn('Hydration mismatch detected');
+    \}
+    ```
   ],
   [
-    未定
+    - 開発時のデバッグ効率を最大化
+    - 本番では詳細情報を除外してバンドルサイズを削減
+    - `__DEV__` フラグで分岐し、本番ビルド時に dead code elimination
+    - Svelte, Vue と同様のアプローチで実績あり
   ],
-  alternatives: [],
+  alternatives: [
+    ("常に詳細情報", "バンドルサイズ増加、本番で不要な情報が露出"),
+    ("常に簡易情報", "開発時のデバッグが困難"),
+  ],
   references: (),
 )
 
 #adr(
-  header("SSR モード伝播", Status.Proposed, "2026-01-25"),
+  header("SSR モード伝播", Status.Accepted, "2026-02-05"),
   [
     plugin / transformer に SSR モードフラグをどう渡すかを決定する必要がある。
 
@@ -1197,11 +1565,47 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - 誤設定の防止
   ],
   [
-    未決定。伝播方法を検討中。
+    *Vite Environment API を優先* し、後方互換を確保する。
+
+    *優先順位*:
+    1. *Environment API* (`environment.name`) - Vite 6+
+    2. `options.ssr` - Vite 5 後方互換
+    3. `import.meta.env.SSR` - 最終フォールバック
+
+    ```javascript
+    // Plugin 実装
+    export function dathomir() \{
+      return \{
+        name: 'dathomir',
+        transform(code, id, options) \{
+          const environment = options?.environment || this.environment;
+
+          // Environment API で環境判定（優先）
+          const envName = environment?.name
+            || (options?.ssr ? 'ssr' : 'client');
+
+          const isSSR = envName === 'ssr' || envName === 'edge';
+
+          return isSSR
+            ? transformSSR(code, envName)
+            : transformClient(code);
+        \}
+      \}
+    \}
+    ```
   ],
   [
-    未定
+    - Vite 6+ の新標準（Environment API）に準拠
+    - 複数環境（`client`, `ssr`, `edge`, `worker`）に柔軟に対応
+    - Vite 5 での動作も保証（後方互換）
+    - 環境名を Transformer に渡すことで、環境別最適化が可能
+    - ビルドツールから明示的に伝播されるため、誤設定が少ない
   ],
-  alternatives: [],
-  references: (),
+  alternatives: [
+    ("環境変数のみ", "ビルドツールとの統合が弱く、誤設定のリスク"),
+    ("設定ファイル", "ユーザーが手動設定する必要があり、煩雑"),
+  ],
+  references: (
+    link("https://vitejs.dev/guide/api-environment.html")[Vite Environment API],
+  ),
 )

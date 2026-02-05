@@ -15,13 +15,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "moduleResolution": "bundler",
-    "rootDir": "${configDir}/src",
     "outDir": "${configDir}/dist",
     "paths": {
       "@/*": ["${configDir}/src/*"]
     },
     "types": ["@types/node"]
   },
-  "include": ["${configDir}/src"],
+  "include": ["${configDir}/src", "${configDir}/test"],
   "exclude": ["${configDir}/dist", "${configDir}/node_modules"]
 }

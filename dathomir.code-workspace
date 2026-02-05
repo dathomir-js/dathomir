@@ -75,7 +75,7 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.inlineSuggest.enabled": true,
     "github.copilot.nextEditSuggestions.enabled": true,
-    "typescript.experimental.useTsgo": true,
+    "typescript.experimental.useTsgo": false,
     "editor.codeActionsOnSave": {
       "source.fixAll.oxc": "explicit",
       "source.fixAll.eslint": "explicit",

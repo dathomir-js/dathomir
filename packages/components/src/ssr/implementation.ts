@@ -149,6 +149,9 @@ function renderDSD(
  * Uses the component registry to resolve custom element tags
  * and render their content with Declarative Shadow DOM.
  *
+ * @internal This is primarily for internal use by Dathomir's SSR system.
+ * Most users should use `renderDSD` or `renderDSDContent` instead.
+ *
  * @returns A function that takes (tagName, attrs) and returns DSD HTML or null.
  */
 function createComponentRenderer(): (

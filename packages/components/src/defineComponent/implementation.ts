@@ -15,7 +15,7 @@ import { createRoot, signal } from "@dathomir/reactivity";
 type SetupFunction = (
   host: HTMLElement,
   ctx: ComponentContext,
-) => Node | DocumentFragment;
+) => Node | DocumentFragment | string;
 
 /** Context passed to setup and hydrate functions. */
 interface ComponentContext {

@@ -107,7 +107,7 @@ importers:
         version: 24.2.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 4.0.4(@vitest/browser@4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4))(vitest@4.0.4)
+        version: 4.0.4(@vitest/browser@4.0.4(vite@7.1.9(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4))(vitest@4.0.4)
       vitest:
         specifier: 'catalog:'
         version: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(happy-dom@20.5.3)(jiti@2.6.1)(tsx@4.20.6)
@@ -173,9 +173,15 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.2.0
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.4(@vitest/browser@4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4))(vitest@4.0.4)
       vite:
         specifier: ^6.3.4
         version: 6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(happy-dom@20.5.3)(jiti@2.6.1)(tsx@4.20.6)
 
   packages/reactivity:
     dependencies:
@@ -247,6 +253,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.2.0
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.4(@vitest/browser@4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4))(vitest@4.0.4)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(happy-dom@20.5.3)(jiti@2.6.1)(tsx@4.20.6)
 
   packages/transformer:
     dependencies:

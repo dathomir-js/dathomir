@@ -33,6 +33,16 @@ function insert(
   child: Node | (() => DocumentFragment) | unknown,
   anchor: Node | null,
 ): void {
+  // Warn on null/undefined parent
+  if (typeof __DEV__ !== "undefined" && __DEV__) {
+    if (parent == null) {
+      console.warn(
+        `[insert] parent is ${parent === null ? "null" : "undefined"}. ` +
+          `Cannot insert child into a non-existent parent node.`,
+      );
+    }
+  }
+
   // Clean up previously inserted content OR SSR content
   if (anchor) {
     if (insertedContent.has(anchor)) {

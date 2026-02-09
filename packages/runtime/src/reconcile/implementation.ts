@@ -99,12 +99,16 @@ function reconcileKeyed<T>(
   const existingByKey = new Map<unknown, ManagedItem<T>>();
   const seenKeys = new Set<unknown>();
 
-  for (const item of managed) {
+  for (let idx = 0; idx < managed.length; idx++) {
+    const item = managed[idx];
     const key = item.key;
     if (seenKeys.has(key)) {
       // Duplicate key detected
-      if (__DEV__) {
-        console.warn(`[reconcile] Duplicate key detected: ${String(key)}`);
+      if (typeof __DEV__ !== "undefined" && __DEV__) {
+        console.warn(
+          `[reconcile] Duplicate key detected in existing items: key=${String(key)} at index ${idx}. ` +
+            `Each item in a keyed list must have a unique key.`,
+        );
       }
     } else {
       existingByKey.set(key, item);
@@ -123,10 +127,23 @@ function reconcileKeyed<T>(
     const item = items[i];
     const key = keyFn(item);
 
+    // Warn on undefined/null keys
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
+      if (key === undefined || key === null) {
+        console.warn(
+          `[reconcile] keyFn returned ${String(key)} for item at index ${i}. ` +
+            `Keys must be non-null and non-undefined. This may cause unexpected behavior.`,
+        );
+      }
+    }
+
     // Check for duplicate keys in new items
     if (newKeys.has(key)) {
-      if (__DEV__) {
-        console.warn(`[reconcile] Duplicate key detected: ${String(key)}`);
+      if (typeof __DEV__ !== "undefined" && __DEV__) {
+        console.warn(
+          `[reconcile] Duplicate key detected in new items: key=${String(key)} at index ${i}. ` +
+            `Each item in a keyed list must have a unique key.`,
+        );
       }
     }
     newKeys.add(key);

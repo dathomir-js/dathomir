@@ -1,40 +1,26 @@
 /**
  * Re-export all runtime functions from @dathomir/runtime.
  */
+
+// CSR (from @dathomir/runtime)
 export {
-  // Hydration
-  HydrationMismatchError,
-  // SSR
-  MarkerType,
   // Namespace enum
   Namespace,
   // DOM insertion
   append,
-  createHydrationContext,
-  createMarker,
   // Reactivity (also exported from reactivity)
   createRoot,
-  createWalker,
-  deserializeState,
   // Events
   event,
-  findMarker,
   // DOM navigation
   firstChild,
   // DOM generation
   fromTree,
-  hydrate,
-  hydrateRoot,
   insert,
-  isHydrated,
   nextSibling,
   onCleanup,
-  parseStateScript,
   // List reconciliation
   reconcile,
-  renderToString,
-  renderTree,
-  serializeState,
   // DOM attributes and properties
   setAttr,
   setProp,
@@ -48,20 +34,43 @@ export {
 export type {
   // Tree types
   Attrs,
-  // Hydration types
-  HydrationContext,
-  MarkerInfo,
   Owner,
   Placeholder,
   PlaceholderType,
-  // SSR types
-  RenderContext,
-  RenderOptions,
   RootDispose,
-  SerializableValue,
   SpreadProps,
-  StateObject,
   TextContent,
   Tree,
   TreeNode,
 } from "@dathomir/runtime";
+
+// SSR (from @dathomir/runtime/ssr)
+export {
+  MarkerType,
+  createMarker,
+  renderToString,
+  renderTree,
+  serializeState,
+} from "@dathomir/runtime/ssr";
+
+export type {
+  RenderContext,
+  RenderOptions,
+  SerializableValue,
+  StateObject,
+} from "@dathomir/runtime/ssr";
+
+// Hydration (from @dathomir/runtime/hydration)
+export {
+  HydrationMismatchError,
+  createHydrationContext,
+  createWalker,
+  deserializeState,
+  findMarker,
+  hydrate,
+  hydrateRoot,
+  isHydrated,
+  parseStateScript,
+} from "@dathomir/runtime/hydration";
+
+export type { HydrationContext, MarkerInfo } from "@dathomir/runtime/hydration";

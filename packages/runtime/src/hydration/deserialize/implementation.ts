@@ -33,17 +33,15 @@ function parseStateScript(container: Element | ShadowRoot): StateObject | null {
     script.remove();
     return state;
   } catch (err) {
-    if (__DEV__) {
-      console.error("[dathomir] Failed to parse state script:", err);
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
+      console.error(
+        `[dathomir] Failed to parse state script. ` +
+          `Ensure the serialized state is valid devalue format.`,
+        err,
+      );
     }
     return null;
   }
 }
-
-/**
- * Development mode flag.
- * Will be replaced by build tool.
- */
-declare const __DEV__: boolean;
 
 export { deserializeState, parseStateScript };

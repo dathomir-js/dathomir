@@ -21,6 +21,6 @@
     },
     "types": ["@types/node"]
   },
-  "include": ["${configDir}/src", "${configDir}/test"],
+  "include": ["${configDir}/src", "${configDir}/test", "${configDir}/bench"],
   "exclude": ["${configDir}/dist", "${configDir}/node_modules"]
 }

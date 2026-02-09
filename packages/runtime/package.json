@@ -29,9 +29,34 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./ssr": {
+      "import": {
+        "types": "./dist/ssr/index.d.mts",
+        "default": "./dist/ssr/index.mjs"
+      },
+      "require": {
+        "types": "./dist/ssr/index.d.cts",
+        "default": "./dist/ssr/index.cjs"
+      }
+    },
+    "./hydration": {
+      "import": {
+        "types": "./dist/hydration/index.d.mts",
+        "default": "./dist/hydration/index.mjs"
+      },
+      "require": {
+        "types": "./dist/hydration/index.d.cts",
+        "default": "./dist/hydration/index.cjs"
+      }
     }
   },
   "files": [
@@ -57,6 +82,7 @@
     "@types/node": "24.2.0",
     "@vitest/browser-playwright": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "happy-dom": "^20.5.3",
     "playwright": "^1.56.1",
     "vitest": "catalog:"
   }

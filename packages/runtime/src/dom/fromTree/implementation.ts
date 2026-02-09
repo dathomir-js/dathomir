@@ -48,6 +48,19 @@ function createNode(tree: Tree, ns: Namespace): Node {
   // Placeholder - create appropriate marker node
   if (isPlaceholder(tree)) {
     const placeholderType = tree[0];
+    // Warn on unsupported placeholder types
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
+      if (
+        placeholderType !== "{text}" &&
+        placeholderType !== "{insert}" &&
+        placeholderType !== "{each}"
+      ) {
+        console.warn(
+          `[fromTree] Unsupported placeholder type: "${placeholderType}". ` +
+            `Supported types are: {text}, {insert}, {each}.`,
+        );
+      }
+    }
     // {insert} uses comment nodes, {text} uses empty text nodes
     if (placeholderType === "{insert}") {
       return document.createComment(placeholderType);
@@ -57,10 +70,30 @@ function createNode(tree: Tree, ns: Namespace): Node {
 
   // Element node
   if (!isElement(tree)) {
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
+      console.warn(
+        `[fromTree] Invalid tree node: expected element, text, or placeholder, got:`,
+        tree,
+      );
+    }
     return document.createTextNode("");
   }
 
   const [tag, attrs, ...children] = tree;
+
+  // Validate tag and attrs in dev mode
+  if (typeof __DEV__ !== "undefined" && __DEV__) {
+    if (tag === "") {
+      console.warn(
+        `[fromTree] Empty tag name detected. Elements must have a non-empty tag name.`,
+      );
+    }
+    if (attrs !== null && typeof attrs !== "object") {
+      console.warn(
+        `[fromTree] Invalid attrs for <${tag}>: expected object or null, got ${typeof attrs}.`,
+      );
+    }
+  }
 
   // Determine namespace
   let elementNs = ns;

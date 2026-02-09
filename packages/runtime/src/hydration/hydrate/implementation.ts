@@ -26,12 +26,6 @@ import {
 } from "@/hydration/walker/implementation";
 
 /**
- * Development mode flag.
- * Will be replaced by build tool.
- */
-declare const __DEV__: boolean;
-
-/**
  * WeakMap to track hydrated ShadowRoots (idempotency).
  */
 const hydratedRoots = new WeakMap<ShadowRoot, boolean>();
@@ -58,9 +52,45 @@ interface HydrationContext {
  * Hydration mismatch error.
  */
 class HydrationMismatchError extends Error {
-  constructor(message: string) {
-    super(`[dathomir] Hydration mismatch: ${message}`);
+  /** The marker ID associated with the mismatch, if available. */
+  markerId: number | null;
+  /** The marker type associated with the mismatch, if available. */
+  markerType: string | null;
+  /** Description of expected DOM state. */
+  expected: string | null;
+  /** Description of actual DOM state. */
+  actual: string | null;
+
+  constructor(
+    message: string,
+    details?: {
+      markerId?: number;
+      markerType?: string;
+      expected?: string;
+      actual?: string;
+    },
+  ) {
+    const detailLines: string[] = [];
+    if (details?.markerId !== undefined) {
+      detailLines.push(`  Marker ID: ${details.markerId}`);
+    }
+    if (details?.markerType !== undefined) {
+      detailLines.push(`  Marker type: ${details.markerType}`);
+    }
+    if (details?.expected !== undefined) {
+      detailLines.push(`  Expected: ${details.expected}`);
+    }
+    if (details?.actual !== undefined) {
+      detailLines.push(`  Actual: ${details.actual}`);
+    }
+    const detailStr =
+      detailLines.length > 0 ? `\n${detailLines.join("\n")}` : "";
+    super(`[dathomir] Hydration mismatch: ${message}${detailStr}`);
     this.name = "HydrationMismatchError";
+    this.markerId = details?.markerId ?? null;
+    this.markerType = details?.markerType ?? null;
+    this.expected = details?.expected ?? null;
+    this.actual = details?.actual ?? null;
   }
 }
 
@@ -83,9 +113,17 @@ function markHydrated(root: ShadowRoot): void {
  * Dev mode: throw error
  * Prod mode: warn and return false (caller should fallback to CSR)
  */
-function handleMismatch(message: string): boolean {
+function handleMismatch(
+  message: string,
+  details?: {
+    markerId?: number;
+    markerType?: string;
+    expected?: string;
+    actual?: string;
+  },
+): boolean {
   if (typeof __DEV__ !== "undefined" && __DEV__) {
-    throw new HydrationMismatchError(message);
+    throw new HydrationMismatchError(message, details);
   }
   console.warn(
     `[dathomir] Hydration mismatch: ${message}. Falling back to CSR.`,
@@ -135,7 +173,14 @@ function nextMarker(ctx: HydrationContext): MarkerInfo | null {
 function hydrateTextMarker(marker: MarkerInfo, getValue: () => unknown): void {
   const textNode = getTextNodeAfterMarker(marker.node);
   if (!textNode) {
-    handleMismatch(`Text node not found after marker ${marker.id}`);
+    handleMismatch(`Text node not found after marker ${marker.id}`, {
+      markerId: marker.id,
+      markerType: marker.type,
+      expected: "Text node after comment marker",
+      actual: marker.node.nextSibling
+        ? `${marker.node.nextSibling.nodeName} (nodeType: ${marker.node.nextSibling.nodeType})`
+        : "no sibling node",
+    });
     return;
   }
 

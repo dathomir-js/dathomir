@@ -1,39 +1,26 @@
 # @dathomir/core
 
-## 破壊前の最終コミット
+A lightweight JavaScript framework powered by fine-grained reactivity and direct DOM manipulation. Built on TC39 Signals (via [alien-signals](https://github.com/stackblitz/alien-signals)).
 
-https://github.com/dathomir-js/dathomir/tree/e6e39d33a40e5b8bb851c588ca5c2b8301c18dc0
+## Features
 
-## Overview
+- **Fine-grained Reactivity** — SolidJS-style signals with automatic dependency tracking
+- **Direct DOM** — No virtual DOM; updates only what changed
+- **Tiny** — Runtime < 2KB gzip
+- **TC39 Signals** — Aligned with the Signals proposal
+- **SSR + Hydration** — Server-side rendering with efficient hydration
+- **Web Standards** — Zero Node.js dependencies in runtime
 
-A full-stack JS framework that works with the new order TC39 Signals.
-
-### Quick start
-
-```bash
-npm install @dathomir/core @dathomir/plugin
-```
-
-## Getting started
-
-### 1. Create Vite project
-
-```bash
-npm create vite@latest my-dathomir-app -- --template vanilla-ts
-cd my-dathomir-app
-```
-
-### 2. Install dependencies
+## Install
 
 ```bash
 npm install @dathomir/core @dathomir/plugin
 ```
 
-### 3. Configure Vite
-
-Create `vite.config.ts` in the project root with the following content:
+## Vite Setup
 
 ```ts
+// vite.config.ts
 import { defineConfig } from "vite";
 import { dathomir } from "@dathomir/plugin";
 
@@ -42,11 +29,8 @@ export default defineConfig({
 });
 ```
 
-### 4. Update tsconfig.json
-
-Add the following to `compilerOptions` in `tsconfig.json`:
-
 ```json
+// tsconfig.json
 {
   "compilerOptions": {
     "jsx": "react-jsx",
@@ -55,55 +39,73 @@ Add the following to `compilerOptions` in `tsconfig.json`:
 }
 ```
 
-### 5. Create app entry point
-
-Create `src/main.tsx` with the following content:
+## Quick Start
 
 ```tsx
-import { mount } from "@dathomir/core";
+import {
+  signal,
+  computed,
+  effect,
+  batch,
+  createRoot,
+  onCleanup,
+} from "@dathomir/core";
 
-const Counter = () => {
-  const [count, setCount] = signal(0);
+// Create a signal
+const count = signal(0);
 
-  return computed(() => (
-    <div>
-      <p>Count: {count()}</p>
-      <button onClick={() => setCount(count() + 1)}>Increment</button>
-    </div>
-  ));
-};
+// Derived value
+const doubled = computed(() => count.value * 2);
 
-const App = (
-  <div>
-    <h1>Hello, Dathomir!</h1>
-    <Counter />
-  </div>
-);
+// Side effect
+const stop = effect(() => {
+  console.log(`count = ${count.value}, doubled = ${doubled.value}`);
+});
 
-mount(App, document.getElementById("app")!);
+// Update
+count.value = 1; // logs: count = 1, doubled = 2
+count.set(5); // logs: count = 5, doubled = 10
+count.update((n) => n + 1); // logs: count = 6, doubled = 12
+
+// Batch multiple updates
+batch(() => {
+  count.value = 10;
+  count.value = 20; // only triggers once
+});
+
+stop(); // cleanup
 ```
 
-### 6. Update index.html
+## API Reference
 
-Update `index.html` to include a div with id "app" and src to `main.tsx`:
+### Reactivity
 
-```html
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dathomir App</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-```
+| Function             | Description                                                                        |
+| -------------------- | ---------------------------------------------------------------------------------- |
+| `signal(initial)`    | Create a mutable signal. Read/write via `.value`, `.set()`, `.update()`, `.peek()` |
+| `computed(fn)`       | Create a derived computation. Read via `.value`, `.peek()`                         |
+| `effect(fn)`         | Run a side effect when dependencies change. Returns cleanup function               |
+| `batch(fn)`          | Batch multiple signal updates into a single flush                                  |
+| `createRoot(fn)`     | Create a cleanup scope. Returns dispose function                                   |
+| `onCleanup(fn)`      | Register a cleanup callback in the current owner scope                             |
+| `templateEffect(fn)` | Template-optimized effect for runtime use                                          |
 
-### 7. Run the development server
+### Runtime (DOM)
 
-```bash
-npm run dev
-```
+| Function                                               | Description                                                |
+| ------------------------------------------------------ | ---------------------------------------------------------- |
+| `fromTree(tree, ns)`                                   | Create DOM from structured array. Returns factory function |
+| `firstChild(node)`                                     | Get first child node                                       |
+| `nextSibling(node)`                                    | Get next sibling node                                      |
+| `setText(node, value)`                                 | Set text content                                           |
+| `setAttr(el, key, value)`                              | Set HTML attribute                                         |
+| `setProp(el, key, value)`                              | Set DOM property                                           |
+| `spread(el, props)`                                    | Spread props onto element                                  |
+| `append(parent, child)`                                | Append child to parent                                     |
+| `insert(parent, child, anchor)`                        | Insert child before anchor                                 |
+| `event(type, el, handler)`                             | Attach event listener                                      |
+| `reconcile(parent, items, keyFn, createFn, updateFn?)` | Keyed list reconciliation                                  |
+
+## License
+
+[MPL-2.0](./LICENSE.md)

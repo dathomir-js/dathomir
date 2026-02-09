@@ -1,73 +1,123 @@
 # @dathomir/reactivity
 
-`@dathomir/reactivity` は [`alien-signals`](https://github.com/stackblitz/alien-signals) の低レベル API（`alien-signals/system`）を土台にしたリアクティビティ層です。TC39 Signals 提案に近い `signal` / `computed` / `effect` インターフェイスを提供し、設定なしで軽量・高速なリアクティビティを構築できます。
+Fine-grained reactivity system built on [alien-signals](https://github.com/stackblitz/alien-signals). Provides TC39 Signals-style `signal` / `computed` / `effect` primitives.
 
-## 特徴
+## Install
 
-- `signal` は `.value` プロパティと `set` / `update` メソッドを備えたオブジェクトを生成します。
-- `computed` は依存するシグナルに追従し、自動的に再計算される `value` を提供します。
-- `effect` は依存するシグナルの変化を監視し、副作用を実行します。戻り値のクリーンアップ関数で停止可能です。
-- `batch` で複数更新をまとめて通知できます。
-- `peek()` でトラッキングなしに現在値へアクセスできます。
+```bash
+npm install @dathomir/reactivity
+```
 
-## 使い方
+## Usage
 
 ```ts
-import { signal, computed, effect, batch } from '@dathomir/reactivity';
+import { signal, computed, effect, batch } from "@dathomir/reactivity";
 
 const count = signal(0);
 const doubled = computed(() => count.value * 2);
 
 const stop = effect(() => {
-  console.log(`${count.value} is effected`);
+  console.log(`count: ${count.value}, doubled: ${doubled.value}`);
 });
 
-console.log(doubled.value); // 0
-
-count.set(prev => prev + 1);
-console.log(count.value);   // 1
-console.log(doubled.value); // 2
+count.value = 5;   // logs: count: 5, doubled: 10
+count.set(10);     // logs: count: 10, doubled: 20
 
 batch(() => {
-  count.value = 5;
-  count.value = 10;
+  count.value = 100;
+  count.value = 200; // single notification
 });
+// logs: count: 200, doubled: 400
 
 stop();
 ```
 
-## 信号 API
+## API
 
 ### `signal(initialValue)`
 
-- `value`: 現在値（getter/setter 両対応）
-- `set(next)`:
-  - 直接値、または `(prev) => next` 形式の更新関数を渡せます。
-- `update(updater)`:
-  - `set` の関数呼び出し版。返り値はなく、値を更新します。
-- `peek()`:
-  - 依存関係をトラッキングせずに現在値を取得します。
+Create a mutable reactive signal.
 
-### `computed(getter)`
+```ts
+const name = signal("world");
+console.log(name.value);  // "world"
+name.value = "dathomir";  // triggers dependents
+name.set("new value");    // alternative setter
+name.update(v => v.toUpperCase()); // updater function
+name.peek();              // read without tracking
+```
 
-- `value`: 最新の計算結果。
-- `peek()`: トラッキングなしで現在値を取得。
+### `computed(fn)`
 
-### `effect(callback)`
+Create a cached derived value that recomputes when dependencies change.
 
-- 依存するシグナルが更新されるたびに `callback` を再実行します。
-- 戻り値はクリーンアップ関数。呼び出すとエフェクトが停止します。
+```ts
+const count = signal(1);
+const doubled = computed(() => count.value * 2);
+console.log(doubled.value); // 2
+console.log(doubled.peek()); // read without tracking
+```
+
+### `effect(fn)`
+
+Run a side effect whenever its dependencies change. Returns a cleanup function.
+
+```ts
+const count = signal(0);
+const stop = effect(() => {
+  console.log(count.value);
+});
+count.value = 1; // triggers re-run
+stop();          // dispose effect
+```
 
 ### `batch(fn)`
 
-- `fn` 内の更新通知を遅延させ、一括で再計算を行います。
+Batch multiple signal writes into a single notification flush.
 
-## 実装メモ
+```ts
+const a = signal(0);
+const b = signal(0);
+batch(() => {
+  a.value = 1;
+  b.value = 2;
+}); // dependents notified once
+```
 
-- `createReactiveSystem` を介して `alien-signals` の伝播アルゴリズムを再利用しています。
-- 追加した `Signal` / `Computed` / `Effect` は `kind` フラグを持ち、`alien-signals` のフラグ管理と共存するよう調整しています。
-- `peek()` は内部的にトラッキングを無効化することで副作用を発生させず安全に値を読み取ります。
+### `createRoot(fn)`
 
-## ライセンス
+Create a cleanup/ownership scope. Returns a dispose function.
 
-本パッケージは MPL-2.0 ライセンスに基づいて提供されます。内部で使用している `alien-signals` は MIT ライセンスです。
+```ts
+const dispose = createRoot(() => {
+  const count = signal(0);
+  effect(() => console.log(count.value));
+  count.value = 1;
+});
+dispose(); // cleans up all effects in scope
+```
+
+### `onCleanup(fn)`
+
+Register a cleanup callback within the current owner scope. Called when the scope is disposed.
+
+```ts
+createRoot(() => {
+  const timer = setInterval(() => {}, 1000);
+  onCleanup(() => clearInterval(timer));
+});
+```
+
+### `templateEffect(fn)`
+
+Optimized effect for template bindings. Used internally by the runtime.
+
+```ts
+templateEffect(() => {
+  setText(node, count.value);
+});
+```
+
+## License
+
+[MPL-2.0](./LICENSE.md)

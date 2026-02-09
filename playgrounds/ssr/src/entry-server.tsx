@@ -1,6 +1,6 @@
 /**
  * Server entry point for SSR.
- * Renders the App component to HTML string.
+ * Renders the App component to HTML string with Declarative Shadow DOM.
  *
  * Note: This file runs on the server, so no DOM APIs are available.
  * The transformer generates SSR-compatible code when mode is 'ssr'.

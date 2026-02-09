@@ -29,6 +29,10 @@
       "path": "=== 📦 packages ==="
     },
     {
+      "name": "📦 @dathomir/components",
+      "path": "./packages/components"
+    },
+    {
       "name": "📦 @dathomir/core",
       "path": "./packages/core"
     },

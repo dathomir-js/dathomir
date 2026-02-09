@@ -74,9 +74,13 @@
   "devDependencies": {
     "@dathomir/config": "workspace:*",
     "@takuma-ru/rlse": "catalog:",
-    "@types/node": "catalog:"
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "happy-dom": "^20.5.3",
+    "vitest": "catalog:"
   },
   "dependencies": {
+    "@dathomir/components": "workspace:*",
     "@dathomir/reactivity": "workspace:*",
     "@dathomir/runtime": "workspace:*",
     "@dathomir/shared": "workspace:*"

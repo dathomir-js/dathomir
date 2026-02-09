@@ -111,7 +111,24 @@ interface RenderContext {
   dynamicValues: Map<number, unknown>;
   /** Current namespace (HTML/SVG/MathML) */
   namespace: Namespace;
+  /** Component renderer for Declarative Shadow DOM */
+  componentRenderer?: ComponentRenderer;
 }
+
+/**
+ * Renders DSD content for a custom element.
+ * Returns DSD HTML string (excluding outer tag), or null if not registered.
+ */
+type ComponentRenderer = (
+  tagName: string,
+  attrs: Record<string, unknown>,
+) => string | null;
+
+/**
+ * Global default component renderer.
+ * Set this before SSR rendering to enable DSD output for Web Components.
+ */
+let globalComponentRenderer: ComponentRenderer | undefined;
 
 /**
  * Render options.
@@ -123,6 +140,8 @@ interface RenderOptions {
   dynamicValues?: Map<number, unknown>;
   /** Whether to include state script */
   includeState?: boolean;
+  /** Component renderer for Declarative Shadow DOM output */
+  componentRenderer?: ComponentRenderer;
 }
 
 /**
@@ -134,6 +153,7 @@ function createContext(options: RenderOptions = {}): RenderContext {
     state: options.state ?? {},
     dynamicValues: options.dynamicValues ?? new Map(),
     namespace: Namespace.HTML,
+    componentRenderer: options.componentRenderer ?? globalComponentRenderer,
   };
 }
 
@@ -246,6 +266,17 @@ function renderNode(node: Tree, ctx: RenderContext): string {
   if (isElement(node)) {
     const [tag, attrs, ...children] = node;
 
+    // Check for custom elements with DSD support
+    if (tag.includes("-") && ctx.componentRenderer) {
+      const attrObj = (attrs ?? {}) as Record<string, unknown>;
+      const dsdContent = ctx.componentRenderer(tag, attrObj);
+      if (dsdContent !== null) {
+        // Render as custom element with Declarative Shadow DOM
+        const attrStr = attrs ? renderAttrs(attrs) : "";
+        return `<${tag}${attrStr}><template shadowrootmode="open">${dsdContent}</template></${tag}>`;
+      }
+    }
+
     // Track namespace changes
     const prevNamespace = ctx.namespace;
     if (SVG_NS_ELEMENTS.has(tag)) {
@@ -282,6 +313,15 @@ function renderNode(node: Tree, ctx: RenderContext): string {
 }
 
 /**
+ * Set the global component renderer for SSR DSD output.
+ * Call this before rendering to enable DSD for registered Web Components.
+ * @param renderer - Component renderer callback, or undefined to clear.
+ */
+function setComponentRenderer(renderer: ComponentRenderer | undefined): void {
+  globalComponentRenderer = renderer;
+}
+
+/**
  * Render a tree to HTML string.
  */
 function renderTree(tree: Tree[], options: RenderOptions = {}): string {
@@ -307,13 +347,15 @@ function renderToString(
   tree: Tree[],
   state: StateObject = {},
   dynamicValues: Map<number, unknown> = new Map(),
+  componentRenderer?: ComponentRenderer,
 ): string {
   return renderTree(tree, {
     state,
     dynamicValues,
     includeState: Object.keys(state).length > 0,
+    componentRenderer,
   });
 }
 
-export { createContext, renderToString, renderTree };
-export type { RenderContext, RenderOptions };
+export { createContext, renderToString, renderTree, setComponentRenderer };
+export type { ComponentRenderer, RenderContext, RenderOptions };

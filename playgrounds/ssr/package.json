@@ -11,7 +11,9 @@
     "preview": "tsx server.ts --preview"
   },
   "dependencies": {
-    "@dathomir/core": "workspace:*"
+    "@dathomir/core": "workspace:*",
+    "@dathomir/components": "workspace:*",
+    "@dathomir/runtime": "workspace:*"
   },
   "devDependencies": {
     "@dathomir/plugin": "workspace:*",

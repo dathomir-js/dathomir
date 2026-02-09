@@ -4,12 +4,8 @@
 
 // CSR (from @dathomir/runtime)
 export {
-  // Namespace enum
-  Namespace,
   // DOM insertion
   append,
-  // Reactivity (also exported from reactivity)
-  createRoot,
   // Events
   event,
   // DOM navigation
@@ -17,8 +13,9 @@ export {
   // DOM generation
   fromTree,
   insert,
+  // Namespace enum
+  Namespace,
   nextSibling,
-  onCleanup,
   // List reconciliation
   reconcile,
   // DOM attributes and properties
@@ -28,26 +25,29 @@ export {
   setText,
   // DOM spread
   spread,
-  templateEffect,
 } from "@dathomir/runtime";
+
+// Reactivity (from @dathomir/reactivity, for runtime convenience)
+export { createRoot, onCleanup, templateEffect } from "@dathomir/reactivity";
 
 export type {
   // Tree types
   Attrs,
-  Owner,
   Placeholder,
   PlaceholderType,
-  RootDispose,
   SpreadProps,
   TextContent,
   Tree,
   TreeNode,
 } from "@dathomir/runtime";
 
+// Reactivity types (from @dathomir/reactivity, for runtime convenience)
+export type { Owner, RootDispose } from "@dathomir/reactivity";
+
 // SSR (from @dathomir/runtime/ssr)
 export {
-  MarkerType,
   createMarker,
+  MarkerType,
   renderToString,
   renderTree,
   serializeState,
@@ -62,13 +62,13 @@ export type {
 
 // Hydration (from @dathomir/runtime/hydration)
 export {
-  HydrationMismatchError,
   createHydrationContext,
   createWalker,
   deserializeState,
   findMarker,
   hydrate,
   hydrateRoot,
+  HydrationMismatchError,
   isHydrated,
   parseStateScript,
 } from "@dathomir/runtime/hydration";

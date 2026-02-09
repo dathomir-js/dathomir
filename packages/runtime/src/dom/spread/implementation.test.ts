@@ -1,6 +1,7 @@
+import { createRoot } from "@dathomir/reactivity";
 import { describe, expect, it, vi } from "vitest";
 
-import { createRoot, spread } from "../../index";
+import { spread } from "../../index";
 
 describe("spread", () => {
   it("should apply initial props", () => {

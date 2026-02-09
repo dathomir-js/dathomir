@@ -23,10 +23,6 @@ export { reconcile } from "./reconcile/implementation";
 // Events
 export { event } from "./events/implementation";
 
-// Reactivity (re-exported from @dathomir/reactivity)
-export { createRoot, onCleanup, templateEffect } from "@dathomir/reactivity";
-export type { Owner, RootDispose } from "@dathomir/reactivity";
-
 // Tree types
 export { Namespace } from "./types/tree";
 export type {

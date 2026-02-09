@@ -23,3 +23,6 @@ export * from "@/runtime/index";
 
 // Shared
 export * from "@/shared/index";
+
+// Web Components
+export * from "@dathomir/components";

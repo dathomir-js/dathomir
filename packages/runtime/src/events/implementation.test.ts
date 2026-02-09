@@ -1,6 +1,7 @@
+import { createRoot } from "@dathomir/reactivity";
 import { describe, expect, it, vi } from "vitest";
 
-import { createRoot, event } from "@/index";
+import { event } from "@/index";
 
 describe("event", () => {
   it("should call handler when event is fired", () => {

@@ -427,7 +427,6 @@ function processChildren(
 function generateNavigation(
   fragmentId: t.Identifier,
   path: number[],
-  isText: boolean,
   state: TransformState,
 ): t.Expression {
   state.runtimeImports.add("firstChild");
@@ -450,10 +449,7 @@ function generateNavigation(
       }
     } else {
       // Navigate into children
-      expr = t.callExpression(t.identifier("firstChild"), [
-        expr,
-        ...(isText && i === path.length - 1 ? [t.booleanLiteral(true)] : []),
-      ]);
+      expr = t.callExpression(t.identifier("firstChild"), [expr]);
       for (let j = 0; j < index; j++) {
         state.runtimeImports.add("nextSibling");
         expr = t.callExpression(t.identifier("nextSibling"), [expr]);
@@ -511,7 +507,7 @@ function transformJSX(
           t.variableDeclaration("const", [
             t.variableDeclarator(
               nodeId,
-              generateNavigation(fragmentId, part.path, true, state),
+              generateNavigation(fragmentId, part.path, state),
             ),
           ]),
         );
@@ -542,7 +538,7 @@ function transformJSX(
           t.variableDeclaration("const", [
             t.variableDeclarator(
               nodeId,
-              generateNavigation(fragmentId, part.path, false, state),
+              generateNavigation(fragmentId, part.path, state),
             ),
           ]),
         );
@@ -582,7 +578,7 @@ function transformJSX(
             t.variableDeclaration("const", [
               t.variableDeclarator(
                 nodeId,
-                generateNavigation(fragmentId, part.path, false, state),
+                generateNavigation(fragmentId, part.path, state),
               ),
             ]),
           );
@@ -611,7 +607,7 @@ function transformJSX(
           t.variableDeclaration("const", [
             t.variableDeclarator(
               nodeId,
-              generateNavigation(fragmentId, part.path, false, state),
+              generateNavigation(fragmentId, part.path, state),
             ),
           ]),
         );

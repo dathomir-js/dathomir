@@ -23,8 +23,8 @@ import {
   fromTree, firstChild, nextSibling,
   setText, setAttr, setProp, spread,
   append, insert, event, reconcile,
-  templateEffect, createRoot, onCleanup,
 } from "@dathomir/runtime";
+import { templateEffect, createRoot, onCleanup } from "@dathomir/reactivity";
 ```
 
 ### `fromTree(tree, ns)`

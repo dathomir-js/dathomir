@@ -25,8 +25,27 @@
 </head>
 
 <body>
-  <div id="app"></div>
+  <h1>Dathomir Playground</h1>
+
+  <section>
+    <h2>JSX Counter Example</h2>
+    <div id="app"></div>
+  </section>
+
+  <section>
+    <h2>Web Components Examples</h2>
+
+    <!-- Greeting Web Component -->
+    <dathomir-greeting name="Dathomir"></dathomir-greeting>
+
+    <!-- Counter Web Components with different initial values -->
+    <dathomir-counter initial="0"></dathomir-counter>
+    <dathomir-counter initial="10"></dathomir-counter>
+    <dathomir-counter initial="-5"></dathomir-counter>
+  </section>
+
   <script type="module" src="/src/main.ts"></script>
+  <script type="module" src="/src/WebComponentTest.tsx"></script>
 </body>
 
 </html>

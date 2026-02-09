@@ -3,9 +3,17 @@
  * Provides functions for rendering structured arrays to HTML strings.
  */
 
-export { MarkerType, createMarker } from "./markers/implementation";
-export { renderToString, renderTree } from "./render/implementation";
-export type { RenderContext, RenderOptions } from "./render/implementation";
+export { createMarker, MarkerType } from "./markers/implementation";
+export {
+  renderToString,
+  renderTree,
+  setComponentRenderer,
+} from "./render/implementation";
+export type {
+  ComponentRenderer,
+  RenderContext,
+  RenderOptions,
+} from "./render/implementation";
 export { serializeState } from "./serialize/implementation";
 export type {
   SerializableValue,

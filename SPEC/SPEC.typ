@@ -1619,3 +1619,95 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     link("https://vitejs.dev/guide/api-environment.html")[Vite Environment API],
   ),
 )
+
+#interface_spec(
+  name: "Web Components 高レベル API",
+  summary: [
+    Web Components を簡潔に定義するための `defineComponent` 関数と `css` ヘルパー。
+    Shadow DOM セットアップ、`createRoot` による cleanup 管理、DSD Hydration 検出、
+    `adoptedStyleSheets` による CSS 適用、属性リフレクション支援を自動化する。
+  ],
+  format: [
+    *defineComponent*:
+    - `defineComponent(tagName: string, setup: SetupFunction, options?: ComponentOptions): typeof HTMLElement`
+    - `SetupFunction = (host: HTMLElement, ctx: ComponentContext) => Node | DocumentFragment`
+    - `ComponentContext = \{ readonly attrs: Readonly<Record<string, Signal<string | null>>> \}`
+
+    *ComponentOptions*:
+    - `styles?: readonly (CSSStyleSheet | string)[]` — `adoptedStyleSheets` に適用
+    - `attrs?: readonly string[]` — `observedAttributes` + Signal 自動生成
+    - `hydrate?: (host: HTMLElement, ctx: ComponentContext) => void` — Hydration パス
+
+    *css ヘルパー*:
+    - `css(strings: TemplateStringsArray, ...values: unknown[]): CSSStyleSheet`
+  ],
+  constraints: [
+    - `tagName` はハイフンを含む有効なカスタム要素名であること
+    - Shadow DOM は `open` モードのみ
+    - DSD が存在する場合は `attachShadow` をスキップ
+    - `connectedCallback` で `createRoot` → `setup` 実行 → Fragment を `shadowRoot.append`
+    - `disconnectedCallback` で `dispose()` により全 effect/event を cleanup
+    - `attributeChangedCallback` で `ctx.attrs[name].value` を自動更新
+    - Hydration パス: DSD コンテンツ存在 かつ `hydrate` 定義済みなら `setup` ではなく `hydrate` を実行
+    - 再接続時は再度 `setup` が呼ばれる（状態リセット）
+  ],
+  examples: [
+    ```javascript
+    import \{ defineComponent, signal, css \} from '@dathomir/core';
+
+    const styles = css`button \{ padding: 8px 16px; \}`;
+
+    defineComponent('my-counter', () => \{
+      const count = signal(0);
+      return <button onClick=\{() => count.value++\}>
+        Count: \{count.value\}
+      </button>;
+    \}, \{
+      styles: [styles],
+    \});
+    ```
+  ],
+)
+
+#adr(
+  header("Web Components 高レベル API 方式", Status.Accepted, "2026-02-09"),
+  [
+    Web Components を定義するための高レベル API の形式を決定する必要がある。
+    ユーザーが書くボイラープレートを最小化しつつ、Compiler-First 哲学に合致し、
+    バンドルサイズへの影響を最小限に抑える方式を選択する。
+
+    検討すべき観点：
+    - Transformer 出力との親和性
+    - バンドルサイズ（~500B 追加まで）
+    - Shadow DOM / Hydration / cleanup の自動化
+    - 属性リフレクションの DX
+  ],
+  [
+    *`defineComponent` 関数方式* を採用する。
+
+    - `defineComponent(tagName, setup, options?)` で Web Component を定義・登録
+    - 内部で `HTMLElement` サブクラスを自動生成
+    - `connectedCallback` で `createRoot` → `setup` → `shadowRoot.append`
+    - `disconnectedCallback` で `dispose()` による自動 cleanup
+    - `options.attrs` で `observedAttributes` + `Signal<string|null>` 自動生成
+    - `options.styles` で `adoptedStyleSheets` 自動適用
+    - `options.hydrate` で DSD 検出 + Hydration パス分岐
+    - `css` タグテンプレートで `CSSStyleSheet` を簡潔に作成
+  ],
+  [
+    - Transformer が `setup` 内の JSX を変換するだけで動作（既存変換パイプラインと整合）
+    - クラス構文不要で出力コードが簡潔
+    - 推定 ~500B（css ヘルパー含む）で目標 2KB 以内
+    - DSD 検出は `this.shadowRoot` の存在チェックのみで軽量
+    - 再接続時の状態リセットはシンプルだが、永続化は外部スコープで対応可能
+  ],
+  alternatives: [
+    1. *クラスデコレータ方式*: Stage 3 Decorators 依存。バンドルサイズ増加。v2 で検討可能。
+    2. *`DathomirElement` 基底クラス*: クラス継承が冗長。Transformer 出力として不適。
+    3. *マクロ方式*: Transformer でコンパイル時に完全展開。柔軟だが実装コストが高い。
+  ],
+  references: (
+    link("https://lit.dev/docs/")[Lit - Web Components library],
+    link("https://stenciljs.com/docs/introduction")[Stencil - Web Components compiler],
+  ),
+)

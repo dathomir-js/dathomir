@@ -1,5 +1,13 @@
 {
   "extends": [
     "./node_modules/@dathomir/config/templates/oxlintrc.template.json"
+  ],
+  "overrides": [
+    {
+      "files": ["src/hydration/**/*.ts"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
   ]
 }

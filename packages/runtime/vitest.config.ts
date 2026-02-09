@@ -4,6 +4,9 @@ import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  define: {
+    __DEV__: true,
+  },
   resolve: {
     alias: {
       "@/": resolve(__dirname, "src") + "/",
@@ -16,7 +19,7 @@ export default defineConfig({
       provider: playwright(),
       instances: [{ browser: "chromium" }],
     },
-    include: ["test/**/*.test.ts"],
+    include: ["src/**/*.test.ts"],
     clearMocks: true,
     coverage: {
       provider: "v8",

@@ -291,7 +291,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 #interface_spec(
   name: "Transformer API",
   summary: [
-    JSX が変換された JavaScript コードを解析し、props 値を `computed()` でラップするトランスフォーマー。
+    JSX を構造化配列（IR）に変換し、Runtime 呼び出しコードを生成するトランスフォーマー。
   ],
   format: [
     *エクスポート*:
@@ -300,6 +300,8 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     *オプション*:
     ```typescript
     interface TransformOptions \{
+      // SSR モードで変換するか
+      mode?: 'csr' | 'ssr';
       // ソースマップを生成するか
       sourceMap?: boolean;
       // ファイル名（ソースマップ用）
@@ -313,18 +315,26 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     ```
   ],
   constraints: [
-    - 入力は JSX が JavaScript に変換済みのコード
-    - `jsx()` / `jsxs()` 呼び出しの props 値を `computed()` でラップ
-    - 静的な値（リテラル）はラップしない（最適化）
+    - 入力は JSX を含む JavaScript/TypeScript コード
+    - 構造化配列形式（IR）で DOM 構造を表現
+    - 静的部分と動的部分を分離し、動的部分は `templateEffect` で更新
     - ES モジュール形式の出力
   ],
   examples: [
     ```javascript
-    // 入力（JSX 変換後）:
-    jsx('button', \{ onClick: handler, class: count.value > 0 ? 'active' : '' \})
+    // 入力:
+    <button class=\{count.value > 0 ? 'active' : ''\} onClick=\{handler\}>
+      Count: \{count.value\}
+    </button>
 
-    // 出力（Transformer 適用後）:
-    jsx('button', \{ onClick: handler, class: computed(() => count.value > 0 ? 'active' : '') \})
+    // 出力（CSR モード）:
+    const _t1 = fromTree([['button', null, 'Count: ', ['\{text\}', null]]], 0);
+    const _f = _t1();
+    const _n0 = firstChild(_f);
+    const _n0_3 = firstChild(_n0, true);
+    event('click', _n0, handler);
+    templateEffect(() => setAttr(_n0, 'class', count.value > 0 ? 'active' : ''));
+    templateEffect(() => setText(_n0_3, count.value));
     ```
   ],
 )

@@ -62,7 +62,7 @@ export const eslint = () => {
       },
     },
     {
-      files: ["test/**"],
+      files: ["test/**", "**/*.test.ts", "**/*.spec.ts"],
       rules: {
         "import/no-relative-parent-imports": "off",
         "no-restricted-imports": "off",

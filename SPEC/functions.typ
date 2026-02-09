@@ -146,3 +146,48 @@
     ]
   ]
 }
+
+// ============================================================
+// Feature Specification Template (for TDD)
+// ============================================================
+
+#let feature_spec(
+  name: none,
+  summary: none,
+  api: none,
+  edge_cases: none,
+  test_cases: none,
+  impl_notes: none,
+) = {
+  assert(name != none, message: "feature_spec: name is required")
+  assert(summary != none, message: "feature_spec: summary is required")
+  [
+    === #name
+
+    #summary
+
+    #if api != none [
+      ==== API
+      #api
+    ]
+
+    #if edge_cases != none [
+      ==== Edge Cases
+      #edge_cases
+    ]
+
+    #if test_cases != none [
+      ==== Test Cases
+      #test_cases
+    ]
+
+    #if impl_notes != none [
+      ==== Implementation Notes
+      #impl_notes
+    ]
+
+    #align(start)[
+      #line(length: 80%, stroke: (paint: gray, dash: "dashed"))
+    ]
+  ]
+}

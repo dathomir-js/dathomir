@@ -1,0 +1,23 @@
+{
+  "name": "@playground/ssr",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build:client": "vite build --outDir dist/client",
+    "build:server": "vite build --outDir dist/server --ssr src/entry-server.tsx",
+    "build": "pnpm build:client && pnpm build:server",
+    "preview": "tsx server.ts --preview"
+  },
+  "dependencies": {
+    "@dathomir/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@dathomir/plugin": "workspace:*",
+    "@types/node": "catalog:",
+    "tsx": "^4.19.0",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.4"
+  }
+}

@@ -1,3 +1,3 @@
-export * from "./utils/entries";
-export * from "./utils/fromEntries";
-export * from "./utils/scule";
+export * from "./entries/implementation";
+export * from "./fromEntries/implementation";
+export * from "./scule/implementation";

@@ -136,6 +136,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.2.0
+      vite:
+        specifier: ^6.3.4
+        version: 6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6)
 
   packages/reactivity:
     dependencies:
@@ -154,7 +157,7 @@ importers:
         version: 24.2.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 4.0.4(@vitest/browser@4.0.4(vite@7.1.9(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4))(vitest@4.0.4)
+        version: 4.0.4(@vitest/browser@4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4))(vitest@4.0.4)
       vitest:
         specifier: 'catalog:'
         version: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(jiti@2.6.1)(tsx@4.20.6)
@@ -167,6 +170,9 @@ importers:
       '@dathomir/shared':
         specifier: workspace:*
         version: link:../shared
+      devalue:
+        specifier: ^5.6.2
+        version: 5.6.2
     devDependencies:
       '@dathomir/config':
         specifier: workspace:*
@@ -238,6 +244,28 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(jiti@2.6.1)(tsx@4.20.6)
+
+  playgrounds/ssr:
+    dependencies:
+      '@dathomir/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@dathomir/plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.2.0
+      tsx:
+        specifier: ^4.19.0
+        version: 4.20.6
+      typescript:
+        specifier: ~5.8.3
+        version: 5.8.3
+      vite:
+        specifier: ^6.3.4
+        version: 6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6)
 
   playgrounds/vanilla:
     dependencies:
@@ -1272,6 +1300,9 @@ packages:
   define-properties@1.2.1:
     resolution: {integrity: sha512-8QmQKqEASLd5nx0U1B1okLElbUuuttJ/AnYmRXbbbGDWh6uS208EjD4Xqq/I9wK7u0v6O08XhTWnt5XtEbR6Dg==}
     engines: {node: '>= 0.4'}
+
+  devalue@5.6.2:
+    resolution: {integrity: sha512-nPRkjWzzDQlsejL1WVifk5rvcFi/y1onBRxjaFMjZeR9mFpqu2gmAZ9xUB9/IEanEP/vBtGeGganC/GO1fmufg==}
 
   diff@8.0.2:
     resolution: {integrity: sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg==}
@@ -3164,6 +3195,20 @@ snapshots:
       '@typescript-eslint/types': 8.46.2
       eslint-visitor-keys: 4.2.1
 
+  '@vitest/browser-playwright@4.0.4(playwright@1.56.1)(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4)':
+    dependencies:
+      '@vitest/browser': 4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4)
+      '@vitest/mocker': 4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))
+      playwright: 1.56.1
+      tinyrainbow: 3.0.3
+      vitest: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(jiti@2.6.1)(tsx@4.20.6)
+    transitivePeerDependencies:
+      - bufferutil
+      - msw
+      - utf-8-validate
+      - vite
+    optional: true
+
   '@vitest/browser-playwright@4.0.4(playwright@1.56.1)(vite@7.1.9(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4)':
     dependencies:
       '@vitest/browser': 4.0.4(vite@7.1.9(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4)
@@ -3176,6 +3221,24 @@ snapshots:
       - msw
       - utf-8-validate
       - vite
+
+  '@vitest/browser@4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4)':
+    dependencies:
+      '@vitest/mocker': 4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))
+      '@vitest/utils': 4.0.4
+      magic-string: 0.30.19
+      pixelmatch: 7.1.0
+      pngjs: 7.0.0
+      sirv: 3.0.2
+      tinyrainbow: 3.0.3
+      vitest: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(jiti@2.6.1)(tsx@4.20.6)
+      ws: 8.18.3
+    transitivePeerDependencies:
+      - bufferutil
+      - msw
+      - utf-8-validate
+      - vite
+    optional: true
 
   '@vitest/browser@4.0.4(vite@7.1.9(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4)':
     dependencies:
@@ -3193,6 +3256,25 @@ snapshots:
       - msw
       - utf-8-validate
       - vite
+
+  '@vitest/coverage-v8@4.0.4(@vitest/browser@4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4))(vitest@4.0.4)':
+    dependencies:
+      '@bcoe/v8-coverage': 1.0.2
+      '@vitest/utils': 4.0.4
+      ast-v8-to-istanbul: 0.3.5
+      debug: 4.4.3
+      istanbul-lib-coverage: 3.2.2
+      istanbul-lib-report: 3.0.1
+      istanbul-lib-source-maps: 5.0.6
+      istanbul-reports: 3.2.0
+      magicast: 0.3.5
+      std-env: 3.9.0
+      tinyrainbow: 3.0.3
+      vitest: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(jiti@2.6.1)(tsx@4.20.6)
+    optionalDependencies:
+      '@vitest/browser': 4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4)
+    transitivePeerDependencies:
+      - supports-color
 
   '@vitest/coverage-v8@4.0.4(@vitest/browser@4.0.4(vite@7.1.9(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4))(vitest@4.0.4)':
     dependencies:
@@ -3221,6 +3303,14 @@ snapshots:
       '@vitest/utils': 4.0.4
       chai: 6.2.0
       tinyrainbow: 3.0.3
+
+  '@vitest/mocker@4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))':
+    dependencies:
+      '@vitest/spy': 4.0.4
+      estree-walker: 3.0.3
+      magic-string: 0.30.19
+    optionalDependencies:
+      vite: 6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6)
 
   '@vitest/mocker@4.0.4(vite@7.1.9(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))':
     dependencies:
@@ -3479,6 +3569,8 @@ snapshots:
       define-data-property: 1.1.4
       has-property-descriptors: 1.0.2
       object-keys: 1.1.1
+
+  devalue@5.6.2: {}
 
   diff@8.0.2: {}
 
@@ -4584,7 +4676,6 @@ snapshots:
       get-tsconfig: 4.13.0
     optionalDependencies:
       fsevents: 2.3.3
-    optional: true
 
   type-check@0.4.0:
     dependencies:
@@ -4690,11 +4781,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.6.1
       tsx: 4.20.6
+    optional: true
 
   vitest@4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(jiti@2.6.1)(tsx@4.20.6):
     dependencies:
       '@vitest/expect': 4.0.4
-      '@vitest/mocker': 4.0.4(vite@7.1.9(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))
+      '@vitest/mocker': 4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))
       '@vitest/pretty-format': 4.0.4
       '@vitest/runner': 4.0.4
       '@vitest/snapshot': 4.0.4
@@ -4711,11 +4803,11 @@ snapshots:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.1.9(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6)
+      vite: 6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.2.0
-      '@vitest/browser-playwright': 4.0.4(playwright@1.56.1)(vite@7.1.9(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4)
+      '@vitest/browser-playwright': 4.0.4(playwright@1.56.1)(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(tsx@4.20.6))(vitest@4.0.4)
     transitivePeerDependencies:
       - jiti
       - less

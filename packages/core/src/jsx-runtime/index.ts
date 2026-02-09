@@ -213,3 +213,24 @@ export function jsxs(
  * Development JSX factory (same as jsx in production).
  */
 export const jsxDEV = jsx;
+
+/**
+ * JSX type definitions.
+ * Enables TypeScript support for JSX elements.
+ */
+export namespace JSX {
+  export interface IntrinsicElements {
+    // HTML elements
+    [elemName: string]: Record<string, unknown>;
+  }
+
+  export interface Element extends Node {}
+
+  export interface ElementAttributesProperty {
+    props: Record<string, unknown>;
+  }
+
+  export interface ElementChildrenAttribute {
+    children: unknown;
+  }
+}

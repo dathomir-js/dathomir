@@ -84,6 +84,29 @@
 - コード内に **JSDoc コメント**で説明を追加する（英語で記述）
 - 過度なコメントは避け、関数の説明やパラメータの説明など最小限に留める
 
+### ファイル構成ルール
+
+新しい API や機能を実装する際は、以下のディレクトリ構成に従うこと：
+
+```
+packages/{package-name}/src/{api-name}/
+├── AGENTS.md               # AI エージェント向けの実装ガイド（必須参照: SPEC.typ, implementation.test.ts）
+├── SPEC.typ               # 仕様と設計決定（日本語）
+├── implementation.ts      # 実装コード
+└── implementation.test.ts # テストコード
+```
+
+**各ファイルの役割：**
+- **SPEC.typ**: 仕様と設計決定を記述。実装の「何を」「なぜ」を定義
+- **implementation.test.ts**: 実装の正しさを検証するテストケース
+- **implementation.ts**: SPEC.typ に基づいた実装コード
+- **AGENTS.md**: AI エージェントに対し、まず SPEC.typ と implementation.test.ts を読むよう指示
+
+**実装前の必須手順：**
+1. SPEC.typ を読み、仕様と設計を理解する
+2. implementation.test.ts を読み、期待される振る舞いを確認する
+3. implementation.ts を実装し、すべてのテストが通ることを確認する
+
 ## ディレクトリ構成
 このプロジェクトを理解する補完情報として読んでください
 

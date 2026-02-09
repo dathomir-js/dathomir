@@ -48,7 +48,8 @@
   },
   "dependencies": {
     "@dathomir/reactivity": "workspace:*",
-    "@dathomir/shared": "workspace:*"
+    "@dathomir/shared": "workspace:*",
+    "devalue": "^5.6.2"
   },
   "devDependencies": {
     "@dathomir/config": "workspace:*",

@@ -5,7 +5,7 @@
 
 == 目的
 
-SSR 環境で Web Components のメタデータを管理するためのグローバルレジストリ。`defineComponent` が SSR で呼ばれた際、コンポーネントの setup 関数、CSS、属性名を登録し、SSR レンダラーがこれを参照して Declarative Shadow DOM を生成する。
+SSR 環境で Web Components のメタデータを管理するためのグローバルレジストリ。`defineComponent` が SSR で呼ばれた際、コンポーネントの setup 関数、CSS、PropsSchema を登録し、SSR レンダラーがこれを参照して Declarative Shadow DOM を生成する。
 
 == API
 
@@ -16,7 +16,7 @@ function registerComponent(
   tagName: string,
   setup: SetupFunction,
   cssTexts: readonly string[],
-  attrs: readonly string[],
+  propsSchema?: PropsSchema,
 ): void
 ```
 
@@ -26,7 +26,7 @@ Web Component を SSR レジストリに登録する。
 - `tagName`: カスタム要素のタグ名（ハイフン必須）
 - `setup`: コンポーネントの DOM コンテンツを生成する関数
 - `cssTexts`: SSR `<style>` 出力用の生 CSS テキスト配列
-- `attrs`: 監視する属性名の配列
+- `propsSchema`: Props スキーマ定義（型変換用、オプショナル）
 
 *振る舞い:*
 - グローバル Map に tagName → ComponentRegistration を保存
@@ -84,7 +84,7 @@ interface ComponentRegistration {
   readonly tagName: string;
   readonly setup: SetupFunction;
   readonly cssTexts: readonly string[];
-  readonly attrs: readonly string[];
+  readonly propsSchema?: PropsSchema;
 }
 ```
 
@@ -92,7 +92,7 @@ interface ComponentRegistration {
 - `tagName`: カスタム要素のタグ名
 - `setup`: DOM コンテンツを生成する setup 関数
 - `cssTexts`: DSD `<style>` タグ出力用の CSS テキスト配列
-- `attrs`: リアクティブシグナルとして反映される属性名の配列
+- `propsSchema`: Props スキーマ定義（型変換用、オプショナル）
 
 == 設計決定
 
@@ -148,7 +148,7 @@ registerComponent(
     return document.createElement("div");
   },
   [":host { display: block; }"],
-  ["initial"]
+  { initial: { type: Number, default: 0 } }
 );
 
 // SSR レンダラーから取得

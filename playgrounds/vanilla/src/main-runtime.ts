@@ -10,17 +10,17 @@
  * - reconcile for list updates
  */
 import {
-    append,
-    computed,
-    createRoot,
-    event,
-    firstChild,
-    fromTree,
-    nextSibling,
-    reconcile,
-    setText,
-    signal,
-    templateEffect,
+  append,
+  computed,
+  createRoot,
+  event,
+  firstChild,
+  fromTree,
+  nextSibling,
+  reconcile,
+  setText,
+  signal,
+  templateEffect,
 } from "@dathomir/core";
 
 // Create a root scope for cleanup management
@@ -78,13 +78,13 @@ createRoot(() => {
 
   // Event handlers
   event("click", decBtn as HTMLElement, () => {
-    count.value--;
+    count.update(v => v - 1);
   });
   event("click", incBtn as HTMLElement, () => {
-    count.value++;
+    count.update(v => v + 1);
   });
   event("click", addBtn as HTMLElement, () => {
-    items.value = [...items.value, `Item ${items.value.length + 1}`];
+    items.set([...items.value, `Item ${items.value.length + 1}`]);
   });
 
   // List reconciliation

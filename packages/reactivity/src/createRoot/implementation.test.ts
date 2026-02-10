@@ -28,13 +28,13 @@ describe("createRoot", () => {
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledWith(0);
 
-    count.value = 1;
+    count.set(1);
     expect(spy).toHaveBeenCalledTimes(2);
     expect(spy).toHaveBeenCalledWith(1);
 
     dispose();
 
-    count.value = 2;
+    count.set(2);
     // Effect should not run after dispose
     expect(spy).toHaveBeenCalledTimes(2);
   });
@@ -53,13 +53,13 @@ describe("createRoot", () => {
     expect(spy1).toHaveBeenCalledWith(0);
     expect(spy2).toHaveBeenCalledWith(0);
 
-    count.value = 5;
+    count.set(5);
     expect(spy1).toHaveBeenCalledWith(5);
     expect(spy2).toHaveBeenCalledWith(10);
 
     dispose();
 
-    count.value = 10;
+    count.set(10);
     expect(spy1).toHaveBeenCalledTimes(2);
     expect(spy2).toHaveBeenCalledTimes(2);
   });
@@ -74,12 +74,12 @@ describe("createRoot", () => {
       templateEffect(() => spy(count.value));
     });
 
-    count.value = 1;
+    count.set(1);
     expect(spy).toHaveBeenCalledTimes(2);
 
     internalDispose!();
 
-    count.value = 2;
+    count.set(2);
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
@@ -98,19 +98,19 @@ describe("createRoot", () => {
       });
     });
 
-    count.value = 1;
+    count.set(1);
     expect(outerSpy).toHaveBeenLastCalledWith(1);
     expect(innerSpy).toHaveBeenLastCalledWith(1);
 
     // Dispose inner only
     innerDispose!();
-    count.value = 2;
+    count.set(2);
     expect(outerSpy).toHaveBeenLastCalledWith(2);
     expect(innerSpy).toHaveBeenLastCalledWith(1); // Should not update
 
     // Dispose outer
     outerDispose!();
-    count.value = 3;
+    count.set(3);
     expect(outerSpy).toHaveBeenLastCalledWith(2); // Should not update
   });
 
@@ -125,13 +125,13 @@ describe("createRoot", () => {
       // Empty scope
     });
 
-    count.value = 1;
+    count.set(1);
     expect(spy).toHaveBeenCalledTimes(2);
 
     // Disposing root should not affect the external effect
     dispose();
 
-    count.value = 2;
+    count.set(2);
     expect(spy).toHaveBeenCalledTimes(3);
 
     cleanup();
@@ -152,13 +152,13 @@ describe("createRoot - nested scopes", () => {
       });
     });
 
-    count.value = 1;
+    count.set(1);
     expect(outerSpy).toHaveBeenLastCalledWith(1);
     expect(innerSpy).toHaveBeenLastCalledWith(1);
 
     outerDispose();
 
-    count.value = 2;
+    count.set(2);
     expect(outerSpy).toHaveBeenCalledTimes(2);
     expect(innerSpy).toHaveBeenCalledTimes(2);
   });
@@ -177,13 +177,13 @@ describe("createRoot - nested scopes", () => {
       });
     });
 
-    count.value = 1;
+    count.set(1);
     expect(outerSpy).toHaveBeenLastCalledWith(1);
     expect(innerSpy).toHaveBeenLastCalledWith(1);
 
     innerDispose!();
 
-    count.value = 2;
+    count.set(2);
     expect(outerSpy).toHaveBeenLastCalledWith(2);
     expect(innerSpy).toHaveBeenCalledTimes(2);
 
@@ -217,9 +217,9 @@ describe("createRoot - edge cases", () => {
     expect(spy).toHaveBeenCalledTimes(1);
     dispose();
 
-    count.value = 1;
-    count.value = 2;
-    count.value = 3;
+    count.set(1);
+    count.set(2);
+    count.set(3);
 
     expect(spy).toHaveBeenCalledTimes(1);
   });

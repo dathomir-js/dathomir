@@ -25,7 +25,7 @@ describe("computed", () => {
       doubled.value;
       expect(getter).toHaveBeenCalledTimes(1);
 
-      count.value = 5;
+      count.set(5);
       expect(getter).toHaveBeenCalledTimes(1);
 
       doubled.value;
@@ -81,7 +81,7 @@ describe("computed", () => {
 
       expect(observed).toEqual([2]);
 
-      count.value = 5;
+      count.set(5);
       expect(observed).toEqual([2, 10]);
     });
 
@@ -92,10 +92,10 @@ describe("computed", () => {
 
       expect(sum.value).toBe(3);
 
-      a.value = 10;
+      a.set(10);
       expect(sum.value).toBe(12);
 
-      b.value = 20;
+      b.set(20);
       expect(sum.value).toBe(30);
     });
   });
@@ -126,11 +126,11 @@ describe("computed", () => {
       doubled.value;
       expect(receivedPrev).toEqual([undefined]);
 
-      count.value = 5;
+      count.set(5);
       doubled.value;
       expect(receivedPrev).toEqual([undefined, 2]);
 
-      count.value = 10;
+      count.set(10);
       doubled.value;
       expect(receivedPrev).toEqual([undefined, 2, 10]);
     });
@@ -151,12 +151,12 @@ describe("computed", () => {
       expect(comp.value).toBe(2);
 
       shouldThrow = true;
-      count.value = 5;
+      count.set(5);
 
       expect(() => comp.value).toThrow("getter error");
 
       shouldThrow = false;
-      count.value = 10;
+      count.set(10);
       expect(comp.value).toBe(20);
     });
   });

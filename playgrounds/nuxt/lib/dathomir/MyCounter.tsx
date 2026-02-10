@@ -8,15 +8,14 @@ import { signal } from "@dathomir/reactivity";
 export const MyCounter = defineComponent(
   "my-counter",
   (host, ctx) => {
-    const initialValue = parseInt(ctx.attrs.initial?.value ?? "0", 10);
-    const count = signal(initialValue);
+    const count = signal(ctx.props.initial.value);
 
     const increment = () => {
-      count.value++;
+      count.update(v => v + 1);
     };
 
     const decrement = () => {
-      count.value--;
+      count.update(v => v - 1);
     };
 
     return (
@@ -72,7 +71,7 @@ export const MyCounter = defineComponent(
     );
   },
   {
-    attrs: ["initial"],
+    props: { initial: { type: Number, default: 0 } },
     styles: [`
       :host {
         display: block;

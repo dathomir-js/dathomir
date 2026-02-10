@@ -109,6 +109,152 @@ function getEventType(key: string): string {
 }
 
 /**
+ * Check if a JSX element name represents a component (starts with uppercase).
+ * Per JSX convention: uppercase = component, lowercase = HTML element.
+ * JSXMemberExpression (e.g. Foo.Bar) is always a component.
+ */
+function isComponentTag(
+  name: t.JSXIdentifier | t.JSXMemberExpression | t.JSXNamespacedName,
+): boolean {
+  if (t.isJSXIdentifier(name)) {
+    return /^[A-Z]/.test(name.name);
+  }
+  if (t.isJSXMemberExpression(name)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Convert a JSX element name to a JavaScript expression for function call.
+ * e.g. Counter → Identifier("Counter"), Foo.Bar → MemberExpression(Foo, Bar)
+ */
+function jsxNameToExpression(
+  name: t.JSXIdentifier | t.JSXMemberExpression | t.JSXNamespacedName,
+): t.Expression {
+  if (t.isJSXIdentifier(name)) {
+    return t.identifier(name.name);
+  }
+  if (t.isJSXMemberExpression(name)) {
+    return t.memberExpression(
+      jsxNameToExpression(name.object),
+      t.identifier(name.property.name),
+    );
+  }
+  return t.identifier(`${name.namespace.name}_${name.name.name}`);
+}
+
+/**
+ * Build a component function call expression from a JSX element.
+ * Converts <Counter initialCount={5} /> into Counter({ initialCount: 5 }).
+ * Children are passed as the `children` prop.
+ */
+function buildComponentCall(
+  node: t.JSXElement,
+  state: TransformState,
+): t.Expression {
+  const opening = node.openingElement;
+  const componentRef = jsxNameToExpression(opening.name);
+
+  // Build props object from attributes
+  const propsProperties: (t.ObjectProperty | t.SpreadElement)[] = [];
+
+  for (const attr of opening.attributes) {
+    if (t.isJSXSpreadAttribute(attr)) {
+      propsProperties.push(t.spreadElement(attr.argument));
+      continue;
+    }
+    if (!t.isJSXIdentifier(attr.name)) continue;
+
+    const key = attr.name.name;
+    let value: t.Expression;
+
+    if (attr.value === null) {
+      value = t.booleanLiteral(true);
+    } else if (t.isStringLiteral(attr.value)) {
+      value = attr.value;
+    } else if (t.isJSXExpressionContainer(attr.value)) {
+      if (t.isJSXEmptyExpression(attr.value.expression)) continue;
+      value = attr.value.expression;
+    } else {
+      continue;
+    }
+
+    propsProperties.push(t.objectProperty(t.identifier(key), value));
+  }
+
+  // Handle children
+  const significantChildren = node.children.filter((c) => {
+    if (t.isJSXText(c)) return c.value.trim() !== "";
+    if (t.isJSXExpressionContainer(c))
+      return !t.isJSXEmptyExpression(c.expression);
+    return true;
+  });
+
+  if (significantChildren.length > 0) {
+    const childExprs: t.Expression[] = [];
+    for (const child of significantChildren) {
+      if (t.isJSXText(child)) {
+        childExprs.push(t.stringLiteral(child.value.trim()));
+      } else if (t.isJSXExpressionContainer(child)) {
+        if (!t.isJSXEmptyExpression(child.expression)) {
+          childExprs.push(child.expression);
+        }
+      } else if (t.isJSXElement(child)) {
+        if (isComponentTag(child.openingElement.name)) {
+          childExprs.push(buildComponentCall(child, state));
+        } else {
+          // HTML element child of component - transform through pipeline
+          childExprs.push(
+            state.mode === "ssr"
+              ? transformJSXForSSRNode(child, state)
+              : transformJSXNode(child, state),
+          );
+        }
+      } else if (t.isJSXFragment(child)) {
+        // Fragment children - process each
+        for (const fragChild of child.children) {
+          if (t.isJSXText(fragChild)) {
+            const text = fragChild.value.trim();
+            if (text) childExprs.push(t.stringLiteral(text));
+          } else if (t.isJSXExpressionContainer(fragChild)) {
+            if (!t.isJSXEmptyExpression(fragChild.expression)) {
+              childExprs.push(fragChild.expression);
+            }
+          } else if (t.isJSXElement(fragChild)) {
+            if (isComponentTag(fragChild.openingElement.name)) {
+              childExprs.push(buildComponentCall(fragChild, state));
+            } else {
+              childExprs.push(
+                state.mode === "ssr"
+                  ? transformJSXForSSRNode(fragChild, state)
+                  : transformJSXNode(fragChild, state),
+              );
+            }
+          }
+        }
+      }
+    }
+
+    if (childExprs.length === 1) {
+      propsProperties.push(
+        t.objectProperty(t.identifier("children"), childExprs[0]!),
+      );
+    } else if (childExprs.length > 1) {
+      propsProperties.push(
+        t.objectProperty(
+          t.identifier("children"),
+          t.arrayExpression(childExprs),
+        ),
+      );
+    }
+  }
+
+  const propsArg = t.objectExpression(propsProperties);
+  return t.callExpression(componentRef, [propsArg]);
+}
+
+/**
  * Convert JSX element to structured array tree.
  */
 function jsxToTree(
@@ -321,6 +467,25 @@ function processChildren(
     }
 
     if (t.isJSXElement(child)) {
+      // Component elements (uppercase tag) → function call + insert placeholder
+      if (isComponentTag(child.openingElement.name)) {
+        const callExpr = buildComponentCall(child, state);
+        dynamicParts.push({
+          type: "insert",
+          path: [...parentPath, childIndex],
+          expression: callExpr,
+        });
+        results.push({
+          tree: t.arrayExpression([
+            t.stringLiteral("{insert}"),
+            t.nullLiteral(),
+          ]),
+          dynamicParts: [],
+        });
+        childIndex++;
+        continue;
+      }
+      // HTML elements → tree node
       const childPath = [...parentPath, childIndex];
       results.push(jsxElementToTree(child, state, dynamicParts, childPath));
       childIndex++;
@@ -467,7 +632,18 @@ function transformJSX(
   path: NodePath<t.JSXElement | t.JSXFragment>,
   state: TransformState,
 ): t.Expression {
-  const { tree, dynamicParts } = jsxToTree(path.node, state);
+  return transformJSXNode(path.node, state);
+}
+
+/**
+ * Transform a JSX element/fragment node to CSR DOM code.
+ * Core implementation used by both path-based and node-based entry points.
+ */
+function transformJSXNode(
+  node: t.JSXElement | t.JSXFragment,
+  state: TransformState,
+): t.Expression {
+  const { tree, dynamicParts } = jsxToTree(node, state);
 
   // Create template factory
   const templateId = createTemplateId(state);
@@ -651,7 +827,18 @@ function transformJSXForSSR(
   path: NodePath<t.JSXElement | t.JSXFragment>,
   state: TransformState,
 ): t.Expression {
-  const { tree, dynamicParts } = jsxToTree(path.node, state);
+  return transformJSXForSSRNode(path.node, state);
+}
+
+/**
+ * Transform a JSX element/fragment node to SSR render code.
+ * Core implementation used by both path-based and node-based entry points.
+ */
+function transformJSXForSSRNode(
+  node: t.JSXElement | t.JSXFragment,
+  state: TransformState,
+): t.Expression {
+  const { tree, dynamicParts } = jsxToTree(node, state);
 
   // Add SSR imports
   state.runtimeImports.add("renderToString");
@@ -768,6 +955,11 @@ function transform(
         ) {
           return;
         }
+        // Root-level component element → function call (no renderToString)
+        if (isComponentTag(path.node.openingElement.name)) {
+          path.replaceWith(buildComponentCall(path.node, state));
+          return;
+        }
         const replacement = transformJSXForSSR(path, state);
         path.replaceWith(replacement);
       },
@@ -792,6 +984,11 @@ function transform(
             (p: NodePath) => p.isJSXElement() || p.isJSXFragment(),
           )
         ) {
+          return;
+        }
+        // Root-level component element → function call (no fromTree)
+        if (isComponentTag(path.node.openingElement.name)) {
+          path.replaceWith(buildComponentCall(path.node, state));
           return;
         }
         const replacement = transformJSX(path, state);

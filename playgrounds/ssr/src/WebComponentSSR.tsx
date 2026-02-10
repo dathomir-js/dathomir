@@ -8,7 +8,7 @@
  */
 
 import { css, defineComponent } from "@dathomir/components";
-import { signal } from "@dathomir/core";
+import { Counter } from "./Counter";
 
 // Counter Web Component with SSR support
 const counterStyles = css`
@@ -22,6 +22,11 @@ const counterStyles = css`
 
   .counter {
     text-align: center;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
   }
 
   h2 {
@@ -33,7 +38,6 @@ const counterStyles = css`
     font-size: 48px;
     font-weight: bold;
     color: #333;
-    margin: 20px 0;
   }
 
   .buttons {
@@ -84,30 +88,11 @@ const counterStyles = css`
 
 export const SSRCounter = defineComponent(
   "dathomir-ssr-counter",
-  (host, ctx) => {
-    const initialCount = parseInt(ctx.attrs["initial"]?.value || "0", 10);
-    const count = signal(initialCount);
-
-    return (
-      <div class="counter">
-        <h2>SSR Web Component Counter</h2>
-        <div class="count">{count.value}</div>
-        <div class="buttons">
-          <button onClick={() => count.value--}>−</button>
-          <button onClick={() => (count.value = 0)}>Reset</button>
-          <button onClick={() => count.value++}>+</button>
-        </div>
-        <div class="info">
-          <span class="ssr-badge">SSR + DSD</span>
-          <br />
-          This component uses Web Components and Shadow DOM
-          <br />
-          Initial count was {initialCount}
-        </div>
-      </div>
-    );
+  Counter,
+  {
+    styles: [counterStyles],
+    props: { initialCount: { type: Number, default: 0, attribute: "initial" } },
   },
-  { styles: [counterStyles], attrs: ["initial"] },
 );
 
 // Simple greeting Web Component
@@ -132,16 +117,14 @@ const greetingStyles = css`
 export const SSRGreeting = defineComponent(
   "dathomir-ssr-greeting",
   (host, ctx) => {
-    const name = ctx.attrs["name"]?.value || "World";
-
     return (
       <div>
-        <h3>Hello, {name}!</h3>
+        <h3>Hello, {ctx.props.name.value}!</h3>
         <p>This Web Component uses Declarative Shadow DOM for instant rendering.</p>
       </div>
     );
   },
-  { styles: [greetingStyles], attrs: ["name"] },
+  { styles: [greetingStyles], props: { name: { type: String, default: "World" } } },
 );
 
 // Export a helper to register all components

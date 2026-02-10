@@ -11,11 +11,11 @@ export function Counter() {
   const doubled = computed(() => count.value * 2);
 
   const increment = () => {
-    count.value++;
+    count.update(v => v + 1);
   };
 
   const decrement = () => {
-    count.value--;
+    count.update(v => v - 1);
   };
 
   return (

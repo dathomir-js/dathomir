@@ -30,9 +30,9 @@ describe("batch", () => {
     });
 
     batch(() => {
-      count.value = 1;
-      count.value = 2;
-      count.value = 3;
+      count.set(1);
+      count.set(2);
+      count.set(3);
     });
 
     expect(observed).toEqual([0, 3]);
@@ -49,9 +49,9 @@ describe("batch", () => {
     expect(spy).toHaveBeenCalledTimes(1);
 
     batch(() => {
-      count.value = 1;
-      count.value = 2;
-      count.value = 3;
+      count.set(1);
+      count.set(2);
+      count.set(3);
     });
 
     expect(spy).toHaveBeenCalledTimes(2);

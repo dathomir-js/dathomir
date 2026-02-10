@@ -13,7 +13,7 @@ import { signal } from "@dathomir/core";
 /**
  * Create a counter element with SSR/Hydration support.
  */
-export function Counter(initialCount = 0) {
+export function Counter({ initialCount = 0 }: { initialCount?: number }) {
   const count = signal(initialCount);
 
   return (

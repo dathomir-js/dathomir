@@ -1,11 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
 import {
-  createRoot,
   effect,
   onCleanup,
   signal,
-  templateEffect,
+  templateEffect
 } from "@dathomir/reactivity";
+import { describe, expect, it, vi } from "vitest";
 
 import { css } from "../css/implementation";
 import { defineComponent } from "./implementation";
@@ -84,30 +83,30 @@ describe("defineComponent", () => {
     expect(cleanupFn).toHaveBeenCalled();
   });
 
-  it("should update attr signals via attributeChangedCallback", async () => {
+  it("should update prop signals via attributeChangedCallback", async () => {
     const tag = uniqueTag();
-    let attrValue: string | null = null;
+    let propValue: string | null = null;
 
     defineComponent(
       tag,
       (_host, ctx) => {
-        attrValue = ctx.attrs["title"]!.value;
+        propValue = ctx.props.title.value;
         effect(() => {
-          attrValue = ctx.attrs["title"]!.value;
+          propValue = ctx.props.title.value;
         });
         return document.createTextNode("test");
       },
-      { attrs: ["title"] },
+      { props: { title: { type: String } } },
     );
 
     const el = document.createElement(tag);
     document.body.appendChild(el);
     await waitForMicrotask();
 
-    expect(attrValue).toBeNull();
+    expect(propValue).toBe("");
 
     el.setAttribute("title", "new-value");
-    expect(attrValue).toBe("new-value");
+    expect(propValue).toBe("new-value");
 
     el.remove();
   });
@@ -223,7 +222,7 @@ describe("defineComponent", () => {
     const tag = uniqueTag();
     let receivedHost: HTMLElement | null = null;
 
-    defineComponent(tag, (host) => {
+    defineComponent(tag, (host: HTMLElement) => {
       receivedHost = host;
       return document.createTextNode("test");
     });
@@ -237,17 +236,17 @@ describe("defineComponent", () => {
     el.remove();
   });
 
-  it("should initialize attr signals with current attribute values", async () => {
+  it("should initialize prop signals with current attribute values", async () => {
     const tag = uniqueTag();
-    let initialValue: string | null = null;
+    let initialValue: string = "";
 
     defineComponent(
       tag,
       (_host, ctx) => {
-        initialValue = ctx.attrs["data-val"]!.value;
+        initialValue = ctx.props["dataVal"].value;
         return document.createTextNode("test");
       },
-      { attrs: ["data-val"] },
+      { props: { dataVal: { type: String, attribute: "data-val" } } },
     );
 
     const el = document.createElement(tag);

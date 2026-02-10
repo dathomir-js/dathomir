@@ -69,29 +69,28 @@ const counterStyles = css`
 defineComponent(
   "dathomir-counter",
   (host, ctx) => {
-    const initialCount = parseInt(ctx.attrs["initial"]?.value || "0", 10);
-    const count = signal(initialCount);
+    const count = signal(ctx.props.initial.value);
 
     return (
       <div class="counter">
         <h2>Web Component Counter</h2>
         <div class="count">{count.value}</div>
         <div class="buttons">
-          <button onClick={() => count.value--}>−</button>
-          <button onClick={() => (count.value = 0)}>Reset</button>
-          <button onClick={() => count.value++}>+</button>
+          <button onClick={() => count.update(v => v - 1)}>−</button>
+          <button onClick={() => count.set(0)}>Reset</button>
+          <button onClick={() => count.update(v => v + 1)}>+</button>
         </div>
         <div class="info">
           This is a Web Component using Shadow DOM!
           <br />
-          Initial value: {initialCount}
+          Initial value: {ctx.props.initial.value}
         </div>
       </div>
     );
   },
   {
     styles: [counterStyles],
-    attrs: ["initial"],
+    props: { initial: { type: Number, default: 0 } },
   }
 );
 
@@ -118,18 +117,16 @@ const greetingStyles = css`
 defineComponent(
   "dathomir-greeting",
   (host, ctx) => {
-    const name = ctx.attrs["name"]?.value || "World";
-
     return (
       <div>
-        <h3>Hello, {name}!</h3>
+        <h3>Hello, {ctx.props.name.value}!</h3>
         <p>This is a custom Web Component created with Dathomir.</p>
       </div>
     );
   },
   {
     styles: [greetingStyles],
-    attrs: ["name"],
+    props: { name: { type: String, default: "World" } },
   }
 );
 

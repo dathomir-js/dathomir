@@ -4,13 +4,14 @@
  * Provides jsx(), jsxs(), and Fragment for JSX transformation.
  * This enables JSX syntax in components.
  */
+import { templateEffect } from "@dathomir/reactivity";
+import type { RuntimeJSX } from "@dathomir/runtime";
 import {
   event,
   firstChild,
   fromTree,
   nextSibling,
   setText,
-  templateEffect,
   type Tree,
 } from "@dathomir/runtime";
 
@@ -217,11 +218,14 @@ export const jsxDEV = jsx;
 /**
  * JSX type definitions.
  * Enables TypeScript support for JSX elements.
+ * Uses detailed HTML element types from @dathomir/runtime.
+ * IntrinsicElements is an interface (not type) to allow module augmentation
+ * via declaration merging for custom elements defined with defineComponent.
  */
 export namespace JSX {
-  export interface IntrinsicElements {
-    // HTML elements
-    [elemName: string]: Record<string, unknown>;
+  export interface IntrinsicElements extends RuntimeJSX.IntrinsicElements {
+    /** Custom elements (tag names with hyphens) - fallback for unregistered custom elements */
+    [K: `${string}-${string}`]: Record<string, unknown>;
   }
 
   export interface Element extends Node {}

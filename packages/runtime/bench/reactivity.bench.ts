@@ -22,7 +22,7 @@ describe("signal - read/write", () => {
   bench("write signal 1000 times", () => {
     const s = signal(0);
     for (let i = 0; i < 1000; i++) {
-      s.value = i;
+      s.set(i);
     }
   });
 });
@@ -32,7 +32,7 @@ describe("computed - derivation", () => {
     const s = signal(0);
     const derived = computed(() => s.value * 2);
     for (let i = 0; i < 1000; i++) {
-      s.value = i;
+      s.set(i);
       derived.value;
     }
   });
@@ -43,7 +43,7 @@ describe("computed - derivation", () => {
     const b = computed(() => a.value * 2);
     const c = computed(() => b.value + 10);
     for (let i = 0; i < 1000; i++) {
-      s.value = i;
+      s.set(i);
       c.value;
     }
   });
@@ -54,9 +54,9 @@ describe("computed - derivation", () => {
     const sC = signal(0);
     const derived = computed(() => sA.value + sB.value + sC.value);
     for (let i = 0; i < 1000; i++) {
-      sA.value = i;
-      sB.value = i;
-      sC.value = i;
+      sA.set(i);
+      sB.set(i);
+      sC.set(i);
       derived.value;
     }
   });
@@ -71,7 +71,7 @@ describe("effect - execution", () => {
         count += s.value;
       });
       for (let i = 1; i <= 1000; i++) {
-        s.value = i;
+        s.set(i);
       }
       // Prevent dead code elimination
       return count;
@@ -87,8 +87,8 @@ describe("effect - execution", () => {
         count += sA.value + sB.value;
       });
       for (let i = 1; i <= 500; i++) {
-        sA.value = i;
-        sB.value = i;
+        sA.set(i);
+        sB.set(i);
       }
       return count;
     });
@@ -104,7 +104,7 @@ describe("batch - grouped updates", () => {
     for (let i = 0; i < 100; i++) {
       batch(() => {
         for (const s of signals) {
-          s.value = i;
+          s.set(i);
         }
       });
       derived.value;
@@ -119,7 +119,7 @@ describe("batch - grouped updates", () => {
     for (let i = 0; i < 10; i++) {
       batch(() => {
         for (const s of signals) {
-          s.value = i;
+          s.set(i);
         }
       });
       derived.value;
@@ -136,7 +136,7 @@ describe("templateEffect vs effect", () => {
         count += s.value;
       });
       for (let i = 1; i <= 1000; i++) {
-        s.value = i;
+        s.set(i);
       }
       return count;
     });
@@ -150,7 +150,7 @@ describe("templateEffect vs effect", () => {
         count += s.value;
       });
       for (let i = 1; i <= 1000; i++) {
-        s.value = i;
+        s.set(i);
       }
       return count;
     });

@@ -9,10 +9,29 @@
 import type {
   ComponentClass,
   ComponentContext,
+  PropDefinition,
+  PropsSchema,
 } from "@/defineComponent/implementation";
 import { getComponent } from "@/registry/implementation";
 import { signal } from "@dathomir/reactivity";
 import { setComponentRenderer } from "@dathomir/runtime/ssr";
+
+/**
+ * Coerce an attribute value for SSR context (mirrors CSR coercion logic).
+ * @internal
+ */
+function coerceForSSR(def: PropDefinition, attrValue: string | null): unknown {
+  if (def.type === Boolean) return attrValue !== null;
+  if (attrValue === null) {
+    if (def.default !== undefined) return def.default;
+    if (def.type === String) return "";
+    if (def.type === Number) return 0;
+    return undefined;
+  }
+  if (def.type === Number) return Number(attrValue);
+  if (def.type === String) return attrValue;
+  return (def.type as (v: string | null) => unknown)(attrValue);
+}
 
 /**
  * Render DSD inner content for a registered component.
@@ -26,16 +45,27 @@ function renderComponentContent(
   const registration = getComponent(tagName);
   if (!registration) return null;
 
-  // Build ComponentContext from attributes
-  const attrSignals: Record<string, ReturnType<typeof signal<string | null>>> =
-    {};
-  for (const name of registration.attrs) {
-    const value = attrs[name];
-    attrSignals[name] = signal(
-      value != null ? String(value) : null,
-    );
+  const { propsSchema } = registration;
+
+  // Build ComponentContext from props schema or raw attrs
+  const propSignals: Record<string, ReturnType<typeof signal>> = {};
+  if (propsSchema) {
+    for (const propName of Object.keys(propsSchema)) {
+      const def = propsSchema[propName]!;
+      const attrName = def.attribute === false
+        ? null
+        : typeof def.attribute === "string"
+          ? def.attribute
+          : propName;
+      const rawValue = attrName !== null && attrs[attrName] != null
+        ? String(attrs[attrName])
+        : null;
+      propSignals[propName] = signal(
+        coerceForSSR(def, rawValue),
+      );
+    }
   }
-  const ctx: ComponentContext = { attrs: attrSignals };
+  const ctx = { props: propSignals } as ComponentContext<PropsSchema>;
 
   // Call setup function (in SSR mode, returns HTML string)
   const mockHost = {} as HTMLElement;

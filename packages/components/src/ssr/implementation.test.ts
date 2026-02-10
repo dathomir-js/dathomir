@@ -24,7 +24,7 @@ describe("ssr", () => {
   describe("renderDSD", () => {
     it("should render complete custom element with DSD", () => {
       const setup = () => "<div>Hello World</div>";
-      registerComponent("test-element", setup, [], []);
+      registerComponent("test-element", setup, []);
 
       const html = renderDSD("test-element", {});
 
@@ -37,7 +37,7 @@ describe("ssr", () => {
 
     it("should accept Component Class as first argument", () => {
       const setup = () => "<div>Component Class Test</div>";
-      registerComponent("class-test", setup, [], []);
+      registerComponent("class-test", setup, []);
 
       const ComponentClass = {
         __tagName__: "class-test",
@@ -51,7 +51,7 @@ describe("ssr", () => {
 
     it("should accept tag name string as first argument (legacy)", () => {
       const setup = () => "<div>String Test</div>";
-      registerComponent("string-test", setup, [], []);
+      registerComponent("string-test", setup, []);
 
       const html = renderDSD("string-test", {});
 
@@ -61,7 +61,7 @@ describe("ssr", () => {
 
     it("should escape attribute values", () => {
       const setup = () => "<div>Escape Test</div>";
-      registerComponent("escape-test", setup, [], []);
+      registerComponent("escape-test", setup, []);
 
       const html = renderDSD("escape-test", {
         value: '<script>alert("xss")</script>',
@@ -78,7 +78,7 @@ describe("ssr", () => {
         ":host { display: block; }",
         "div { color: red; }",
       ];
-      registerComponent("styled-element", setup, cssTexts, []);
+      registerComponent("styled-element", setup, cssTexts);
 
       const html = renderDSD("styled-element", {});
 
@@ -94,7 +94,7 @@ describe("ssr", () => {
 
     it("should handle empty attributes", () => {
       const setup = () => "<div>No Attrs</div>";
-      registerComponent("no-attrs", setup, [], []);
+      registerComponent("no-attrs", setup, []);
 
       const html = renderDSD("no-attrs", {});
 
@@ -105,7 +105,11 @@ describe("ssr", () => {
 
     it("should handle multiple attributes", () => {
       const setup = () => "<div>Multi Attrs</div>";
-      registerComponent("multi-attrs", setup, [], ["name", "value", "disabled"]);
+      registerComponent("multi-attrs", setup, [], {
+        name: { type: String },
+        value: { type: String },
+        disabled: { type: String },
+      });
 
       const html = renderDSD("multi-attrs", {
         name: "test",
@@ -122,7 +126,7 @@ describe("ssr", () => {
   describe("renderDSDContent", () => {
     it("should render DSD template only", () => {
       const setup = () => "<div>Template Only</div>";
-      registerComponent("template-test", setup, [], []);
+      registerComponent("template-test", setup, []);
 
       const html = renderDSDContent("template-test", {});
 
@@ -134,7 +138,7 @@ describe("ssr", () => {
 
     it("should accept Component Class", () => {
       const setup = () => "<div>Class Template</div>";
-      registerComponent("class-template", setup, [], []);
+      registerComponent("class-template", setup, []);
 
       const ComponentClass = {
         __tagName__: "class-template",
@@ -149,7 +153,7 @@ describe("ssr", () => {
     it("should include CSS in template", () => {
       const setup = () => "<div>Styled Template</div>";
       const cssTexts = [":host { padding: 10px; }"];
-      registerComponent("template-styled", setup, cssTexts, []);
+      registerComponent("template-styled", setup, cssTexts);
 
       const html = renderDSDContent("template-styled", {});
 
@@ -177,7 +181,7 @@ describe("ssr", () => {
 
     it("should set up ComponentRenderer", () => {
       const setup = () => "<div>Renderer Test</div>";
-      registerComponent("renderer-test", setup, [], []);
+      registerComponent("renderer-test", setup, []);
 
       ensureComponentRenderer();
 
@@ -187,55 +191,64 @@ describe("ssr", () => {
     });
   });
 
-  describe("attribute signal handling", () => {
-    it("should pass attributes to setup function", () => {
-      const setupSpy = vi.fn(() => "<div>Attr Test</div>");
-      registerComponent("attr-component", setupSpy, [], ["name", "value"]);
+  describe("props signal handling", () => {
+    it("should pass props to setup function with type coercion", () => {
+      const setupSpy = vi.fn(() => "<div>Props Test</div>");
+      registerComponent("props-component", setupSpy, [], {
+        name: { type: String },
+        count: { type: Number },
+      });
 
-      renderDSD("attr-component", { name: "test", value: "123" });
+      renderDSD("props-component", { name: "test", count: "123" });
 
       expect(setupSpy).toHaveBeenCalled();
       const [, ctx] = setupSpy.mock.calls[0] as unknown as [
         HTMLElement,
         ComponentContext,
       ];
-      expect(ctx.attrs.name.value).toBe("test");
-      expect(ctx.attrs.value.value).toBe("123");
+      expect(ctx.props.name.value).toBe("test");
+      expect(ctx.props.count.value).toBe(123);
     });
 
-    it("should handle missing attributes as null", () => {
-      const setupSpy = vi.fn(() => "<div>Missing Attr</div>");
-      registerComponent("missing-attr", setupSpy, [], ["name", "value"]);
+    it("should handle missing attributes with defaults", () => {
+      const setupSpy = vi.fn(() => "<div>Default Test</div>");
+      registerComponent("default-props", setupSpy, [], {
+        name: { type: String, default: "World" },
+        count: { type: Number },
+      });
 
-      renderDSD("missing-attr", { name: "test" });
+      renderDSD("default-props", { name: "test" });
 
       const [, ctx] = setupSpy.mock.calls[0] as unknown as [
         HTMLElement,
         ComponentContext,
       ];
-      expect(ctx.attrs.name.value).toBe("test");
-      expect(ctx.attrs.value.value).toBeNull();
+      expect(ctx.props.name.value).toBe("test");
+      expect(ctx.props.count.value).toBe(0);
     });
 
-    it("should convert non-string values to strings", () => {
-      const setupSpy = vi.fn(() => "<div>Convert Test</div>");
-      registerComponent("convert-test", setupSpy, [], ["count", "enabled"]);
+    it("should handle boolean type coercion", () => {
+      const setupSpy = vi.fn(() => "<div>Boolean Test</div>");
+      registerComponent("bool-test", setupSpy, [], {
+        enabled: { type: Boolean },
+        disabled: { type: Boolean },
+      });
 
-      renderDSD("convert-test", { count: "42", enabled: "true" });
+      renderDSD("bool-test", { enabled: "true" });
 
       const [, ctx] = setupSpy.mock.calls[0] as unknown as [
         HTMLElement,
         ComponentContext,
       ];
-      expect(ctx.attrs.count.value).toBe("42");
-      expect(ctx.attrs.enabled.value).toBe("true");
+      expect(ctx.props.enabled.value).toBe(true);
+      expect(ctx.props.disabled.value).toBe(false);
     });
   });
 
   describe("edge cases", () => {
     it("should handle component with no CSS", () => {
       const setup = () => "<div>No CSS</div>";
-      registerComponent("no-css", setup, [], []);
+      registerComponent("no-css", setup, []);
 
       const html = renderDSD("no-css", {});
 
@@ -245,7 +258,7 @@ describe("ssr", () => {
 
     it("should handle empty setup return value", () => {
       const setup = () => "";
-      registerComponent("empty-setup", setup, [], []);
+      registerComponent("empty-setup", setup, []);
 
       const html = renderDSD("empty-setup", {});
 
@@ -257,7 +270,7 @@ describe("ssr", () => {
     it("should handle special characters in CSS", () => {
       const setup = () => "<div>Special CSS</div>";
       const cssTexts = [":host::before { content: '<>'; }"];
-      registerComponent("special-css", setup, cssTexts, []);
+      registerComponent("special-css", setup, cssTexts);
 
       const html = renderDSD("special-css", {});
 

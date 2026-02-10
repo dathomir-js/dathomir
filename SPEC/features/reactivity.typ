@@ -132,7 +132,7 @@
     function signal<T>(initialValue: T): Signal<T>
 
     interface Signal<T> \{
-      value: T;              // 読み書きアクセス
+      readonly value: T;     // 読み取り専用（書き込みは set()/update()）
       set(update: T | ((prev: T) => T)): void;  // 値を設定
       update(fn: (prev: T) => T): void;  // 更新関数で設定
       peek(): T;             // 追跡なしで読み取り
@@ -148,9 +148,10 @@
   test_cases: [
     *基本動作*:
     + 初期値が正しく設定される
-    + .value で読み取りができる
-    + .value = で書き込みができる
-    + set() で関数による更新ができる
+    + .value で読み取りができる（readonly）
+    + set() で値の設定ができる
+    + update() で関数による更新ができる
+    + .value への直接代入は TypeScript で禁止される
 
     *依存追跡*:
     + effect 内での .value 読み取りで依存登録

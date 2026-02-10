@@ -4,7 +4,7 @@ Web Components high-level API for Dathomir framework.
 
 ## Features
 
-- **`defineComponent`**: High-level API for defining Web Components with automatic Shadow DOM setup, reactive attributes, and lifecycle management
+- **`defineComponent`**: High-level API for defining Web Components with automatic Shadow DOM setup, reactive props with type coercion, and lifecycle management
 - **`css`**: Tagged template literal for creating CSSStyleSheets to use with adoptedStyleSheets
 
 ## Installation
@@ -28,16 +28,17 @@ const styles = css`
   }
 `;
 
-defineComponent('my-counter', () => {
-  const count = signal(0);
+defineComponent('my-counter', (_host, ctx) => {
+  const count = signal(ctx.props.initial.value);
 
   return (
-    <button onClick={() => count.value++}>
+    <button onClick={() => count.update(v => v + 1)}>
       Count: {count.value}
     </button>
   );
 }, {
   styles: [styles],
+  props: { initial: { type: Number, default: 0 } },
 });
 ```
 
@@ -55,7 +56,7 @@ Define and register a custom element.
 - **setup**: Function that creates the component's DOM content
 - **options**: Optional configuration
   - `styles`: Array of CSSStyleSheet or string styles
-  - `attrs`: Array of attribute names to observe
+  - `props`: PropsSchema object defining observed attributes with type coercion
   - `hydrate`: Hydration setup function for SSR
 
 ### `css`

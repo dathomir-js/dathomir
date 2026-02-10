@@ -302,6 +302,9 @@ importers:
       '@dathomir/components':
         specifier: workspace:*
         version: link:../../packages/components
+      '@dathomir/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@dathomir/reactivity':
         specifier: workspace:*
         version: link:../../packages/reactivity

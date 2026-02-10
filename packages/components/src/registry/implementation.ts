@@ -2,12 +2,12 @@
  * SSR Web Component Registry.
  *
  * When defineComponent() is called in SSR, it registers the component's
- * setup function, styles, and attribute names here. The SSR renderer
+ * setup function, styles, and props schema here. The SSR renderer
  * queries this registry to generate Declarative Shadow DOM output.
  * @module
  */
 
-import type { SetupFunction } from "@/defineComponent/implementation";
+import type { PropsSchema, SetupFunction } from "@/defineComponent/implementation";
 
 /** Registered component metadata for SSR. */
 interface ComponentRegistration {
@@ -17,8 +17,8 @@ interface ComponentRegistration {
   readonly setup: SetupFunction;
   /** Raw CSS text strings for DSD <style> output. */
   readonly cssTexts: readonly string[];
-  /** Observed attribute names. */
-  readonly attrs: readonly string[];
+  /** Props schema for type coercion in SSR. */
+  readonly propsSchema?: PropsSchema;
 }
 
 /** Global registry: tagName → ComponentRegistration */
@@ -29,15 +29,15 @@ const registry = new Map<string, ComponentRegistration>();
  * @param tagName - Custom element tag name (must contain a hyphen).
  * @param setup - Setup function that creates the component's DOM content.
  * @param cssTexts - Raw CSS text strings for SSR <style> output.
- * @param attrs - Observed attribute names.
+ * @param propsSchema - Props schema for type coercion.
  */
 function registerComponent(
   tagName: string,
   setup: SetupFunction,
   cssTexts: readonly string[],
-  attrs: readonly string[],
+  propsSchema?: PropsSchema,
 ): void {
-  registry.set(tagName, { tagName, setup, cssTexts, attrs });
+  registry.set(tagName, { tagName, setup, cssTexts, propsSchema });
 }
 
 /**

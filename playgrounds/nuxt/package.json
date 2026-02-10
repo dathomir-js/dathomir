@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@dathomir/components": "workspace:*",
+    "@dathomir/core": "workspace:*",
     "@dathomir/reactivity": "workspace:*",
     "@dathomir/runtime": "workspace:*",
     "nuxt": "^4.0.0",

@@ -23,11 +23,11 @@ describe("templateEffect", () => {
       expect(spy).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenCalledWith(0);
 
-      count.value = 1;
+      count.set(1);
       expect(spy).toHaveBeenCalledTimes(2);
       expect(spy).toHaveBeenCalledWith(1);
 
-      count.value = 2;
+      count.set(2);
       expect(spy).toHaveBeenCalledTimes(3);
       expect(spy).toHaveBeenCalledWith(2);
     });
@@ -42,12 +42,12 @@ describe("templateEffect", () => {
 
       expect(spy).toHaveBeenCalledTimes(1);
 
-      count.value = 1;
+      count.set(1);
       expect(spy).toHaveBeenCalledTimes(2);
 
       dispose();
 
-      count.value = 2;
+      count.set(2);
       expect(spy).toHaveBeenCalledTimes(2);
     });
   });
@@ -66,10 +66,10 @@ describe("templateEffect", () => {
 
       expect(spy).toHaveBeenCalledWith(3);
 
-      a.value = 10;
+      a.set(10);
       expect(spy).toHaveBeenCalledWith(12);
 
-      b.value = 20;
+      b.set(20);
       expect(spy).toHaveBeenCalledWith(30);
     });
 
@@ -86,7 +86,7 @@ describe("templateEffect", () => {
 
       expect(spy).toHaveBeenCalledWith(2);
 
-      count.value = 5;
+      count.set(5);
       expect(spy).toHaveBeenCalledWith(10);
     });
 
@@ -103,10 +103,10 @@ describe("templateEffect", () => {
       expect(spy).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenCalledWith(0);
 
-      count.value = 1;
+      count.set(1);
       expect(spy).toHaveBeenCalledTimes(1);
 
-      count.value = 2;
+      count.set(2);
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });
@@ -126,8 +126,8 @@ describe("templateEffect", () => {
       expect(spy).toHaveBeenCalledTimes(1);
 
       batch(() => {
-        a.value = 1;
-        b.value = 2;
+        a.set(1);
+        b.set(2);
       });
 
       expect(spy).toHaveBeenCalledTimes(2);
@@ -147,9 +147,9 @@ describe("templateEffect", () => {
       expect(observed).toEqual([0]);
 
       batch(() => {
-        count.value = 1;
-        count.value = 2;
-        count.value = 3;
+        count.set(1);
+        count.set(2);
+        count.set(3);
       });
 
       expect(observed).toEqual([0, 3]);
@@ -165,10 +165,10 @@ describe("templateEffect", () => {
 
       expect(spy).toHaveBeenCalledTimes(1);
 
-      count.value = 1;
+      count.set(1);
       expect(spy).toHaveBeenCalledTimes(2);
 
-      count.value = 2;
+      count.set(2);
       expect(spy).toHaveBeenCalledTimes(3);
     });
   });
@@ -183,7 +183,7 @@ describe("templateEffect", () => {
       });
 
       expect(spy).toHaveBeenCalledWith(0);
-      count.value = 1;
+      count.set(1);
       expect(spy).toHaveBeenCalledWith(1);
     });
 
@@ -196,9 +196,9 @@ describe("templateEffect", () => {
         templateEffect(() => spy(count.value));
       });
 
-      count.value = 1;
+      count.set(1);
       dispose!();
-      count.value = 2;
+      count.set(2);
       expect(spy).toHaveBeenCalledTimes(2); // Only 0 and 1
     });
 
@@ -211,11 +211,11 @@ describe("templateEffect", () => {
       });
 
       expect(spy).toHaveBeenCalledWith(0);
-      count.value = 1;
+      count.set(1);
       expect(spy).toHaveBeenCalledWith(1);
 
       dispose();
-      count.value = 2;
+      count.set(2);
       expect(spy).toHaveBeenCalledTimes(2);
     });
 
@@ -226,13 +226,13 @@ describe("templateEffect", () => {
       templateEffect(() => spy(count.value));
 
       expect(spy).toHaveBeenCalledWith(0);
-      count.value = 1;
+      count.set(1);
       expect(spy).toHaveBeenCalledWith(1);
 
       const dispose = createRoot(() => {});
       dispose();
 
-      count.value = 2;
+      count.set(2);
       expect(spy).toHaveBeenCalledWith(2);
       expect(spy).toHaveBeenCalledTimes(3);
     });

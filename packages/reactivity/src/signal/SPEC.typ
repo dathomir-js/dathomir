@@ -13,7 +13,7 @@
 function signal<T>(initialValue: T): Signal<T>
 
 interface Signal<T> {
-  value: T;                              // 追跡付きで読み書き
+  readonly value: T;                     // 追跡付きで読み取り専用
   set(update: T | ((prev: T) => T)): void;
   update(updater: (prev: T) => T): void;
   peek(): T;                             // 追跡なしで読み取り
@@ -30,10 +30,20 @@ interface Signal<T> {
 
 === 書き込み
 
-- `signal.value = newValue` は値を設定し、変更があれば更新をトリガーする
+- `signal.value` への直接代入（`signal.value = x`）は *禁止*（`readonly`）
 - `signal.set(value)` は値または更新関数を受け取る
 - `signal.update(fn)` は `set(fn)` のエイリアス
 - `Object.is()` を使用して等価性をチェック（NaN を正しく扱う）
+
+=== ADR: `.value` 書き込み禁止
+
+*決定:* `signal.value` を読み取り専用にし、書き込みは `set()` / `update()` のみとする。
+
+*理由:*
+1. 更新パスを `set()` / `update()` に統一することで、意図しない副作用を防止
+2. `set()` は値またはアップデータ関数を受け取り、柔軟な更新が可能
+3. `.value++` 等の暗黙的な read-modify-write パターンを排除し、コードの意図を明確化
+4. TypeScript の `readonly` により、コンパイル時にエラーが検出される
 
 === 通知
 
@@ -51,7 +61,7 @@ interface Signal<T> {
 
 - 初期値を正しく設定する
 - .value 経由で読み取る
-- .value = で書き込む
+- .value への直接代入が TypeScript でエラーになる
 - set() で直接値を更新する
 - set() で関数を使って更新する
 - update() で更新する

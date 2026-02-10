@@ -63,9 +63,6 @@ function createSignalApi<T>(node: SignalNode<T>): Signal<T> {
     get value() {
       return readTracked();
     },
-    set value(value) {
-      write(value);
-    },
     set(update) {
       const nextValue =
         typeof update === "function"

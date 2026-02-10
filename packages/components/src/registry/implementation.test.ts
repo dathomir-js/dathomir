@@ -16,9 +16,9 @@ describe("registry", () => {
     it("should register a component", () => {
       const setup = () => document.createTextNode("test");
       const cssTexts = [":host { display: block; }"];
-      const attrs = ["value"];
+      const propsSchema = { value: { type: String } };
 
-      registerComponent("test-component", setup, cssTexts, attrs);
+      registerComponent("test-component", setup, cssTexts, propsSchema);
 
       expect(hasComponent("test-component")).toBe(true);
     });
@@ -27,8 +27,8 @@ describe("registry", () => {
       const setup1 = () => document.createTextNode("first");
       const setup2 = () => document.createTextNode("second");
 
-      registerComponent("test-component", setup1, [], []);
-      registerComponent("test-component", setup2, [], []);
+      registerComponent("test-component", setup1, []);
+      registerComponent("test-component", setup2, []);
 
       const registration = getComponent("test-component");
       expect(registration?.setup).toBe(setup2);
@@ -39,16 +39,16 @@ describe("registry", () => {
     it("should return registered component", () => {
       const setup = () => document.createTextNode("test");
       const cssTexts = [":host { color: red; }"];
-      const attrs = ["name"];
+      const propsSchema = { name: { type: String } };
 
-      registerComponent("my-component", setup, cssTexts, attrs);
+      registerComponent("my-component", setup, cssTexts, propsSchema);
 
       const registration = getComponent("my-component");
       expect(registration).toBeDefined();
       expect(registration?.tagName).toBe("my-component");
       expect(registration?.setup).toBe(setup);
       expect(registration?.cssTexts).toEqual(cssTexts);
-      expect(registration?.attrs).toEqual(attrs);
+      expect(registration?.propsSchema).toEqual(propsSchema);
     });
 
     it("should return undefined for unregistered component", () => {
@@ -59,22 +59,22 @@ describe("registry", () => {
     it("should return ComponentRegistration with correct structure", () => {
       const setup = () => document.createTextNode("test");
       const cssTexts = [":host { display: block; }"];
-      const attrs = ["value"];
+      const propsSchema = { value: { type: String } };
 
-      registerComponent("structure-test", setup, cssTexts, attrs);
+      registerComponent("structure-test", setup, cssTexts, propsSchema);
 
       const registration = getComponent("structure-test");
       expect(registration).toHaveProperty("tagName");
       expect(registration).toHaveProperty("setup");
       expect(registration).toHaveProperty("cssTexts");
-      expect(registration).toHaveProperty("attrs");
+      expect(registration).toHaveProperty("propsSchema");
     });
   });
 
   describe("hasComponent", () => {
     it("should return true for registered component", () => {
       const setup = () => document.createTextNode("test");
-      registerComponent("existing-component", setup, [], []);
+      registerComponent("existing-component", setup, []);
 
       expect(hasComponent("existing-component")).toBe(true);
     });
@@ -85,7 +85,7 @@ describe("registry", () => {
 
     it("should return false after clearRegistry", () => {
       const setup = () => document.createTextNode("test");
-      registerComponent("temp-component", setup, [], []);
+      registerComponent("temp-component", setup, []);
 
       expect(hasComponent("temp-component")).toBe(true);
 
@@ -99,9 +99,9 @@ describe("registry", () => {
     it("should clear all registered components", () => {
       const setup = () => document.createTextNode("test");
 
-      registerComponent("component-1", setup, [], []);
-      registerComponent("component-2", setup, [], []);
-      registerComponent("component-3", setup, [], []);
+      registerComponent("component-1", setup, []);
+      registerComponent("component-2", setup, []);
+      registerComponent("component-3", setup, []);
 
       expect(hasComponent("component-1")).toBe(true);
       expect(hasComponent("component-2")).toBe(true);
@@ -117,9 +117,9 @@ describe("registry", () => {
     it("should allow re-registration after clear", () => {
       const setup = () => document.createTextNode("test");
 
-      registerComponent("reusable-component", setup, [], []);
+      registerComponent("reusable-component", setup, []);
       clearRegistry();
-      registerComponent("reusable-component", setup, [], []);
+      registerComponent("reusable-component", setup, []);
 
       expect(hasComponent("reusable-component")).toBe(true);
     });
@@ -132,33 +132,37 @@ describe("registry", () => {
         ":host { display: block; }",
         "div { color: blue; }",
       ];
-      const attrs = ["name", "value", "disabled"];
+      const propsSchema = {
+        name: { type: String },
+        value: { type: String },
+        disabled: { type: Boolean },
+      };
 
-      registerComponent("full-component", setup, cssTexts, attrs);
+      registerComponent("full-component", setup, cssTexts, propsSchema);
 
       const registration = getComponent("full-component");
       expect(registration).toMatchObject({
         tagName: "full-component",
         setup,
         cssTexts,
-        attrs,
+        propsSchema,
       });
     });
 
     it("should handle empty cssTexts array", () => {
       const setup = () => document.createTextNode("test");
-      registerComponent("no-styles", setup, [], ["attr"]);
+      registerComponent("no-styles", setup, [], { attr: { type: String } });
 
       const registration = getComponent("no-styles");
       expect(registration?.cssTexts).toEqual([]);
     });
 
-    it("should handle empty attrs array", () => {
+    it("should handle no propsSchema", () => {
       const setup = () => document.createTextNode("test");
-      registerComponent("no-attrs", setup, [":host {}"], []);
+      registerComponent("no-attrs", setup, [":host {}"]);
 
       const registration = getComponent("no-attrs");
-      expect(registration?.attrs).toEqual([]);
+      expect(registration?.propsSchema).toBeUndefined();
     });
   });
 });

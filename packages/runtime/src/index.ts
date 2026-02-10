@@ -23,6 +23,9 @@ export { reconcile } from "./reconcile/implementation";
 // Events
 export { event } from "./events/implementation";
 
+// JSX types
+export type { JSX as RuntimeJSX } from "./types/JSX";
+
 // Tree types
 export { Namespace } from "./types/tree";
 export type {

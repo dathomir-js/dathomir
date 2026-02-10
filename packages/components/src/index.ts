@@ -4,10 +4,12 @@ export type { DathomirStyleSheet } from "@/css/implementation";
 export { defineComponent } from "@/defineComponent/implementation";
 export type {
   ComponentClass,
+  ComponentConstructor,
   ComponentContext,
+  ComponentElement,
   ComponentOptions,
-  HydrateSetupFunction,
-  SetupFunction
+  FunctionComponent,
+  HydrateSetupFunction, InferProps, InferPropType, PropDefinition, PropsSchema, PropType, SetupFunction
 } from "@/defineComponent/implementation";
 export {
   clearRegistry,

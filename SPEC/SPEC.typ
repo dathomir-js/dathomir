@@ -180,7 +180,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
           const button = firstChild(fragment);
           const text = firstChild(button, true);
           templateEffect(() => setText(text, this.count.value));
-          event('click', button, () => this.count.value++);
+          event('click', button, () => this.count.update(v => v + 1));
           this.shadowRoot.append(fragment);
         \});
       \}
@@ -208,16 +208,21 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     *型定義*:
     ```typescript
     interface Signal<T> \{
-      value: T;  // 読み書き可能
+      readonly value: T;  // 読み取り専用（書き込みは set()/update() を使用）
+      set(update: T | ((prev: T) => T)): void;
+      update(updater: (prev: T) => T): void;
+      peek(): T;
     \}
 
     interface ReadonlySignal<T> \{
       readonly value: T;  // 読み取り専用
+      peek(): T;
     \}
     ```
   ],
   constraints: [
-    - Signal の値は `.value` プロパティでアクセスする（TC39 Signals 準拠）
+    - Signal の値は `.value` プロパティで読み取る（TC39 Signals 準拠）
+    - `.value` は読み取り専用。書き込みは `set()` / `update()` メソッドを使用する
     - 関数呼び出し形式 `count()` は非サポート（SolidJS とは異なる）
     - `computed` は遅延評価（依存関係が変化するまで再計算しない）
     - `effect` は同期的に初回実行される
@@ -237,12 +242,12 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     \});
 
     // 値の更新
-    count.value++;  // "Count: 1, Doubled: 2"
+    count.update(v => v + 1);  // "Count: 1, Doubled: 2"
 
     // バッチ更新
     batch(() => \{
-      count.value = 10;
-      count.value = 20;  // effect は一度だけ実行される
+      count.set(10);
+      count.set(20);  // effect は一度だけ実行される
     \});  // "Count: 20, Doubled: 40"
     ```
   ],
@@ -1087,7 +1092,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
   [
     *関数参照（直接）* を採用する。
 
-    - CSR: `event('click', button, () => count.value++)` で関数を直接渡す
+    - CSR: `event('click', button, () => count.update(v => v + 1))` で関数を直接渡す
     - SSR → Hydration: マーカーと関数の紐付け情報を管理し、Hydration 時に復元
     - ID 参照は不要（委譲システムがないため）
   ],
@@ -1352,12 +1357,18 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     *`.value` 固定（TC39 準拠）* を採用する。
 
     ```javascript
-    // ✅ 許可
+    // ✅ 許可: 読み取り
     const value = signal.value;
-    signal.value = newValue;
     const derived = computed.value;
 
-    // ❌ 不許可
+    // ✅ 許可: 書き込み（メソッド経由）
+    signal.set(newValue);
+    signal.update(prev => prev + 1);
+
+    // ❌ 不許可: .value への直接代入
+    signal.value = newValue;  // TypeScript エラー (readonly)
+
+    // ❌ 不許可: 関数呼び出し形式
     const value = signal();
     signal(newValue);
     ```
@@ -1469,7 +1480,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 )
 
 #adr(
-  header("Web Components 属性/プロパティのリフレクション", Status.Accepted, "2026-02-05"),
+  header("Web Components 属性/プロパティのリフレクション", Status.Superseded, "2026-02-05"),
   [
     属性とプロパティの同期方法を決定する必要がある。
 
@@ -1492,12 +1503,12 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 
       attributeChangedCallback(name, oldValue, newValue) \{
         if (name === 'count') \{
-          this.#count.value = Number(newValue);
+          this.#count.set(Number(newValue));
         \}
       \}
 
       set count(value) \{
-        this.#count.value = value;
+        this.#count.set(value);
         this.setAttribute('count', value);
       \}
     \}
@@ -1625,18 +1636,87 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
   summary: [
     Web Components を簡潔に定義するための `defineComponent` 関数と `css` ヘルパー。
     Shadow DOM セットアップ、`createRoot` による cleanup 管理、DSD Hydration 検出、
-    `adoptedStyleSheets` による CSS 適用、属性リフレクション支援を自動化する。
+    `adoptedStyleSheets` による CSS 適用、*型付き Props システム* による属性/プロパティの
+    リアクティブ管理、および TSX 型補完を自動化する。
   ],
   format: [
     *defineComponent*:
-    - `defineComponent(tagName: string, setup: SetupFunction, options?: ComponentOptions): typeof HTMLElement`
-    - `SetupFunction = (host: HTMLElement, ctx: ComponentContext) => Node | DocumentFragment`
-    - `ComponentContext = \{ readonly attrs: Readonly<Record<string, Signal<string | null>>> \}`
+    ```typescript
+    function defineComponent<const S extends PropsSchema = \{\}>(
+      tagName: string,
+      setup: SetupFunction<S>,
+      options?: ComponentOptions<S>,
+    ): ComponentConstructor<S>
+    ```
 
-    *ComponentOptions*:
-    - `styles?: readonly (CSSStyleSheet | string)[]` — `adoptedStyleSheets` に適用
-    - `attrs?: readonly string[]` — `observedAttributes` + Signal 自動生成
-    - `hydrate?: (host: HTMLElement, ctx: ComponentContext) => void` — Hydration パス
+    *Props 定義（ランタイム型）*:
+    ```typescript
+    type PropType =
+      | StringConstructor
+      | NumberConstructor
+      | BooleanConstructor
+      | ((value: string | null) => unknown);
+
+    interface PropDefinition \{
+      type: PropType;
+      default?: unknown;
+      attribute?: string | false;
+    \}
+
+    type PropsSchema = Record<string, PropDefinition>;
+    ```
+
+    *型推論ユーティリティ*:
+    ```typescript
+    type InferPropType<D extends PropDefinition> =
+      D extends \{ type: StringConstructor \} ? string :
+      D extends \{ type: NumberConstructor \} ? number :
+      D extends \{ type: BooleanConstructor \} ? boolean :
+      D extends \{ type: (v: string | null) => infer R \} ? R :
+      unknown;
+
+    type InferProps<S extends PropsSchema> = \{
+      readonly [K in keyof S]: Computed<InferPropType<S[K]>>;
+    \};
+    ```
+
+    *コンポーネント型*:
+    ```typescript
+    type SetupFunction<S extends PropsSchema = PropsSchema> = (
+      host: HTMLElement,
+      ctx: ComponentContext<S>,
+    ) => Node | DocumentFragment | string;
+
+    interface ComponentContext<S extends PropsSchema = PropsSchema> \{
+      readonly props: Readonly<InferProps<S>>;
+    \}
+
+    interface ComponentOptions<S extends PropsSchema = PropsSchema> \{
+      styles?: readonly (CSSStyleSheet | string)[];
+      props?: S;
+      hydrate?: (host: HTMLElement, ctx: ComponentContext<S>) => void;
+    \}
+
+    type ComponentConstructor<S extends PropsSchema = PropsSchema> = \{
+      new(): HTMLElement & \{ [K in keyof S]: InferPropType<S[K]> \};
+      readonly prototype: HTMLElement;
+    \} & ComponentClass<S>;
+
+    interface ComponentClass<S extends PropsSchema = PropsSchema> \{
+      readonly __tagName__: string;
+      readonly __propsSchema__?: S;
+    \}
+    ```
+
+    *JSX 型ヘルパー*:
+    ```typescript
+    type ComponentElement<C> =
+      C extends \{ __propsSchema__?: infer S \} ?
+        (S extends PropsSchema ? \{
+          [K in keyof S]?: InferPropType<S[K]>;
+        \} & \{ children?: unknown \} : Record<string, unknown>) :
+        Record<string, unknown>;
+    ```
 
     *css ヘルパー*:
     - `css(strings: TemplateStringsArray, ...values: unknown[]): CSSStyleSheet`
@@ -1647,24 +1727,61 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - DSD が存在する場合は `attachShadow` をスキップ
     - `connectedCallback` で `createRoot` → `setup` 実行 → Fragment を `shadowRoot.append`
     - `disconnectedCallback` で `dispose()` により全 effect/event を cleanup
-    - `attributeChangedCallback` で `ctx.attrs[name].value` を自動更新
+    - `attributeChangedCallback` で型変換を行い、内部 Signal を更新
     - Hydration パス: DSD コンテンツ存在 かつ `hydrate` 定義済みなら `setup` ではなく `hydrate` を実行
     - 再接続時は再度 `setup` が呼ばれる（状態リセット）
+    - Props は `Computed<T>` として `ctx.props` から公開（読み取り専用）
+    - 要素に property getter/setter を自動定義（JS からの直接アクセス対応）
+    - 属性名のデフォルトマッピング: camelCase → kebab-case（`@dathomir/shared` の `kebabCase` を使用）
+    - `attribute: false` の場合は属性観測をスキップ（プロパティ専用）
+    - *Boolean 属性規約*: 属性の存在 = `true`、不在 = `false`
+    - *Number 属性変換*: `Number(attrValue)`、属性削除時は `default` にフォールバック
+    - *String 属性変換*: そのまま使用、属性削除時は `default` にフォールバック
+    - プロパティ → 属性の自動反映は行わない（片方向: 属性 → プロパティのみ）
   ],
   examples: [
     ```javascript
     import \{ defineComponent, signal, css \} from '@dathomir/core';
+    import type \{ ComponentElement \} from '@dathomir/components';
 
     const styles = css`button \{ padding: 8px 16px; \}`;
 
-    defineComponent('my-counter', () => \{
-      const count = signal(0);
-      return <button onClick=\{() => count.value++\}>
-        Count: \{count.value\}
-      </button>;
+    // Props 付きコンポーネント定義
+    const Counter = defineComponent('my-counter', (host, \{ props \}) => \{
+      // props.count: Computed<number> — 型安全・リアクティブ
+      // props.label: Computed<string> — 型安全・リアクティブ
+      const doubled = computed(() => props.count.value * 2);
+      return <button>\{props.label.value\}: \{props.count.value\} (x2: \{doubled.value\})</button>;
     \}, \{
       styles: [styles],
+      props: \{
+        count: \{ type: Number, default: 0 \},
+        label: \{ type: String, default: 'Count' \},
+      \},
     \});
+
+    // JSX 型補完の登録
+    declare module '@dathomir/core/jsx-runtime' \{
+      namespace JSX \{
+        interface IntrinsicElements \{
+          'my-counter': ComponentElement<typeof Counter>;
+        \}
+      \}
+    \}
+
+    // TSX で型補完が効く
+    <my-counter count=\{5\} label="Items" />
+    // ✅ count: number, label: string を認識
+    // ❌ <my-counter count="abc" /> は型エラー
+
+    // HTML 属性からも動作
+    // <my-counter count="5" label="Items">
+    // → Number("5") = 5, String("Items") = "Items"
+
+    // JS プロパティからも動作
+    const el = document.querySelector('my-counter');
+    el.count = 10;  // setter → Signal.set(10)
+    el.count;       // getter → Signal.peek() = 10
     ```
   ],
 )
@@ -1689,7 +1806,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - 内部で `HTMLElement` サブクラスを自動生成
     - `connectedCallback` で `createRoot` → `setup` → `shadowRoot.append`
     - `disconnectedCallback` で `dispose()` による自動 cleanup
-    - `options.attrs` で `observedAttributes` + `Signal<string|null>` 自動生成
+    - `options.props` で型付き Props システムを提供（`options.attrs` を置換）
     - `options.styles` で `adoptedStyleSheets` 自動適用
     - `options.hydrate` で DSD 検出 + Hydration パス分岐
     - `css` タグテンプレートで `CSSStyleSheet` を簡潔に作成
@@ -1697,7 +1814,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
   [
     - Transformer が `setup` 内の JSX を変換するだけで動作（既存変換パイプラインと整合）
     - クラス構文不要で出力コードが簡潔
-    - 推定 ~500B（css ヘルパー含む）で目標 2KB 以内
+    - 推定 ~600B（props + css ヘルパー含む）で目標 2KB 以内
     - DSD 検出は `this.shadowRoot` の存在チェックのみで軽量
     - 再接続時の状態リセットはシンプルだが、永続化は外部スコープで対応可能
   ],
@@ -1710,4 +1827,228 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     link("https://lit.dev/docs/")[Lit - Web Components library],
     link("https://stenciljs.com/docs/introduction")[Stencil - Web Components compiler],
   ),
+)
+
+#adr(
+  header("Props ベース API 設計", Status.Accepted, "2026-02-10"),
+  [
+    `defineComponent` の外部インターフェース（属性/プロパティ）の定義方法を決定する必要がある。
+    現行の `attrs: readonly string[]` は型情報を持たず、すべて `Signal<string | null>` として
+    扱われるため、数値やブール値の変換がユーザー責任となり DX が悪い。
+
+    また、TSX で custom element を使用する際に型補完が効かない問題がある。
+
+    検討すべき観点：
+    - TypeScript の型推論との統合
+    - HTML attribute（string のみ）と JS property（任意型）の二重性
+    - Signal ベースのリアクティビティとの統合
+    - バンドルサイズへの影響
+    - JSX/TSX での型補完
+
+    本 ADR は「Web Components 属性/プロパティのリフレクション」(2026-02-05) を Supersede する。
+  ],
+  [
+    *`options.props` による型付き Props スキーマ* を採用する。
+
+    *API 設計*:
+    ```typescript
+    // Props 定義
+    defineComponent('my-counter', (host, \{ props \}) => \{
+      // props.count: Computed<number> — 型推論で自動決定
+      return <button>\{props.count.value\}</button>;
+    \}, \{
+      props: \{
+        count: \{ type: Number, default: 0 \},
+        label: \{ type: String, default: 'Count' \},
+        active: \{ type: Boolean, default: false \},
+      \},
+    \});
+    ```
+
+    *設計原則*:
+    1. `type` フィールド（`String` / `Number` / `Boolean` / カスタム関数）で
+      ランタイム型変換と TypeScript 型推論を同時に実現
+    2. `default` で初期値を提供（属性未設定時に使用）
+    3. `attribute` で属性名マッピングをカスタマイズ（`false` で属性観測をスキップ）
+    4. Props は `Computed<T>` として `ctx.props` から公開（読み取り専用）
+    5. 要素に property getter/setter を自動定義（JS からの直接アクセス対応）
+    6. `const S extends PropsSchema` ジェネリクスで `type` のリテラル型を保持し、正確な推論を実現
+
+    *属性→値の型変換規則*:
+    | `type` | 属性値 → プロパティ値 |
+    |--------|------------------------|
+    | `String` | `attrValue`（そのまま） |
+    | `Number` | `Number(attrValue)` |
+    | `Boolean` | `attrValue !== null`（存在 = true、不在 = false） |
+    | カスタム関数 | `fn(attrValue)` |
+
+    *属性削除時*（`attrValue === null`）:
+    - `Boolean`: `false`
+    - `String` / `Number` / カスタム: `default` 値にフォールバック
+
+    *属性名マッピング*:
+    - デフォルト: camelCase → kebab-case（`initialCount` → `initial-count`）
+    - カスタム: `attribute: 'data-count'` で明示指定
+    - 無効化: `attribute: false` で属性観測をスキップ（プロパティ専用）
+  ],
+  [
+    *利点*:
+    - `type` フィールドがランタイム変換と TypeScript 推論の二重の役割を果たし、定義が DRY
+    - ユーザーが手動で `Number(attrValue)` 等を書く必要がない
+    - `Computed<T>` 公開によりコンポーネント内部での不正な `.set()` を防止
+    - `const` type parameter により `StringConstructor` / `NumberConstructor` がリテラル保持
+    - property getter/setter によりバニラ JS からも型付きアクセスが可能
+    - Lit / Stencil の開発者に馴染みのあるパターン
+
+    *トレードオフ*:
+    - Props システムのランタイムコストが ~200B 増加（型変換 + getter/setter 定義）
+    - プロパティ → 属性の自動反映は行わない（明示的な片方向のみ）
+    - `Computed<T>` の `__type__` が `"computed"` となり、概念上は "prop" とのギャップがある
+      （v2 で `PropSignal<T>` を検討可能）
+  ],
+  alternatives: [
+    1. *TypeScript ジェネリクスのみ*: `defineComponent<\{ count: number \}>(...)` 形式。型安全だがランタイム型変換情報がなく、属性からの number/boolean 変換ができない。
+    2. *Vue 3 型の PropType システム*: `\{ type: [Number, String] \}` のような union 型サポート。実装が複雑で v1.0 のスコープを超える。
+    3. *デコレータベース*: `@Prop() count = 0` 形式。Stage 3 Decorators 依存。v2 で検討可能。
+    4. *手動リフレクション維持*: 前回の決定。DX が悪く、型安全性が低い。
+  ],
+  references: (
+    link("https://lit.dev/docs/components/properties/")[Lit - Reactive Properties],
+    link("https://stenciljs.com/docs/properties")[Stencil - Props],
+    link(
+      "https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements",
+    )[MDN - Custom Elements],
+  ),
+)
+
+#adr(
+  header("JSX 型ヘルパー設計", Status.Accepted, "2026-02-10"),
+  [
+    `defineComponent` で作成した custom element を TSX で使用する際に、型補完を効かせる方法を
+    決定する必要がある。
+
+    検討すべき観点：
+    - TypeScript の module augmentation の制約
+    - 開発者体験（ボイラープレートの少なさ）
+    - 既存の `IntrinsicElements` catch-all との共存
+    - Transformer による自動生成の可能性
+  ],
+  [
+    *`ComponentElement<C>` 型ヘルパー + `interface` ベースの `IntrinsicElements`* を採用する。
+
+    *Step 1*: `JSX.IntrinsicElements` を `type` から `interface` に変更
+    ```typescript
+    // Before (type — 拡張不可)
+    export type IntrinsicElements = RuntimeJSX.IntrinsicElements & \{
+      [K: `$\{string\}-$\{string\}`]: Record<string, unknown>;
+    \};
+
+    // After (interface — module augmentation 可能)
+    export interface IntrinsicElements extends RuntimeJSX.IntrinsicElements \{
+      [K: `$\{string\}-$\{string\}`]: Record<string, unknown>;
+    \}
+    ```
+
+    *Step 2*: `ComponentElement<C>` 型ヘルパーを提供
+    ```typescript
+    type ComponentElement<C> =
+      C extends \{ __propsSchema__?: infer S \} ?
+        (S extends PropsSchema ? \{
+          [K in keyof S]?: InferPropType<S[K]>;
+        \} & \{ children?: unknown \} : Record<string, unknown>) :
+        Record<string, unknown>;
+    ```
+
+    *Step 3*: ユーザーが module augmentation で登録
+    ```typescript
+    declare module '@dathomir/core/jsx-runtime' \{
+      namespace JSX \{
+        interface IntrinsicElements \{
+          'my-counter': ComponentElement<typeof Counter>;
+        \}
+      \}
+    \}
+    ```
+
+    interface の specific key は pattern index signature より優先されるため、
+    登録されたカスタム要素は正確な型でチェックされ、未登録要素は catch-all が適用される。
+  ],
+  [
+    *利点*:
+    - TypeScript 標準の module augmentation パターンを使用（特殊な仕組み不要）
+    - `ComponentElement<typeof Counter>` の1行で Props 型を自動抽出
+    - 登録済み要素はタイポを検出可能（catch-all ではなく specific type が優先）
+    - 未登録のカスタム要素は従来通り `Record<string, unknown>` で許容
+
+    *トレードオフ*:
+    - ユーザーが `declare module` を書く必要がある（1ファイルにまとめれば軽微）
+    - Transformer による自動生成は v2 で検討
+    - `IntrinsicElements` を `type` → `interface` に変更する破壊的変更（後方互換不要なので問題なし）
+  ],
+  alternatives: [
+    1. *Transformer 自動生成*: `.d.ts` ファイルを自動生成。DX は最高だが Transformer の実装コストが高い。v2 で検討。
+    2. *グローバル型宣言*: `declare global \{ namespace JSX \}` 形式。複数 JSX ライブラリとの衝突リスク。
+    3. *型 registry パターン*: 中央の registry interface に登録。module augmentation の方がシンプル。
+  ],
+  references: (
+    link("https://www.typescriptlang.org/docs/handbook/declaration-merging.html")[TypeScript - Declaration Merging],
+    link("https://lit.dev/docs/frameworks/react/#typed-jsx")[Lit - Typed JSX],
+  ),
+)
+
+#behavior_spec(
+  name: "Props 属性/プロパティ同期",
+  summary: [
+    `defineComponent` の Props システムにおける属性（HTML attribute）とプロパティ（JS property）の
+    同期フロー。外部からの入力を内部 Signal に変換し、リアクティブに伝播させる。
+  ],
+  preconditions: [
+    - `defineComponent` で `options.props` が定義されている
+    - Props スキーマに少なくとも1つの `PropDefinition` が存在する
+  ],
+  steps: [
+    *初期化（コンストラクタ）*:
+    1. Props スキーマの各エントリに対して内部 `Signal<T>` を作成
+    2. 各 prop の `attribute` 設定に基づき `observedAttributes` を構築:
+      - `attribute: false` → スキップ
+      - `attribute: 'custom-name'` → カスタム名を使用
+      - 未指定 → `kebabCase(propName)` をデフォルトとして使用
+    3. 初期値を決定: `getAttribute(attrName)` が存在すれば型変換、なければ `default`
+    4. 要素インスタンスに property getter/setter を `Object.defineProperty` で定義:
+      - `get`: `signal.peek()`（追跡なし — プロパティアクセスは非リアクティブ）
+      - `set`: `signal.set(value)`（Signal 更新 → effect が再実行）
+
+    *connectedCallback*:
+    5. 各内部 Signal に対して `Computed<T>` ライクなラッパーを作成（`ctx.props` 用）:
+      - `value` → `signal.value`（追跡付き読み取り）
+      - `peek()` → `signal.peek()`（追跡なし読み取り）
+    6. `ctx.props` を構築し、`setup(host, ctx)` を呼び出す
+
+    *attributeChangedCallback*:
+    7. 変更された属性名から対応する prop 名を逆引き
+    8. `PropDefinition.type` に基づき属性値を型変換:
+      - `newValue === null` の場合: Boolean → `false`、その他 → `default`
+      - `newValue !== null` の場合: コンストラクタで変換
+    9. 内部 `Signal.set(coerced)` → 依存する effect が再実行
+
+    *JS プロパティ設定*:
+    10. `element.count = 5` → setter → `Signal.set(5)`（型変換なし）
+    11. 依存する effect が再実行
+
+    *注意*: プロパティ → 属性の自動反映は行わない。
+    `element.count = 5` は属性を更新しない。
+    属性に反映が必要な場合はユーザーが `element.setAttribute()` を併用する。
+  ],
+  postconditions: [
+    - すべての Props が `Signal<T>` でバッキングされている
+    - 属性変更 → Signal 更新 → effect 再実行のパイプラインが接続されている
+    - プロパティ変更 → Signal 更新 → effect 再実行のパイプラインが接続されている
+    - `ctx.props` は `Computed<T>` として読み取り専用で公開されている
+    - 要素に property getter/setter が定義されている
+  ],
+  errors: [
+    - *Number 変換で NaN*: `Number('abc')` = `NaN`。現状はそのまま Signal に設定（v2 でバリデーション検討）
+    - *未定義の属性変更*: Props スキーマにない属性の `attributeChangedCallback` は無視
+    - *`__DEV__` 警告*: `attribute: false` の prop に対して `setAttribute` が呼ばれた場合、開発モードで警告
+  ],
 )

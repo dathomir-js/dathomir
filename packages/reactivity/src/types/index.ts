@@ -14,8 +14,8 @@ type EffectCleanup = () => void;
 
 /** Mutable reactive signal */
 interface Signal<T> {
-  /** Read/write the signal value with tracking */
-  value: T;
+  /** Read the signal value with tracking (read-only; use set()/update() to write) */
+  readonly value: T;
   /** Set the signal value (accepts value or updater function) */
   set(update: SignalUpdate<T>): void;
   /** Alias for set() */

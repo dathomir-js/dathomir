@@ -14,9 +14,9 @@ describe("signal", () => {
       expect(name.value).toBe("test");
     });
 
-    it("writes via .value =", () => {
+    it("writes via set()", () => {
       const count = signal(0);
-      count.value = 10;
+      count.set(10);
       expect(count.value).toBe(10);
     });
 
@@ -50,7 +50,7 @@ describe("signal", () => {
 
       expect(observed).toEqual([0]);
 
-      count.value = 1;
+      count.set(1);
       expect(observed).toEqual([0, 1]);
     });
 
@@ -60,7 +60,7 @@ describe("signal", () => {
 
       expect(doubled.value).toBe(4);
 
-      count.value = 5;
+      count.set(5);
       expect(doubled.value).toBe(10);
     });
 
@@ -74,8 +74,8 @@ describe("signal", () => {
 
       expect(observed).toEqual([0]);
 
-      count.value = 1;
-      count.value = 2;
+      count.set(1);
+      count.set(2);
 
       expect(observed).toEqual([0]);
     });
@@ -92,10 +92,10 @@ describe("signal", () => {
 
       expect(spy).toHaveBeenCalledTimes(1);
 
-      count.value = 1;
+      count.set(1);
       expect(spy).toHaveBeenCalledTimes(2);
 
-      count.value = 2;
+      count.set(2);
       expect(spy).toHaveBeenCalledTimes(3);
     });
 
@@ -109,10 +109,10 @@ describe("signal", () => {
 
       expect(spy).toHaveBeenCalledTimes(1);
 
-      count.value = 5;
+      count.set(5);
       expect(spy).toHaveBeenCalledTimes(1);
 
-      count.value = 5;
+      count.set(5);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -126,7 +126,7 @@ describe("signal", () => {
 
       expect(spy).toHaveBeenCalledTimes(1);
 
-      num.value = NaN;
+      num.set(NaN);
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });

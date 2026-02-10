@@ -104,6 +104,7 @@ function doTransform(
   code: string,
   id: string,
   isSsr: boolean,
+  environmentName: string | undefined,
   options: PluginOptions,
 ): TransformResult | null {
   if (!shouldTransform(id, options)) {
@@ -111,7 +112,7 @@ function doTransform(
   }
 
   try {
-    const mode = detectMode(options.mode, undefined, isSsr);
+    const mode = detectMode(options.mode, environmentName, isSsr);
 
     const result = transform(code, {
       mode,
@@ -143,7 +144,8 @@ function createVitePlugin(options: PluginOptions = {}): VitePlugin {
 
     transform(code: string, id: string, transformOptions?: { ssr?: boolean }) {
       const isSsr = transformOptions?.ssr ?? false;
-      return doTransform(code, id, isSsr, options);
+      const environmentName = this?.environment?.name;
+      return doTransform(code, id, isSsr, environmentName, options);
     },
   };
 }
@@ -162,7 +164,7 @@ const unpluginFactory = createUnplugin((options: PluginOptions = {}) => {
     transform(this: ViteTransformContext, code: string, id: string) {
       const environmentName = this.environment?.name;
       const isSsr = environmentName === "ssr" || environmentName === "edge";
-      return doTransform(code, id, isSsr, options)!;
+      return doTransform(code, id, isSsr, environmentName, options)!;
     },
   };
 });

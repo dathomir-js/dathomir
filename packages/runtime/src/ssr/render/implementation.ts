@@ -176,6 +176,29 @@ function escapeAttr(str: string): string {
 }
 
 /**
+ * Convert a camelCase CSS property name to kebab-case.
+ * Handles vendor prefixes like "webkitTransform" → "-webkit-transform".
+ */
+function camelToKebab(str: string): string {
+  return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+}
+
+/**
+ * Serialize a style object to a CSS string.
+ * Converts `{ padding: "20px", borderRadius: "8px" }`
+ * to `"padding: 20px; border-radius: 8px"`.
+ */
+function serializeStyleObject(obj: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(obj)) {
+    if (value == null || value === "") continue;
+    const cssKey = camelToKebab(key);
+    parts.push(`${cssKey}: ${String(value)}`);
+  }
+  return parts.join("; ");
+}
+
+/**
  * Render attributes to string.
  */
 function renderAttrs(attrs: Record<string, unknown>): string {
@@ -188,6 +211,12 @@ function renderAttrs(attrs: Record<string, unknown>): string {
     if (BOOLEAN_ATTRS.has(key.toLowerCase())) {
       if (value) {
         parts.push(key);
+      }
+    } else if (key === "style" && typeof value === "object" && value !== null) {
+      // Serialize style object to CSS string
+      const css = serializeStyleObject(value as Record<string, unknown>);
+      if (css) {
+        parts.push(`style="${escapeAttr(css)}"`);
       }
     } else if (value != null && value !== false) {
       parts.push(`${key}="${escapeAttr(String(value))}"`);

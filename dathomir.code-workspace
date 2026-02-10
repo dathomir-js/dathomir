@@ -67,6 +67,10 @@
     {
       "name": "🎮 ssr",
       "path": "./playgrounds/ssr"
+    },
+    {
+      "name": "🎮 nuxt",
+      "path": "./playgrounds/nuxt"
     }
   ],
   "settings": {

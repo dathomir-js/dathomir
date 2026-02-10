@@ -120,6 +120,20 @@ function createNode(tree: Tree, ns: Namespace): Node {
       if (value !== undefined && value !== null && value !== false) {
         if (value === true) {
           element.setAttribute(key, "");
+        } else if (key === "style" && typeof value === "object") {
+          // Serialize style object to cssText
+          const styleObj = value as Record<string, unknown>;
+          const cssText = Object.entries(styleObj)
+            .filter(([, v]) => v != null && v !== "")
+            .map(([k, v]) => {
+              // Convert camelCase to kebab-case
+              const kebab = k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+              return `${kebab}: ${v}`;
+            })
+            .join("; ");
+          if (cssText) {
+            element.setAttribute("style", cssText);
+          }
         } else {
           element.setAttribute(key, String(value));
         }

@@ -68,8 +68,8 @@ const counterStyles = css`
 // Define the Web Component
 defineComponent(
   "dathomir-counter",
-  (host, ctx) => {
-    const count = signal(ctx.props.initial.value);
+  ({ initial }) => {
+    const count = signal(initial.value);
 
     return (
       <div class="counter">
@@ -83,7 +83,7 @@ defineComponent(
         <div class="info">
           This is a Web Component using Shadow DOM!
           <br />
-          Initial value: {ctx.props.initial.value}
+          Initial value: {initial.value}
         </div>
       </div>
     );
@@ -116,10 +116,10 @@ const greetingStyles = css`
 
 defineComponent(
   "dathomir-greeting",
-  (host, ctx) => {
+  ({ name }) => {
     return (
       <div>
-        <h3>Hello, {ctx.props.name.value}!</h3>
+        <h3>Hello, {name.value}!</h3>
         <p>This is a custom Web Component created with Dathomir.</p>
       </div>
     );

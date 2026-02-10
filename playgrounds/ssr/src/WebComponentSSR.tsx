@@ -8,7 +8,6 @@
  */
 
 import { css, defineComponent } from "@dathomir/components";
-import { Counter } from "./Counter";
 
 // Counter Web Component with SSR support
 const counterStyles = css`
@@ -86,9 +85,59 @@ const counterStyles = css`
   }
 `;
 
+// export function Counter({ initialCount = 0 }: { initialCount?: number }) {
+//   return (
+//     <div class="counter-container">
+//       <h2>SSR Counter</h2>
+//       <div class="counter">
+//         <button onClick={() => count.update((v) => v - 1)}>-</button>
+//         <span class="count">{count.value}</span>
+//         <button onClick={() => count.update((v) => v + 1)}>+</button>
+//         {count.value % 2 === 0 ? (
+//           <span class="even-indicator"> (Even)</span>
+//         ) : (
+//           <span>
+//             {" "}
+//             (Odd) <span>{count.value}</span>
+//           </span>
+//         )}
+//       </div>
+//       <div class="info">
+//         <p>This component was server-side rendered and hydrated on the client.</p>
+//         <p>Initial count from server: {initialCount}</p>
+//         <p>Current count: {count.value}</p>
+//       </div>
+//     </div>
+//   );
+// };
+
 export const SSRCounter = defineComponent(
   "dathomir-ssr-counter",
-  Counter,
+  ({ initialCount }) => {
+      return (
+      <div class="counter-container">
+        <h2>SSR Counter</h2>
+        <div class="counter">
+          <button onClick={() => initialCount.update((v) => v - 1)}>-</button>
+          <span class="count">{initialCount.value}</span>
+          <button onClick={() => initialCount.update((v) => v + 1)}>+</button>
+          {initialCount.value % 2 === 0 ? (
+            <span class="even-indicator"> (Even)</span>
+          ) : (
+            <span>
+              {" "}
+              (Odd) <span>{initialCount.value}</span>
+            </span>
+          )}
+        </div>
+        <div class="info">
+          <p>This component was server-side rendered and hydrated on the client.</p>
+          <p>Initial count from server: {initialCount.value}</p>
+          <p>Current count: {initialCount.value}</p>
+        </div>
+      </div>
+    );
+  },
   {
     styles: [counterStyles],
     props: { initialCount: { type: Number, default: 0, attribute: "initial" } },
@@ -116,10 +165,10 @@ const greetingStyles = css`
 
 export const SSRGreeting = defineComponent(
   "dathomir-ssr-greeting",
-  (host, ctx) => {
+  ({ name }) => {
     return (
       <div>
-        <h3>Hello, {ctx.props.name.value}!</h3>
+        <h3>Hello, {name.value}!</h3>
         <p>This Web Component uses Declarative Shadow DOM for instant rendering.</p>
       </div>
     );

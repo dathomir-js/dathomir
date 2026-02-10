@@ -14,7 +14,7 @@ Web Components を宣言的に定義するための高レベル API。Shadow DOM
 ```typescript
 function defineComponent<const S extends PropsSchema = {}>(
   tagName: string,
-  setup: SetupFunction<S>,
+  component: FunctionComponent<S>,
   options?: ComponentOptions<S>,
 ): ComponentConstructor<S>
 ```
@@ -23,7 +23,7 @@ function defineComponent<const S extends PropsSchema = {}>(
 
 *パラメータ:*
 - `tagName`: カスタム要素のタグ名（ハイフン必須）
-- `setup`: コンポーネントの DOM コンテンツを生成する関数
+- `component`: リアクティブ props を受け取る関数コンポーネント
 - `options`: スタイル、props、ハイドレーションの設定
 
 *返り値:*
@@ -36,10 +36,10 @@ function defineComponent<const S extends PropsSchema = {}>(
 3. `adoptedStyleSheets` にスタイルを適用
 4. props 定義に基づいてリアクティブシグナルを作成（型変換付き）
 5. 各 prop に対して JS property のゲッター/セッターを定義
-6. `connectedCallback` で `createRoot` スコープ内から `setup` を呼び出す
+6. `connectedCallback` で `createRoot` スコープ内から関数コンポーネントを呼び出す（props をシグナルとして渡す）
 7. DSD が存在する場合は `hydrate` 関数を優先使用
 8. `disconnectedCallback` で `dispose` を呼び出し、cleanup を実行
-9. `attributeChangedCallback` で型変換後にシグナルを更新
+9. `attributeChangedCallback` で型変換後にシグナルを更新（関数コンポーネント内の effect が自動追跡）
 
 *SSR の振る舞い:*
 1. CSS テキストを `getCssText()` で抽出
@@ -87,7 +87,17 @@ type InferProps<S extends PropsSchema> = {
 };
 ```
 
-=== SetupFunction
+=== FunctionComponent
+
+```typescript
+type FunctionComponent<S extends PropsSchema = PropsSchema> = (
+  props: InferProps<S>,
+) => Node | DocumentFragment | string;
+```
+
+リアクティブな props を受け取り、DOM コンテンツを生成する関数コンポーネント。props はシグナルとして渡されるため、`.value` でアクセスし、`effect` 内で変化を追跡できる。
+
+=== SetupFunction (内部使用)
 
 ```typescript
 type SetupFunction<S extends PropsSchema = PropsSchema> = (
@@ -96,7 +106,7 @@ type SetupFunction<S extends PropsSchema = PropsSchema> = (
 ) => Node | DocumentFragment | string;
 ```
 
-コンポーネントの DOM コンテンツを生成する関数。
+内部的に使用される setup 関数。`FunctionComponent` は自動的にこの形式にラップされる。
 
 === ComponentContext
 
@@ -252,32 +262,76 @@ type HydrateSetupFunction<S extends PropsSchema = PropsSchema> = (
   }
   ```
 
-=== ADR-009: 関数コンポーネントサポート
+=== ADR-009: 関数コンポーネントのリアクティブ props サポート
 
-*決定:* `defineComponent` の第2引数に Setup 関数 `(host, ctx) => Node` だけでなく、関数コンポーネント `(props) => Node` も渡せるようにする。`setup.length < 2` かつ `options.props` が定義されている場合に関数コンポーネントと判定し、内部でアダプターにラップする。
+*決定:* `defineComponent` の第2引数として関数コンポーネント `(props) => Node` を受け取り、props をリアクティブなシグナルとして渡す。関数コンポーネントは初回レンダリング時に1回だけ実行され、props の変化には `.value` アクセスや `effect` を通じて反応できる。
 
 *理由:*
-1. 既存の関数コンポーネント（例: `Counter({ initialCount }) => JSX`）をそのまま Web Component 化できる
-2. `(host, ctx) => { ctx.props.foo.value }` パターンは冗長で、特に初期値としてのみ使用する場合に不必要な複雑さがある
-3. SolidJS スタイルで関数コンポーネントは1回だけ実行されるため、props は初期値として渡すだけで十分
-4. 既存の `SetupFunction` パターンとの互換性を維持（`setup.length >= 2` は従来通り）
-5. `options.props` 未指定時は `(host) => ...` のような1引数 setup 関数として扱い、誤検出を防ぐ
+1. 既存の関数コンポーネント（例: `Counter({ count }) => JSX`）を Web Component 化しつつ、props の変化に対応できる
+2. `host` や `ctx` を直接扱う必要がないため、シンプルなコンポーネント定義が可能
+3. SolidJS の細粒度リアクティビティと一貫性がある：関数は1回実行され、内部の `effect` やシグナルアクセスでリアクティブに更新
+4. 属性変更時の再描画やパフォーマンスを最適化しやすい（必要な部分だけ更新）
+5. props がシグナルであることで、初期値だけでなく継続的な変化にも対応できる
 
 *アダプター処理:*
-1. `options.props` スキーマのキーを列挙
-2. 各 prop について `ctx.props[key].value` を読み取り、プレーンなオブジェクトに変換
-3. 変換後のオブジェクトを関数コンポーネントに渡す
+1. `ctx.props` をそのままシグナルとして関数コンポーネントに渡す
+2. 関数コンポーネント内で `props.count.value` のようにアクセス
+3. `effect(() => { ... })` 内で props にアクセスすることで、変化を自動追跡
 
 *型定義:*
 ```typescript
 type FunctionComponent<S extends PropsSchema = PropsSchema> = (
-  props: { [K in keyof S]?: InferPropType<S[K]> },
+  props: InferProps<S>,
 ) => Node | DocumentFragment | string;
+
+// InferProps はシグナルのマップ
+type InferProps<S extends PropsSchema> = {
+  readonly [K in keyof S]: Signal<InferPropType<S[K]>>;
+};
 ```
 
-*使用例:*
+*使用例 1: 初期値として使用*
+```typescript
+defineComponent(
+  "my-counter",
+  ({ initialCount }) => {
+    const count = signal(initialCount.value); // 初期値を取得
+    return (
+      <div>
+        <button onClick={() => count.update(v => v - 1)}>-</button>
+        <span>{count.value}</span>
+        <button onClick={() => count.update(v => v + 1)}>+</button>
+      </div>
+    );
+  },
+  { props: { initialCount: { type: Number, default: 0 } } },
+);
+```
+
+*使用例 2: props の変化を追跡*
+```typescript
+defineComponent(
+  "reactive-label",
+  ({ text }) => {
+    const span = <span>{text.value}</span> as HTMLSpanElement;
+
+    // props.text が変化するたびに自動更新
+    effect(() => {
+      span.textContent = text.value;
+    });
+
+    return span;
+  },
+  { props: { text: { type: String, default: "" } } },
+);
+```
+
+*使用例 3: 既存の関数コンポーネントを Web Component 化*
 ```typescript
 import { Counter } from "./Counter";
+
+// Counter は ({ initialCount }) => JSX 形式
+// initialCount.value で初期値にアクセス
 defineComponent("my-counter", Counter, {
   props: { initialCount: { type: Number, default: 0, attribute: "initial" } },
   styles: [counterStyles],

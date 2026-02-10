@@ -7,8 +7,8 @@ import { signal } from "@dathomir/reactivity";
 
 export const MyCounter = defineComponent(
   "my-counter",
-  (host, ctx) => {
-    const count = signal(ctx.props.initial.value);
+  ({ initial }) => {
+    const count = signal(initial.value);
 
     const increment = () => {
       count.update(v => v + 1);

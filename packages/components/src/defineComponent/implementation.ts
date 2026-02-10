@@ -46,19 +46,18 @@ type InferProps<S extends PropsSchema> = {
   readonly [K in keyof S]: Signal<InferPropType<S[K]>>;
 };
 
-/** Function that builds the component's DOM content. */
+/**
+ * Function component that receives reactive props as signals.
+ * Props can be accessed via .value and will reactively update when attributes change.
+ */
+type FunctionComponent<S extends PropsSchema = PropsSchema> = (
+  props: InferProps<S>,
+) => Node | DocumentFragment | string;
+
+/** Internal setup function with host and context. @internal */
 type SetupFunction<S extends PropsSchema = PropsSchema> = (
   host: HTMLElement,
   ctx: ComponentContext<S>,
-) => Node | DocumentFragment | string;
-
-/**
- * Function component that receives plain (unwrapped) prop values.
- * Used as an alternative to SetupFunction for simpler component definitions.
- * Props are read from signals once and passed as plain values (SolidJS style).
- */
-type FunctionComponent<S extends PropsSchema = PropsSchema> = (
-  props: { [K in keyof S]?: InferPropType<S[K]> },
 ) => Node | DocumentFragment | string;
 
 /** Context passed to setup and hydrate functions. */
@@ -145,58 +144,37 @@ function attrNameForProp(propName: string, def: PropDefinition): string | null {
 // ── Main API ────────────────────────────────────────────────────────
 
 /**
- * Detect if the given function is a function component (not a setup function).
- * Setup functions take (host, ctx) = 2 params; function components take (props) = 0..1 params.
- * @internal
- */
-function isFunctionComponent(fn: Function): boolean {
-  return fn.length < 2;
-}
-
-/**
  * Wrap a function component into a SetupFunction.
- * Reads prop signal values and passes them as plain props to the function component.
+ * Passes reactive signal props directly to the function component.
  * @internal
  */
 function wrapFunctionComponent<S extends PropsSchema>(
   fc: FunctionComponent<S>,
-  propsSchema: S | undefined,
+  _propsSchema: S | undefined,
 ): SetupFunction<S> {
   return (_host: HTMLElement, ctx: ComponentContext<S>) => {
-    const plain: Record<string, unknown> = {};
-    if (propsSchema) {
-      for (const key of Object.keys(propsSchema)) {
-        plain[key] = (ctx.props as Record<string, Signal<unknown>>)[key]?.value;
-      }
-    }
-    return fc(plain as { [K in keyof S]?: InferPropType<S[K]> });
+    return fc(ctx.props);
   };
 }
 
 /**
  * Define a custom element with automatic Shadow DOM, reactive props with
  * type coercion, adoptedStyleSheets, and lifecycle management.
- * Accepts either a SetupFunction (host, ctx) or a FunctionComponent (props).
+ * Accepts a FunctionComponent that receives plain prop values.
  * @param tagName - Custom element tag name (must contain a hyphen).
- * @param setup - Function that creates the component's DOM content.
+ * @param component - Function component that creates the component's DOM content.
  * @param options - Optional configuration for styles, props, and hydration.
  * @returns The registered HTMLElement class with __tagName__ and __propsSchema__ properties.
  */
 function defineComponent<const S extends PropsSchema = Record<string, never>>(
   tagName: string,
-  setup: SetupFunction<S> | FunctionComponent<S>,
+  component: FunctionComponent<S>,
   options: ComponentOptions<S> = {},
 ): ComponentConstructor<S> {
   const isSSR = typeof window === "undefined";
 
-  // Detect function component and wrap if needed (ADR-009)
-  // A function component has < 2 params AND options.props is defined.
-  // Setup functions with 1 param (host only, ignoring ctx) won't have props
-  // to unwrap, so without options.props the wrapping is unnecessary and wrong.
-  const resolvedSetup: SetupFunction<S> =
-    options.props && isFunctionComponent(setup)
-      ? wrapFunctionComponent(setup as FunctionComponent<S>, options.props)
-      : (setup as SetupFunction<S>);
+  // Wrap function component into SetupFunction
+  const resolvedSetup: SetupFunction<S> = wrapFunctionComponent(component, options.props);
 
   if (isSSR) {
     const cssTexts: string[] = [];

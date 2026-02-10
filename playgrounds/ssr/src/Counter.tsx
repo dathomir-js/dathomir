@@ -39,6 +39,6 @@ export function Counter({ initialCount = 0 }: { initialCount?: number }) {
       </div>
     </div>
   );
-}
+};
 
 export default Counter;

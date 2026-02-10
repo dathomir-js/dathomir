@@ -26,6 +26,9 @@ export { event } from "./events/implementation";
 // JSX types
 export type { JSX as RuntimeJSX } from "./types/JSX";
 
+// Component types
+export type { FC, FCWithChildren } from "./types/FC";
+
 // Tree types
 export { Namespace } from "./types/tree";
 export type {

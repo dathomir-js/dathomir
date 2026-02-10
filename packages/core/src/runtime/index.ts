@@ -33,6 +33,9 @@ export { createRoot, onCleanup, templateEffect } from "@dathomir/reactivity";
 export type {
   // Tree types
   Attrs,
+  // Component types
+  FC,
+  FCWithChildren,
   Placeholder,
   PlaceholderType,
   SpreadProps,

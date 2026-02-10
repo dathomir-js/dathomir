@@ -4,9 +4,9 @@
  * This demonstrates JSX usage with automatic reactive binding.
  * {count.value} is automatically tracked via the transformer.
  */
-import { computed, signal } from "@dathomir/core";
+import { computed, signal, type FC } from "@dathomir/core";
 
-export function Counter() {
+export const Counter: FC = () => {
   const count = signal(0);
   const doubled = computed(() => count.value * 2);
 
@@ -29,4 +29,4 @@ export function Counter() {
       </div>
     </div>
   );
-}
+};

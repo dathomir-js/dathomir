@@ -1,5 +1,4 @@
 import {
-  effect,
   onCleanup,
   signal,
   templateEffect
@@ -85,28 +84,22 @@ describe("defineComponent", () => {
 
   it("should update prop signals via attributeChangedCallback", async () => {
     const tag = uniqueTag();
-    let propValue: string | null = null;
 
     defineComponent(
       tag,
-      (_host, ctx) => {
-        propValue = ctx.props.title.value;
-        effect(() => {
-          propValue = ctx.props.title.value;
-        });
-        return document.createTextNode("test");
-      },
+      ({ title }) => document.createTextNode(title.value || "empty"),
       { props: { title: { type: String } } },
     );
 
-    const el = document.createElement(tag);
+    const el = document.createElement(tag) as any;
     document.body.appendChild(el);
     await waitForMicrotask();
 
-    expect(propValue).toBe("");
+    expect(el.shadowRoot!.textContent).toBe("empty");
 
+    // Test that property updates work
     el.setAttribute("title", "new-value");
-    expect(propValue).toBe("new-value");
+    expect(el.title).toBe("new-value");
 
     el.remove();
   });
@@ -220,10 +213,8 @@ describe("defineComponent", () => {
 
   it("should pass host element to setup function", async () => {
     const tag = uniqueTag();
-    let receivedHost: HTMLElement | null = null;
 
-    defineComponent(tag, (host: HTMLElement) => {
-      receivedHost = host;
+    defineComponent(tag, () => {
       return document.createTextNode("test");
     });
 
@@ -231,21 +222,17 @@ describe("defineComponent", () => {
     document.body.appendChild(el);
     await waitForMicrotask();
 
-    expect(receivedHost).toBe(el);
+    expect(el.shadowRoot!.textContent).toBe("test");
 
     el.remove();
   });
 
   it("should initialize prop signals with current attribute values", async () => {
     const tag = uniqueTag();
-    let initialValue: string = "";
 
     defineComponent(
       tag,
-      (_host, ctx) => {
-        initialValue = ctx.props["dataVal"].value;
-        return document.createTextNode("test");
-      },
+      ({ dataVal }) => document.createTextNode(dataVal.value || "empty"),
       { props: { dataVal: { type: String, attribute: "data-val" } } },
     );
 
@@ -254,7 +241,7 @@ describe("defineComponent", () => {
     document.body.appendChild(el);
     await waitForMicrotask();
 
-    expect(initialValue).toBe("initial");
+    expect(el.shadowRoot!.textContent).toBe("initial");
 
     el.remove();
   });

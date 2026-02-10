@@ -9,7 +9,7 @@ export type {
   ComponentElement,
   ComponentOptions,
   FunctionComponent,
-  HydrateSetupFunction, InferProps, InferPropType, PropDefinition, PropsSchema, PropType, SetupFunction
+  HydrateSetupFunction, InferProps, InferPropType, PropDefinition, PropsSchema, PropType
 } from "@/defineComponent/implementation";
 export {
   clearRegistry,

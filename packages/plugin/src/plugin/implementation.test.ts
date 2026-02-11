@@ -163,5 +163,85 @@ describe("plugin", () => {
         expect.objectContaining({ mode: "ssr" }),
       );
     });
+
+    it("should pass custom runtimeModule to transformer", () => {
+      const plugin = dathomirVitePlugin({ runtimeModule: "custom-runtime" });
+      (plugin.transform as Function)("const x = <div />;", "component.tsx", {});
+
+      expect(transform).toHaveBeenCalledWith(
+        "const x = <div />;",
+        expect.objectContaining({ runtimeModule: "custom-runtime" }),
+      );
+    });
+
+    it("should pass filename to transformer", () => {
+      const plugin = dathomirVitePlugin();
+      (plugin.transform as Function)(
+        "const x = <div />;",
+        "/path/to/component.tsx",
+        {},
+      );
+
+      expect(transform).toHaveBeenCalledWith(
+        "const x = <div />;",
+        expect.objectContaining({ filename: "/path/to/component.tsx" }),
+      );
+    });
+
+    it("should wrap transform errors with filename", () => {
+      vi.mocked(transform).mockImplementationOnce(() => {
+        throw new Error("Parse error");
+      });
+
+      const plugin = dathomirVitePlugin();
+
+      expect(() => {
+        (plugin.transform as Function)(
+          "const x = <div />;",
+          "/path/to/component.tsx",
+          {},
+        );
+      }).toThrow("[dathomir] Error transforming /path/to/component.tsx");
+    });
+  });
+
+  describe("edge mode detection", () => {
+    it("should detect SSR mode from edge environment name", () => {
+      const plugin = dathomirVitePlugin();
+      const context = {
+        environment: { name: "edge" },
+      };
+
+      (plugin.transform as Function).call(
+        context,
+        "const x = <div />;",
+        "component.tsx",
+        {},
+      );
+
+      expect(transform).toHaveBeenCalledWith(
+        "const x = <div />;",
+        expect.objectContaining({ mode: "ssr" }),
+      );
+    });
+
+    it("should detect CSR mode from client environment name", () => {
+      const plugin = dathomirVitePlugin();
+      const context = {
+        environment: { name: "client" },
+      };
+
+      (plugin.transform as Function).call(
+        context,
+        "const x = <div />;",
+        "component.tsx",
+        {},
+      );
+
+      expect(transform).toHaveBeenCalledWith(
+        "const x = <div />;",
+        expect.objectContaining({ mode: "csr" }),
+      );
+    });
   });
 });

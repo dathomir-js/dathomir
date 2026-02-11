@@ -80,6 +80,9 @@
     "eslint.enable": true,
     "chat.useAgentsMdFile": true,
     "chat.useNestedAgentsMdFiles": true,
+    "chat.agentSkillsLocations": {
+      ".agents/skills": true
+    },
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.inlineSuggest.enabled": true,
     "github.copilot.nextEditSuggestions.enabled": true,
@@ -112,5 +115,36 @@
     ],
     "eslint.useFlatConfig": true,
     "typst.fontPaths": ["SPEC/fonts"]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Run pnpm dev",
+        "type": "shell",
+        "command": "pnpm",
+        "args": ["dev"],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        },
+        "problemMatcher": []
+      }
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "command": "pnpm dev",
+        "name": "Launch Dev Script",
+        "request": "launch",
+        "type": "node-terminal"
+      }
+    ]
   }
 }

@@ -21,7 +21,9 @@ function deserializeState(serialized: string): StateObject {
  * Find and parse state script from a container.
  */
 function parseStateScript(container: Element | ShadowRoot): StateObject | null {
-  const script = container.querySelector("script[data-dh-state]");
+  const script = container.querySelector(
+    'script[type="application/json"][data-dh-state]',
+  );
 
   if (!script?.textContent) {
     return null;

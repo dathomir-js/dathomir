@@ -21,8 +21,8 @@ type SerializableValue =
   | undefined
   | Date
   | RegExp
-  | Map<unknown, unknown>
-  | Set<unknown>
+  | Map<SerializableValue, SerializableValue>
+  | Set<SerializableValue>
   | bigint
   | SerializableValue[]
   | { [key: string]: SerializableValue };
@@ -53,8 +53,18 @@ function isSerializable(value: unknown): value is SerializableValue {
 
   if (value instanceof Date) return true;
   if (value instanceof RegExp) return true;
-  if (value instanceof Map) return true;
-  if (value instanceof Set) return true;
+  if (value instanceof Map) {
+    for (const [k, v] of value.entries()) {
+      if (!isSerializable(k) || !isSerializable(v)) return false;
+    }
+    return true;
+  }
+  if (value instanceof Set) {
+    for (const item of value) {
+      if (!isSerializable(item)) return false;
+    }
+    return true;
+  }
 
   if (Array.isArray(value)) {
     return value.every(isSerializable);

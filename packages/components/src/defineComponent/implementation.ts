@@ -122,13 +122,17 @@ function coerceValue(def: PropDefinition, attrValue: string | null): unknown {
     // Boolean attributes: presence = true, absence (null) = false
     return attrValue !== null;
   }
+  if (def.type === Number) return Number(attrValue);
+  if (def.type === String) return attrValue;
+  // Custom coercion function - pass null through as per SPEC
+  if (typeof def.type === "function") {
+    return def.type(attrValue);
+  }
+  // Fallback for null with no custom function
   if (attrValue === null) {
     return getDefaultValue(def);
   }
-  if (def.type === Number) return Number(attrValue);
-  if (def.type === String) return attrValue;
-  // Custom coercion function
-  return (def.type as (v: string | null) => unknown)(attrValue);
+  return attrValue;
 }
 
 /**

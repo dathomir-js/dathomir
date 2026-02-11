@@ -2,18 +2,14 @@
 
 ## プロジェクト概要
 
-このプロジェクトは、**Web Components** と **Signals**（tc39 signals、alien-signals）を主要技術として使用し、モダンで効率的な Web アプリケーションを構築するためのフレームワークライブラリを開発しています。
-
-## 言語
-
-**日本語**で応答してください。
+このプロジェクトは、**Web Components** と **Signals**(tc39 signals、alien-signals)を主要技術として使用し、モダンで効率的な Web アプリケーションを構築するためのフレームワークライブラリを開発しています。
 
 ## セッションガイドライン
 
 ### セッション開始時
 
-1. この `AGENTS.md` と関連するパッケージ固有の instructions を読む
-2. コードベースの現状を確認する（git status、最近のコミット）
+1. この `AGENTS.md` と関連するパッケージの `AGENTS.md` と `SPEC.typ` および `implementation.test.ts` を読む
+2. コードベースの現状を確認する(git status、最近のコミット)
 3. 変更を加える前に、依頼されたタスクのスコープを理解する
 
 ### セッション終了時
@@ -33,16 +29,17 @@
 
 ### 変更を加える前に
 
+- implementation.ts の修正を行う場合は、まず、その機能と同じディレクトリに存在する SPEC.typ と implementation.test.ts を implementation.ts に加えようとしている変更内容の仕様、設計、テストケースを作成してから行うこと
 - コードを修正する前に十分なコンテキストを収集する
-- 依存パッケージの最新仕様を理解すること（Context7 等を活用）
+- 依存パッケージの最新仕様を理解すること(Context7 等を活用)
+- SPEC.typ と implementation.test.ts を必ず読むこと
 - 大きな変更の場合は、先に人間にアプローチを確認する
 - 変更後はテストを実行して正しさを検証する
 
 ### 禁止事項
 
+- SPEC.typ と implementation.test.ts に変更を加えずに implementation.ts を修正しないこと
 - 明示的な許可なしにテストを削除・変更しないこと
-- 明示的に指示されるまでテストを生成しないこと
-- Markdown などの新しいドキュメントファイルを生成しないこと
 - 依頼されたスコープ外の変更を行わないこと
 - 適切な検証なしにタスクを「完了」と宣言しないこと
 
@@ -86,7 +83,7 @@
 
 ### ファイル構成ルール
 
-新しい API や機能を実装する際は、以下のディレクトリ構成に従うこと：
+新しい API (公開、内部どちらも) や機能を実装する際は、以下のディレクトリ構成に従うこと：
 
 ```
 packages/{package-name}/src/{api-name}/
@@ -100,7 +97,7 @@ packages/{package-name}/src/{api-name}/
 - **SPEC.typ**: 仕様と設計決定を記述。実装の「何を」「なぜ」を定義
 - **implementation.test.ts**: 実装の正しさを検証するテストケース
 - **implementation.ts**: SPEC.typ に基づいた実装コード
-- **AGENTS.md**: AI エージェントに対し、まず SPEC.typ と implementation.test.ts を読むよう指示
+- **AGENTS.md**: AI エージェントに対し、まず SPEC.typ と implementation.test.ts を読むよう指示 (ほとんど変更しない)
 
 **実装前の必須手順：**
 1. SPEC.typ を読み、仕様と設計を理解する
@@ -114,6 +111,7 @@ packages/{package-name}/src/{api-name}/
 <project-root>/
 ├── config/              # パッケージ共通の設定ファイル
 ├── packages/
+│   ├── components/      # Web Components 実装
 │   ├── core/            # 他パッケージを集約するコアフレームワーク
 │   ├── plugin/          # ビルドツール向けプラグイン（Vite、webpack など）
 │   ├── reactivity/      # Signals 実装（alien-signals ベース）
@@ -121,102 +119,7 @@ packages/{package-name}/src/{api-name}/
 │   ├── transformer/     # コンパイラ/トランスフォーマー
 │   └── shared/          # 共有ユーティリティ
 ├── playgrounds/
-│   └── vanilla/         # 開発用プレイグラウンド
+│   └── *                # 各パッケージの動作確認用プレイグラウンド
 ├── .github/             # GitHub 関連の設定ファイル
 ├── dathomir.code-workspace  # VSCode ワークスペース設定
-└── mise.toml            # 開発ツールのバージョン管理（mise）
 ```
-
-## 各パッケージの概要
-このプロジェクトを理解する補完情報として読んでください
-
-### @dathomir/core
-
-#### 目的
-
-他パッケージ（reactivity、runtime、shared）を集約し、Web Components を作成するための高レベル API を提供するコアフレームワークパッケージ。
-
-#### コマンド実行方法
-
-```bash
-pnpm --filter @dathomir/core {任意のコマンド}
-```
-
-#### 機能関係図
-
-### @dathomir/plugin
-
-#### 目的
-
-Vite、webpack などのビルドツール向けプラグインを提供する。[unplugin](https://github.com/unjs/unplugin) を使用して、複数のバンドラーに対応している。JSX/TSX ファイルに対して `@dathomir/transformer` を適用し、props 値を自動的に `computed()` でラップする。
-
-#### コマンド実行方法
-
-```bash
-pnpm --filter @dathomir/plugin {任意のコマンド}
-```
-
-#### 機能関係図
-
-### @dathomir/reactivity
-
-#### 目的
-
-TC39 Signals 仕様に基づいたカスタムリアクティブシステムを提供する。[alien-signals](https://github.com/stackblitz/alien-signals) をベースに構築されている。
-
-**提供する API:**
-- `signal` - 読み取りを追跡し、更新時に依存先へ通知するミュータブルなシグナル
-- `computed` - 依存関係が変化したときに再計算されるキャッシュ付き派生値
-- `effect` - 依存関係が変化したときに再実行されるリアクティブな副作用
-- `batch` - 複数のシグナル通知を1回のフラッシュにまとめて実行
-- `toUnreactive` - リアクティブな値を静的な値に変換（SSR 用）
-
-#### コマンド実行方法
-
-```bash
-pnpm --filter @dathomir/reactivity {任意のコマンド}
-```
-
-#### 機能関係図
-
-### @dathomir/runtime
-
-#### 目的
-
-JSX を VNode に変換し、クライアント/サーバー両方でレンダリングする統一ランタイムを提供する。
-
-#### コマンド実行方法
-
-```bash
-pnpm --filter @dathomir/runtime {任意のコマンド}
-```
-
-#### 機能関係図
-
-### @dathomir/transformer
-
-#### 目的
-
-JSX が変換された JavaScript コードを解析し、`jsx()` 呼び出しの props 値を `computed()` でラップするトランスフォーマーを提供する。これにより、リアクティブな値が自動的に追跡される。
-
-#### コマンド実行方法
-
-```bash
-pnpm --filter @dathomir/transformer {任意のコマンド}
-```
-
-#### 機能関係図
-
-### @dathomir/shared
-
-#### 目的
-
-複数パッケージで共有される型安全なユーティリティ関数を提供する。
-
-#### コマンド実行方法
-
-```bash
-pnpm --filter @dathomir/shared {任意のコマンド}
-```
-
-#### 機能関係図

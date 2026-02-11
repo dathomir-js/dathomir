@@ -27,10 +27,20 @@ function createRoot(fn: (dispose: RootDispose) => void): RootDispose {
 
   const dispose: RootDispose = () => {
     for (const cleanup of owner.effects) {
-      cleanup();
+      try {
+        cleanup();
+      } catch (error) {
+        // Log error but continue with other cleanups
+        console.error("Error in effect cleanup:", error);
+      }
     }
     for (const cleanup of owner.cleanups) {
-      cleanup();
+      try {
+        cleanup();
+      } catch (error) {
+        // Log error but continue with other cleanups
+        console.error("Error in cleanup:", error);
+      }
     }
     owner.effects.length = 0;
     owner.cleanups.length = 0;

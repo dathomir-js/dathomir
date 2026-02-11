@@ -18,7 +18,7 @@ function firstChild(node: Node, isText?: boolean): Node
 ノードの最初の子を取得する。
 
 - `isText` が `true` の場合、最初のテキストノードを探索する
-- 子が見つからない場合はエラーを投げる
+- 子が見つからない場合は `null!` を返す（non-null assertion により runtime error）
 
 === `nextSibling`
 
@@ -26,10 +26,22 @@ function firstChild(node: Node, isText?: boolean): Node
 function nextSibling(node: Node): Node
 ```
 
-次の兄弟ノードを取得する。見つからない場合はエラーを投げる。
+次の兄弟ノードを取得する。見つからない場合は `null!` を返す（non-null assertion により runtime error）。
 
 == 設計判断
 
+#adr[
+  *ADR: non-null assertion によるエラーハンドリング*
+
+  *背景*: Generated code では必ず次のノードが存在する前提。明示的なエラー処理はバンドルサイズを増やす。
+
+  *決定*: `!` (non-null assertion) を使用してコンパクトな実装を維持。
+  - `return child!` や `return node.nextSibling!` のように記述
+  - 万が一 null だった場合、ブラウザが `TypeError: Cannot read properties of null` を投げる
+  - Transformer が正しいコードを生成する責任を持つ
+  - バンドルサイズは最小限（明示的な if 文やエラーメッセージ不要）
+]
+
 - Transformer が生成するナビゲーションコード（`firstChild(firstChild(root))` 等）で使用
 - テキストノード探索は、テンプレート内のテキストプレースホルダーへの参照取得に必要
-- エラーを投げることで、DOM 構造の不整合を早期に検出
+- non-null assertion により、DOM 構造の不整合があれば実行時エラーで検出

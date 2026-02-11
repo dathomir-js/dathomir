@@ -32,12 +32,18 @@ function computedOper<T>(node: ComputedNode<T>): T {
       }
     }
   } else if (!flags) {
-    node.flags = ReactiveFlags.Mutable;
+    node.flags = ReactiveFlags.Mutable | ReactiveFlags.RecursedCheck;
     const prevSub = setActiveSub(node);
+    let succeeded = false;
     try {
-      node.value = node.getter() as T;
+      node.value = node.getter(node.value) as T;
+      succeeded = true;
     } finally {
       unsetActiveSub(prevSub);
+      node.flags &= ~ReactiveFlags.RecursedCheck;
+      if (!succeeded) {
+        node.flags |= ReactiveFlags.Dirty;
+      }
     }
   }
   const sub = getActiveSub();

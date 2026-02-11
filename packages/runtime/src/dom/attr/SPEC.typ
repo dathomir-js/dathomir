@@ -19,6 +19,10 @@ function setAttr(element: Element, name: string, value: unknown): void
 
 - `null`、`undefined`、`false` の場合は属性を削除する
 - `true` の場合は空文字列として設定する（boolean 属性）
+- `name` が `"style"` で `value` がオブジェクトの場合は CSS 文字列に変換
+  - `camelCase` → `kebab-case` へ変換（例: `borderRadius` → `border-radius`）
+  - null/空文字の値を除外
+  - 結果が空なら style 属性を削除
 - それ以外は `String(value)` で文字列に変換して設定する
 
 === `setProp`
@@ -31,6 +35,18 @@ function setProp(element: Element, name: string, value: unknown): void
 `element[name] = value` による直接代入で、`value`、`checked` 等に使用する。
 
 == 設計判断
+
+#adr[
+  *ADR: style オブジェクトの CSS 文字列変換*
+
+  *背景*: JSX で `style={{ padding: "20px", borderRadius: "8px" }}` のように書きたい。
+
+  *決定*: `setAttr` 内で style オブジェクトを検出し、CSS 文字列に変換する。
+  - `typeof value === "object"` で判定（配列や null は先に処理済み）
+  - `camelCase` → `kebab-case` への変換（単純な正規表現）
+  - null/空文字の値は除外
+  - 結果が空なら style 属性を削除
+]
 
 - 属性とプロパティの使い分けは呼び出し側（transformer）が決定する
 - `setAttr` は HTML 仕様の boolean 属性セマンティクスに従う

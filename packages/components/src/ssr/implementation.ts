@@ -7,10 +7,10 @@
  */
 
 import type {
-  ComponentClass,
-  ComponentContext,
-  PropDefinition,
-  PropsSchema,
+    ComponentClass,
+    ComponentContext,
+    PropDefinition,
+    PropsSchema,
 } from "@/defineComponent/implementation";
 import { getComponent } from "@/registry/implementation";
 import { signal } from "@dathomir/reactivity";
@@ -22,15 +22,20 @@ import { setComponentRenderer } from "@dathomir/runtime/ssr";
  */
 function coerceForSSR(def: PropDefinition, attrValue: string | null): unknown {
   if (def.type === Boolean) return attrValue !== null;
+  if (def.type === Number) return Number(attrValue);
+  if (def.type === String) return attrValue;
+  // Custom coercion function - pass null through as per SPEC
+  if (typeof def.type === "function") {
+    return def.type(attrValue);
+  }
+  // Fallback for null with no custom function
   if (attrValue === null) {
     if (def.default !== undefined) return def.default;
     if (def.type === String) return "";
     if (def.type === Number) return 0;
     return undefined;
   }
-  if (def.type === Number) return Number(attrValue);
-  if (def.type === String) return attrValue;
-  return (def.type as (v: string | null) => unknown)(attrValue);
+  return attrValue;
 }
 
 /**
@@ -215,9 +220,9 @@ function _resetRendererState(): void {
 }
 
 export {
-  _resetRendererState, createComponentRenderer,
-  ensureComponentRenderer,
-  renderDSD,
-  renderDSDContent
+    _resetRendererState, createComponentRenderer,
+    ensureComponentRenderer,
+    renderDSD,
+    renderDSDContent
 };
 

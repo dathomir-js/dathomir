@@ -114,7 +114,8 @@
       "Unreactive"
     ],
     "eslint.useFlatConfig": true,
-    "typst.fontPaths": ["SPEC/fonts"]
+    "typst.fontPaths": ["SPEC/fonts"],
+    "json.schemaDownload.enable": true
   },
   "tasks": {
     "version": "2.0.0",

@@ -31,12 +31,6 @@ describe("signal", () => {
       count.set((prev) => prev + 5);
       expect(count.value).toBe(15);
     });
-
-    it("updates via update()", () => {
-      const count = signal(10);
-      count.update((prev) => prev * 2);
-      expect(count.value).toBe(20);
-    });
   });
 
   describe("Dependency tracking", () => {

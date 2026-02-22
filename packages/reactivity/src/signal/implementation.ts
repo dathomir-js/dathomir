@@ -70,9 +70,6 @@ function createSignalApi<T>(node: SignalNode<T>): Signal<T> {
           : update;
       write(nextValue as T);
     },
-    update(updater) {
-      this.set(updater);
-    },
     peek() {
       return readUntracked();
     },

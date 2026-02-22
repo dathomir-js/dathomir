@@ -20,12 +20,12 @@ const stop = effect(() => {
   console.log(`count: ${count.value}, doubled: ${doubled.value}`);
 });
 
-count.value = 5;   // logs: count: 5, doubled: 10
-count.set(10);     // logs: count: 10, doubled: 20
+count.set(5);    // logs: count: 5, doubled: 10
+count.set(10);   // logs: count: 10, doubled: 20
 
 batch(() => {
-  count.value = 100;
-  count.value = 200; // single notification
+  count.set(100);
+  count.set(200); // single notification
 });
 // logs: count: 200, doubled: 400
 
@@ -41,9 +41,8 @@ Create a mutable reactive signal.
 ```ts
 const name = signal("world");
 console.log(name.value);  // "world"
-name.value = "dathomir";  // triggers dependents
-name.set("new value");    // alternative setter
-name.update(v => v.toUpperCase()); // updater function
+name.set("dathomir");     // triggers dependents
+name.set(v => v + "!");   // updater function
 name.peek();              // read without tracking
 ```
 
@@ -61,14 +60,17 @@ console.log(doubled.peek()); // read without tracking
 ### `effect(fn)`
 
 Run a side effect whenever its dependencies change. Returns a cleanup function.
+`onCleanup` called inside the effect body runs before each re-execution and when the effect is stopped.
 
 ```ts
 const count = signal(0);
 const stop = effect(() => {
+  const timer = setInterval(() => {}, 1000);
+  onCleanup(() => clearInterval(timer)); // runs before re-execution or on stop()
   console.log(count.value);
 });
-count.value = 1; // triggers re-run
-stop();          // dispose effect
+count.set(1); // triggers re-run (previous onCleanup fires first)
+stop();       // dispose effect (onCleanup fires)
 ```
 
 ### `batch(fn)`
@@ -99,10 +101,17 @@ dispose(); // cleans up all effects in scope
 
 ### `onCleanup(fn)`
 
-Register a cleanup callback within the current owner scope. Called when the scope is disposed.
+Register a cleanup callback within the current scope. Works inside both `createRoot` and `effect`.
 
 ```ts
+// Inside createRoot — runs when root is disposed
 createRoot(() => {
+  const timer = setInterval(() => {}, 1000);
+  onCleanup(() => clearInterval(timer));
+});
+
+// Inside effect — runs before each re-execution and on stop()
+effect(() => {
   const timer = setInterval(() => {}, 1000);
   onCleanup(() => clearInterval(timer));
 });

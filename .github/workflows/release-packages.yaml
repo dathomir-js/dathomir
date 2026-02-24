@@ -83,6 +83,7 @@ jobs:
       packages: write
       id-token: write
     strategy:
+      max-parallel: 1
       matrix:
         package: [reactivity, transformer]
     env:
@@ -129,6 +130,7 @@ jobs:
       packages: write
       id-token: write
     strategy:
+      max-parallel: 1
       matrix:
         package: [runtime, plugin]
     env:

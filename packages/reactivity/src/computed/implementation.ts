@@ -50,7 +50,7 @@ function computedOper<T>(node: ComputedNode<T>): T {
   if (sub !== undefined) {
     link(node, sub, 0);
   }
-  return node.value!;
+  return node.value as T;
 }
 
 function createComputedApi<T>(node: ComputedNode<T>): Computed<T> {

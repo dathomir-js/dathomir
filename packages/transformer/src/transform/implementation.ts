@@ -744,6 +744,7 @@ function transformJSXNode(
         const existingDecl = setupStatements.find(
           (s) =>
             t.isVariableDeclaration(s) &&
+            s.declarations.length > 0 &&
             t.isIdentifier((s.declarations[0] as t.VariableDeclarator).id, {
               name: nodeId.name,
             }),
@@ -806,6 +807,48 @@ function transformJSXNode(
         );
         break;
       }
+
+      case "spread": {
+        state.runtimeImports.add("spread");
+        state.runtimeImports.add("templateEffect");
+
+        // Get element reference (may already exist from another part at same path)
+        const existingSpreadDecl = setupStatements.find(
+          (s) =>
+            t.isVariableDeclaration(s) &&
+            s.declarations.length > 0 &&
+            t.isIdentifier((s.declarations[0] as t.VariableDeclarator).id, {
+              name: nodeId.name,
+            }),
+        );
+
+        if (!existingSpreadDecl) {
+          setupStatements.push(
+            t.variableDeclaration("const", [
+              t.variableDeclarator(
+                nodeId,
+                generateNavigation(fragmentId, part.path, state),
+              ),
+            ]),
+          );
+        }
+
+        // spread(element, spreadObject) applies all properties reactively
+        setupStatements.push(
+          t.expressionStatement(
+            t.callExpression(t.identifier("templateEffect"), [
+              t.arrowFunctionExpression(
+                [],
+                t.callExpression(t.identifier("spread"), [
+                  nodeId,
+                  part.expression,
+                ]),
+              ),
+            ]),
+          ),
+        );
+        break;
+      }
     }
   }
 
@@ -857,6 +900,24 @@ function transformJSXForSSRNode(
       );
     } else if (part.type === "insert") {
       // For inserts (like .map results), evaluate and pass
+      dynamicValueEntries.push(
+        t.arrayExpression([
+          t.numericLiteral(dynamicValueEntries.length + 1),
+          part.expression,
+        ]),
+      );
+    } else if (part.type === "attr") {
+      // For dynamic attributes, pass the expression value for SSR serialization
+      dynamicValueEntries.push(
+        t.arrayExpression([
+          t.numericLiteral(dynamicValueEntries.length + 1),
+          part.expression,
+        ]),
+      );
+    } else if (part.type === "event") {
+      // Event handlers are not rendered in SSR HTML output; skip them
+    } else if (part.type === "spread") {
+      // Spread attributes - pass the object for SSR serialization
       dynamicValueEntries.push(
         t.arrayExpression([
           t.numericLiteral(dynamicValueEntries.length + 1),

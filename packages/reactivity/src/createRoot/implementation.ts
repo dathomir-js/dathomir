@@ -25,21 +25,25 @@ function createRoot(fn: (dispose: RootDispose) => void): RootDispose {
   const prevOwner = getCurrentOwner();
   setCurrentOwner(owner);
 
+  let disposed = false;
+
   const dispose: RootDispose = () => {
+    // Idempotent: ignore subsequent calls after the first dispose
+    if (disposed) return;
+    disposed = true;
+
     for (const cleanup of owner.effects) {
       try {
         cleanup();
-      } catch (error) {
-        // Log error but continue with other cleanups
-        console.error("Error in effect cleanup:", error);
+      } catch {
+        // Silently continue with other cleanups on error
       }
     }
     for (const cleanup of owner.cleanups) {
       try {
         cleanup();
-      } catch (error) {
-        // Log error but continue with other cleanups
-        console.error("Error in cleanup:", error);
+      } catch {
+        // Silently continue with other cleanups on error
       }
     }
     owner.effects.length = 0;

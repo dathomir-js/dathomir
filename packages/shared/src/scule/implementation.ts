@@ -34,8 +34,10 @@ type JoinLowercaseWords<
     : JoinLowercaseWords<R, Joiner, `${Accumulator}${Joiner}${Lowercase<F>}`>
   : Accumulator;
 
-type LastOfArray<T extends any[]> = T extends [...any, infer R] ? R : never;
-type RemoveLastOfArray<T extends any[]> = T extends [...infer F, any]
+type LastOfArray<T extends unknown[]> = T extends [...unknown[], infer R]
+  ? R
+  : never;
+type RemoveLastOfArray<T extends unknown[]> = T extends [...infer F, unknown]
   ? F
   : never;
 
@@ -199,9 +201,11 @@ export function splitByCase<
 
   for (const char of str) {
     // Splitter
-    const isSplitter = (splitters as unknown as string).includes(char);
+    const isSplitter = (splitters as readonly string[]).includes(char);
     if (isSplitter === true) {
-      parts.push(buff);
+      if (buff.length > 0) {
+        parts.push(buff);
+      }
       buff = "";
       previousUpper = undefined;
       continue;
@@ -232,7 +236,9 @@ export function splitByCase<
     previousSplitter = isSplitter;
   }
 
-  parts.push(buff);
+  if (buff.length > 0) {
+    parts.push(buff);
+  }
 
   return parts as SplitByCase<T, Separator[number]>;
 }

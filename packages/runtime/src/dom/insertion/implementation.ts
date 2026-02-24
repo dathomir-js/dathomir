@@ -33,14 +33,15 @@ function insert(
   child: Node | (() => DocumentFragment) | unknown,
   anchor: Node | null,
 ): void {
-  // Warn on null/undefined parent
-  if (typeof __DEV__ !== "undefined" && __DEV__) {
-    if (parent == null) {
+  // Warn on null/undefined parent and bail out early to avoid crash
+  if (parent == null) {
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
       console.warn(
         `[insert] parent is ${parent === null ? "null" : "undefined"}. ` +
           `Cannot insert child into a non-existent parent node.`,
       );
     }
+    return;
   }
 
   // Clean up previously inserted content OR SSR content
@@ -70,15 +71,9 @@ function insert(
           break;
         }
 
-        // Stop if we hit a closing tag (heuristic: if anchor's parent has no more children)
-        // This is a simple heuristic; more sophisticated logic could be added
         const nextNode = ssrNode.nextSibling;
         ssrNodesToRemove.push(ssrNode);
         ssrNode = nextNode;
-
-        // Only remove the immediate next node for simple inserts
-        // For complex inserts, this logic may need refinement
-        break;
       }
 
       // Remove collected SSR nodes

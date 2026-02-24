@@ -95,7 +95,9 @@ function runWatcher(node: WatcherNode, flags: number): void {
       ReactiveFlags.RecursedCheck;
     const prevSub = setActiveSub(node);
     try {
-      (node as unknown as { fn?: () => void }).fn?.();
+      if (node.kind === "effect") {
+        node.fn();
+      }
     } finally {
       unsetActiveSub(prevSub);
       node.flags &= ~ReactiveFlags.RecursedCheck;

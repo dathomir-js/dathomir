@@ -122,8 +122,16 @@ function coerceValue(def: PropDefinition, attrValue: string | null): unknown {
     // Boolean attributes: presence = true, absence (null) = false
     return attrValue !== null;
   }
-  if (def.type === Number) return Number(attrValue);
-  if (def.type === String) return attrValue;
+  if (def.type === Number) {
+    // Per SPEC: null → default value (Number(null) = 0 would hide the real default)
+    if (attrValue === null) return getDefaultValue(def);
+    return Number(attrValue);
+  }
+  if (def.type === String) {
+    // Per SPEC: null → default value
+    if (attrValue === null) return getDefaultValue(def);
+    return attrValue;
+  }
   // Custom coercion function - pass null through as per SPEC
   if (typeof def.type === "function") {
     return def.type(attrValue);
@@ -295,21 +303,33 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
         }
 
         if (hydrateSetup) {
-          this.#dispose = createRoot(() => {
-            hydrateSetup(this, ctx);
-          });
+          try {
+            this.#dispose = createRoot(() => {
+              hydrateSetup(this, ctx);
+            });
+          } catch (error) {
+            console.error("[dathomir] Error in component hydrate:", error);
+          }
         } else {
+          try {
+            this.#dispose = createRoot(() => {
+              shadowRoot.innerHTML = "";
+              const content = resolvedSetup(this, ctx);
+              shadowRoot.append(content as string | Node);
+            });
+          } catch (error) {
+            console.error("[dathomir] Error in component setup:", error);
+          }
+        }
+      } else {
+        try {
           this.#dispose = createRoot(() => {
-            shadowRoot.innerHTML = "";
             const content = resolvedSetup(this, ctx);
             shadowRoot.append(content as string | Node);
           });
+        } catch (error) {
+          console.error("[dathomir] Error in component setup:", error);
         }
-      } else {
-        this.#dispose = createRoot(() => {
-          const content = resolvedSetup(this, ctx);
-          shadowRoot.append(content as string | Node);
-        });
       }
     }
 
@@ -329,7 +349,11 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
       const propSignals = propSignalMap.get(this);
       const sig = propSignals?.[propName];
       if (sig) {
-        sig.set(coerceValue(def, newValue) as never);
+        try {
+          sig.set(coerceValue(def, newValue) as never);
+        } catch (error) {
+          console.error("[dathomir] Error updating prop signal:", error);
+        }
       }
     }
   }

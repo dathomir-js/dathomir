@@ -172,9 +172,11 @@ type HydrateSetupFunction<S extends PropsSchema = PropsSchema> = (
 | PropType | 属性値 → Signal 値 |
 |----------|-------------------|
 | `String` | そのまま。`null` → デフォルト値 |
-| `Number` | `Number(attrValue)`。`null` → デフォルト値 |
+| `Number` | `attrValue` が `null` → デフォルト値。それ以外 → `Number(attrValue)` |
 | `Boolean` | 属性存在 → `true`、属性不在(`null`) → `false` |
 | カスタム関数 | `fn(attrValue)`。`null` もそのまま渡す |
+
+*Number 型の注意:* `Number(null)` は `0` を返すが、これはデフォルト値と混同されるため、`null` は必ずデフォルト値を使用する。
 
 == 設計決定
 
@@ -338,6 +340,20 @@ defineComponent("my-counter", Counter, {
 });
 ```
 
+=== ADR-010: connectedCallback / attributeChangedCallback のエラーハンドリング
+
+*決定:* `connectedCallback` 内の `createRoot` 呼び出し、および `attributeChangedCallback` 内のシグナル更新は try-catch で保護する。
+
+*理由:*
+1. `setup` 関数がエラーを投げた場合、`#dispose` が未設定のまま残り、再接続時に問題が生じる
+2. `createRoot` が例外を投げると dispose 関数が返されないため、`#dispose` が `undefined` のまま
+3. 例外発生時でも、他のコールバック（`disconnectedCallback` など）が正常に動作できるよう保護が必要
+4. `attributeChangedCallback` が例外を投げると属性変更の副作用として他の処理が中断される可能性がある
+
+*振る舞い:*
+- `connectedCallback` 内で `createRoot` がエラーを投げた場合、エラーをコンソールに出力し、`#dispose` は `undefined` のまま（以降の `disconnectedCallback` は安全に動作）
+- `attributeChangedCallback` 内でシグナル更新がエラーを投げた場合、エラーをコンソールに出力して無視する
+
 == テストケース
 
 1. カスタム要素を正しく定義する
@@ -357,3 +373,5 @@ defineComponent("my-counter", Counter, {
 15. `__tagName__` と `__propsSchema__` が返されるクラスに付与される
 16. Component Class を `renderDSD` の引数として使用できる
 17. `ComponentElement<typeof MyComp>` でカスタム要素の props 型が推論される
+18. Number 型の prop: `null` 属性値はデフォルト値を使用する（`Number(null)` = 0 を使わない）
+19. `setup` 関数がエラーを投げても `#dispose` が安全に扱われる（再接続時も動作）

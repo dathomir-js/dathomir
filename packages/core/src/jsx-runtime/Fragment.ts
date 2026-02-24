@@ -1,6 +1,8 @@
 /**
  * JSX Fragment component.
  */
+import { templateEffect } from "@dathomir/reactivity";
+
 type JSXChild =
   | Node
   | string
@@ -16,6 +18,7 @@ interface FragmentProps {
 
 /**
  * Fragment renders children without a wrapper element.
+ * Function children are treated as reactive getters and kept in sync via templateEffect.
  */
 export function Fragment(props: FragmentProps): DocumentFragment {
   const fragment = document.createDocumentFragment();
@@ -29,8 +32,12 @@ export function Fragment(props: FragmentProps): DocumentFragment {
     if (child instanceof Node) {
       fragment.appendChild(child);
     } else if (typeof child === "function") {
-      // Functions are not supported in Fragment - use in elements instead
-      fragment.appendChild(document.createTextNode(String(child())));
+      // Reactive getter: create a text node and keep it updated via templateEffect
+      const textNode = document.createTextNode(String(child()));
+      fragment.appendChild(textNode);
+      templateEffect(() => {
+        textNode.nodeValue = String(child());
+      });
     } else {
       fragment.appendChild(document.createTextNode(String(child)));
     }

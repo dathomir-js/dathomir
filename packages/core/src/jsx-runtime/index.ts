@@ -17,6 +17,11 @@ import {
 
 export { Fragment } from "./Fragment";
 
+/** Narrowed type for a reactive value with a .value property. */
+interface ReactiveValue {
+  value: unknown;
+}
+
 type JSXChild =
   | Node
   | string
@@ -24,7 +29,8 @@ type JSXChild =
   | boolean
   | null
   | undefined
-  | (() => unknown);
+  | (() => unknown)
+  | ReactiveValue;
 type JSXChildren = JSXChild | JSXChild[];
 
 interface JSXProps {
@@ -35,7 +41,7 @@ interface JSXProps {
 /**
  * Check if a value is a reactive accessor (has .value property access).
  */
-function isReactiveValue(value: unknown): boolean {
+function isReactiveValue(value: unknown): value is ReactiveValue {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -84,11 +90,12 @@ function createElement(
 
   // Separate static attrs from dynamic ones and events
   const staticAttrs: Record<string, unknown> = {};
-  const dynamicAttrs: Array<{ key: string; value: unknown }> = [];
+  const dynamicAttrs: Array<{ key: string; value: ReactiveValue }> = [];
   const events: Array<{ type: string; handler: EventListener }> = [];
 
   for (const [key, value] of Object.entries(attrs)) {
-    if (isEventHandler(key)) {
+    if (isEventHandler(key) && typeof value === "function") {
+      // Only register as event listener if the value is actually a function
       events.push({ type: getEventType(key), handler: value as EventListener });
     } else if (isReactiveValue(value)) {
       dynamicAttrs.push({ key, value });
@@ -121,14 +128,14 @@ function createElement(
       treeNode.push(["{text}", null]);
       dynamicTexts.push({
         index: treeNode.length - 3,
-        getter: child as () => unknown,
+        getter: child,
       });
     } else if (isReactiveValue(child)) {
       // Direct reactive value (signal/computed)
       treeNode.push(["{text}", null]);
       dynamicTexts.push({
         index: treeNode.length - 3,
-        getter: () => (child as { value: unknown }).value,
+        getter: () => child.value,
       });
     }
   }
@@ -142,7 +149,12 @@ function createElement(
   // Create DOM
   const factory = fromTree(tree, 0);
   const fragment = factory();
-  const element = firstChild(fragment) as HTMLElement;
+  const firstEl = firstChild(fragment);
+  if (!firstEl) {
+    // A non-void element must always produce at least one child node
+    throw new Error(`createElement: no child element found for tag "${tag}"`);
+  }
+  const element = firstEl as HTMLElement;
 
   // Bind events
   for (const { type, handler } of events) {
@@ -152,7 +164,7 @@ function createElement(
   // Bind dynamic attributes
   for (const { key, value } of dynamicAttrs) {
     templateEffect(() => {
-      const v = (value as { value: unknown }).value;
+      const v = value.value;
       if (key === "class" || key === "className") {
         element.setAttribute("class", String(v));
       } else {

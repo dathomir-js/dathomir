@@ -59,7 +59,6 @@ jobs:
 
       - name: Release shared
         run: |
-          git restore .npmrc
           if [ "${{ github.event.inputs.pre }}" == "true" ]; then
             pnpm p:shared release --level ${{ github.event.inputs.level }} --pre
           else
@@ -67,6 +66,7 @@ jobs:
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Get package version
         id: get-version
@@ -114,10 +114,10 @@ jobs:
 
       - name: Release ${{ matrix.package }}
         run: |
-          git restore .npmrc
           pnpm p:${{ matrix.package }} release --level fix --release-version ${{ needs.release-shared.outputs.package-version }} -k create-release-branch,build
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # Level 2: Release packages dependent on level 1
   release-level2:
@@ -160,10 +160,10 @@ jobs:
 
       - name: Release ${{ matrix.package }}
         run: |
-          git restore .npmrc
           pnpm p:${{ matrix.package }} release --level fix --release-version ${{ needs.release-shared.outputs.package-version }} -k create-release-branch,build
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # Level 3: Release components (depends on runtime)
   release-level3:
@@ -203,10 +203,10 @@ jobs:
 
       - name: Release components
         run: |
-          git restore .npmrc
           pnpm p:components release --level fix --release-version ${{ needs.release-shared.outputs.package-version }} -k create-release-branch,build
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # Level 4: Release core (depends on all other packages)
   release-level4:
@@ -246,10 +246,10 @@ jobs:
 
       - name: Release core
         run: |
-          git restore .npmrc
           pnpm p:core release --level fix --release-version ${{ needs.release-shared.outputs.package-version }} -k create-release-branch,build
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # Finalize: Create PR and GitHub Release
   finalize-release:

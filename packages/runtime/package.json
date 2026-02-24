@@ -1,7 +1,7 @@
 {
   "name": "@dathomir/runtime",
   "description": "dathomir runtime package",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": false,
   "publishConfig": {
     "access": "public",

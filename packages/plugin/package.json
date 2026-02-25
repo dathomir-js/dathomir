@@ -1,7 +1,7 @@
 {
   "name": "@dathomir/plugin",
   "description": "dathomir plugin package",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "private": false,
   "publishConfig": {
     "access": "public",

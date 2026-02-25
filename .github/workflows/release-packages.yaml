@@ -20,18 +20,19 @@ on:
           - preup
 
 jobs:
-  # Level 1a: Release shared package (determines version)
-  release-shared:
-    name: Release @dathomir/shared
+  release-packages:
+    name: Release packages sequentially
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
+      pull-requests: write
       id-token: write
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    outputs:
-      package-version: ${{ steps.get-version.outputs.PACKAGE_VERSION }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -64,240 +65,30 @@ jobs:
           else
             pnpm p:shared release --level ${{ github.event.inputs.level }}
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Get package version
         id: get-version
         run: |
-          echo "PACKAGE_VERSION=$(node -p "require('./packages/shared/package.json').version")" >> $GITHUB_OUTPUT
+          echo "package-version=$(node -p \"require('./packages/shared/package.json').version\")" >> $GITHUB_OUTPUT
 
-  # Level 1b: Release base packages (no internal dependencies)
-  release-level1b:
-    name: Release ${{ matrix.package }}
-    runs-on: ubuntu-latest
-    needs: release-shared
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
-    strategy:
-      max-parallel: 1
-      matrix:
-        package: [reactivity, transformer]
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          ref: main
-
-      - name: Pull latest changes
-        run: git pull origin main
-
-      - name: Set up Node.js
-        uses: jdx/mise-action@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          install_args: "node pnpm"
-          cache: true
-
-      - uses: pnpm/action-setup@v4
-
-      - name: Setup .npmrc
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-
-      - name: Install dependencies
-        run: pnpm i --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
-
-      - name: Release ${{ matrix.package }}
+      - name: Release dependent packages
         run: |
-          pnpm p:${{ matrix.package }} release --level fix --release-version ${{ needs.release-shared.outputs.package-version }} -k create-release-branch,build
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  # Level 2: Release packages dependent on level 1
-  release-level2:
-    name: Release ${{ matrix.package }}
-    runs-on: ubuntu-latest
-    needs: [release-shared, release-level1b]
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
-    strategy:
-      max-parallel: 1
-      matrix:
-        package: [runtime, plugin]
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          ref: main
-
-      - name: Pull latest changes
-        run: git pull origin main
-
-      - name: Set up Node.js
-        uses: jdx/mise-action@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          install_args: "node pnpm"
-          cache: true
-
-      - uses: pnpm/action-setup@v4
-
-      - name: Setup .npmrc
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-
-      - name: Install dependencies
-        run: pnpm i --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
-
-      - name: Release ${{ matrix.package }}
-        run: |
-          pnpm p:${{ matrix.package }} release --level fix --release-version ${{ needs.release-shared.outputs.package-version }} -k create-release-branch,build
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  # Level 3: Release components (depends on runtime)
-  release-level3:
-    name: Release components
-    runs-on: ubuntu-latest
-    needs: [release-shared, release-level2]
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          ref: main
-
-      - name: Pull latest changes
-        run: git pull origin main
-
-      - name: Set up Node.js
-        uses: jdx/mise-action@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          install_args: "node pnpm"
-          cache: true
-
-      - uses: pnpm/action-setup@v4
-
-      - name: Setup .npmrc
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-
-      - name: Install dependencies
-        run: pnpm i --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
-
-      - name: Release components
-        run: |
-          pnpm p:components release --level fix --release-version ${{ needs.release-shared.outputs.package-version }} -k create-release-branch,build
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  # Level 4: Release core (depends on all other packages)
-  release-level4:
-    name: Release core
-    runs-on: ubuntu-latest
-    needs: [release-shared, release-level3]
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          ref: main
-
-      - name: Pull latest changes
-        run: git pull origin main
-
-      - name: Set up Node.js
-        uses: jdx/mise-action@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          install_args: "node pnpm"
-          cache: true
-
-      - uses: pnpm/action-setup@v4
-
-      - name: Setup .npmrc
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-
-      - name: Install dependencies
-        run: pnpm i --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
-
-      - name: Release core
-        run: |
-          pnpm p:core release --level fix --release-version ${{ needs.release-shared.outputs.package-version }} -k create-release-branch,build
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  # Finalize: Create PR and GitHub Release
-  finalize-release:
-    name: Create PR
-    runs-on: ubuntu-latest
-    needs: [release-shared, release-level4]
-    permissions:
-      contents: write
-      packages: write
-      pull-requests: write
-      id-token: write
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          ref: release/@dathomir/shared.${{ needs.release-shared.outputs.package-version }}
+          for pkg in reactivity transformer runtime plugin components core; do
+            pnpm p:${pkg} release --level fix --release-version ${{ steps.get-version.outputs.package-version }} -k create-release-branch,build
+          done
 
       - name: Create Pull Request
         run: |
           gh pr create \
-            --title "Release v${{ needs.release-shared.outputs.package-version }}" \
-            --body "Release v${{ needs.release-shared.outputs.package-version }} This PR was automatically generated by the release workflow." \
+            --title "Release v${{ steps.get-version.outputs.package-version }}" \
+            --body "Release v${{ steps.get-version.outputs.package-version }} This PR was automatically generated by the release workflow." \
             --base main \
             --reviewer takuma-ru \
             --label ":rocket: release"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         id: create-release
         uses: release-drafter/release-drafter@v6
         with:
-          version: ${{ needs.release-shared.outputs.package-version }}
-          prerelease: ${{ contains(needs.release-shared.outputs.package-version, '-beta') }}
+          version: ${{ steps.get-version.outputs.package-version }}
+          prerelease: ${{ contains(steps.get-version.outputs.package-version, '-beta') }}

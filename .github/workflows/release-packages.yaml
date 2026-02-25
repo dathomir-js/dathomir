@@ -69,7 +69,8 @@ jobs:
       - name: Get package version
         id: get-version
         run: |
-          echo "package-version=$(node -p \"require('./packages/shared/package.json').version\")" >> $GITHUB_OUTPUT
+          PACKAGE_VERSION=$(node -e "process.stdout.write(require('./packages/shared/package.json').version)")
+          echo "package-version=${PACKAGE_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Release dependent packages
         run: |

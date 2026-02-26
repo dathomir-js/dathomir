@@ -160,4 +160,84 @@ describe("computed", () => {
       expect(comp.value).toBe(20);
     });
   });
+
+  describe("peek", () => {
+    it("returns the actual computed value without registering as subscriber", () => {
+      const count = signal(1);
+      const doubled = computed(() => count.value * 2);
+
+      expect(doubled.peek()).toBe(2);
+
+      count.set(5);
+      expect(doubled.peek()).toBe(10);
+    });
+
+    it("does not track dependencies so effect reading via peek does not re-run", () => {
+      const count = signal(0);
+      const doubled = computed(() => count.value * 2);
+      const spy = vi.fn();
+
+      effect(() => {
+        spy(doubled.peek());
+      });
+
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      count.set(1);
+      // effect only read via peek — no dependency registered
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("initial computation failure", () => {
+    it("retries computation on next read when getter throws on first access", () => {
+      let shouldThrow = true;
+      const count = signal(1);
+      const comp = computed(() => {
+        if (shouldThrow) throw new Error("initial failure");
+        return count.value * 2;
+      });
+
+      // First read hits the uninitialised (flags=0) branch and throws
+      expect(() => comp.value).toThrow("initial failure");
+
+      // The failed computation must be marked dirty so next read retries
+      shouldThrow = false;
+      expect(comp.value).toBe(2);
+    });
+  });
+
+  describe("chained computed propagation", () => {
+    it("propagates updates through a chain of computed values", () => {
+      const base = signal(1);
+      const doubled = computed(() => base.value * 2);
+      const quadrupled = computed(() => doubled.value * 2);
+
+      expect(quadrupled.value).toBe(4);
+
+      base.set(3);
+      expect(quadrupled.value).toBe(12); // 3 * 2 * 2
+    });
+
+    it("does not recompute downstream computed when intermediate value is unchanged", () => {
+      const flag = signal(false);
+      // This getter always returns 42 regardless of flag's actual value
+      const alwaysFortyTwo = computed(() => {
+        void flag.value; // tracked dependency, but result never changes
+        return 42;
+      });
+      const downstream = vi.fn(() => alwaysFortyTwo.value * 2);
+      const doubleFortyTwo = computed(downstream);
+
+      expect(doubleFortyTwo.value).toBe(84);
+      expect(downstream).toHaveBeenCalledTimes(1);
+
+      // Changing flag causes alwaysFortyTwo to re-run, but its return value is still 42
+      flag.set(true);
+
+      // doubleFortyTwo must not recompute because its dependency value did not change
+      expect(doubleFortyTwo.value).toBe(84);
+      expect(downstream).toHaveBeenCalledTimes(1);
+    });
+  });
 });

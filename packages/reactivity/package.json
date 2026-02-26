@@ -43,6 +43,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "test": "vitest run --coverage",
+    "test:mutation": "stryker run",
     "release": "rlse"
   },
   "devDependencies": {

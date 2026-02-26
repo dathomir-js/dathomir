@@ -224,3 +224,55 @@ describe("createRoot - edge cases", () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("createRoot - owner context restoration", () => {
+  it("restores outer owner after inner createRoot so subsequent templateEffects register with outer", () => {
+    const count = signal(0);
+    const spy = vi.fn();
+
+    const disposeOuter = createRoot(() => {
+      // Inner root executes and returns — outer owner must be restored afterward
+      createRoot(() => {});
+
+      // If setCurrentOwner was not restored, this templateEffect would be
+      // registered with the already-returned inner owner and never disposed
+      // by disposeOuter.
+      templateEffect(() => spy(count.value));
+    });
+
+    count.set(1);
+    expect(spy).toHaveBeenCalledTimes(2);
+
+    // Disposing outer must stop the templateEffect
+    disposeOuter();
+    count.set(2);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it("sequential createRoot scopes are independent of each other", () => {
+    const count = signal(0);
+    const spy1 = vi.fn();
+    const spy2 = vi.fn();
+
+    const dispose1 = createRoot(() => {
+      templateEffect(() => spy1(count.value));
+    });
+
+    // After dispose1's root finished, owner must be restored so that
+    // this second root is truly independent.
+    const dispose2 = createRoot(() => {
+      templateEffect(() => spy2(count.value));
+    });
+
+    count.set(1);
+    expect(spy1).toHaveBeenCalledTimes(2);
+    expect(spy2).toHaveBeenCalledTimes(2);
+
+    dispose1();
+    count.set(2);
+    expect(spy1).toHaveBeenCalledTimes(2); // stopped
+    expect(spy2).toHaveBeenCalledTimes(3); // still running
+
+    dispose2();
+  });
+});

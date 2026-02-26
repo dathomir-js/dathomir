@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { computed, effect, onCleanup, signal } from "../index";
+import { computed, createRoot, effect, onCleanup, signal } from "../index";
 
 describe("effect", () => {
   it("reacts to changes and cleanup stops re-execution", () => {
@@ -68,13 +68,7 @@ describe("effect onCleanup integration", () => {
     count.set(1);
     count.set(2);
 
-    expect(log).toEqual([
-      "run:0",
-      "cleanup:0",
-      "run:1",
-      "cleanup:1",
-      "run:2",
-    ]);
+    expect(log).toEqual(["run:0", "cleanup:0", "run:1", "cleanup:1", "run:2"]);
   });
 
   it("onCleanup registered in effect runs when stop() is called", () => {
@@ -116,8 +110,49 @@ describe("effect onCleanup integration", () => {
     });
 
     count.set(1); // cleanup:0 runs, then new cleanup:1 is registered
-    stop();       // cleanup:1 runs
+    stop(); // cleanup:1 runs
 
     expect(log).toEqual(["cleanup:0", "cleanup:1"]);
+  });
+});
+
+describe("effect - cleanup context restoration", () => {
+  it("onCleanup registered after effect() call within createRoot is captured by root", () => {
+    const cleanupSpy = vi.fn();
+
+    const dispose = createRoot(() => {
+      // Create an effect. After this returns, setCurrentEffectCleanups must
+      // be restored so that subsequent onCleanup calls go to the root owner,
+      // not the effect's internal cleanup list.
+      effect(() => {});
+
+      onCleanup(cleanupSpy);
+    });
+
+    // dispose() only iterates owner.cleanups — if cleanupSpy went into the
+    // effect's effectCleanups array instead, it would not be called here.
+    dispose();
+    expect(cleanupSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("cleanup context is independent between sibling effects", () => {
+    const log: string[] = [];
+
+    const dispose = createRoot(() => {
+      effect(() => {
+        onCleanup(() => log.push("effect-a"));
+      });
+
+      effect(() => {
+        onCleanup(() => log.push("effect-b"));
+      });
+
+      onCleanup(() => log.push("root"));
+    });
+
+    dispose();
+
+    // root cleanup runs; effect cleanups ran at stop time (effects are stopped first)
+    expect(log).toContain("root");
   });
 });

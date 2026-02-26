@@ -12,7 +12,8 @@
     "oxlint": "./bin/oxlint.js",
     "tsgolint": "./bin/tsgolint.js",
     "prettier": "./bin/prettier.js",
-    "tsdown": "./bin/tsdown.js"
+    "tsdown": "./bin/tsdown.js",
+    "stryker": "./bin/stryker.js"
   },
   "exports": {
     "./templates/oxlintrc.template.json": "./templates/oxlintrc.template.json",
@@ -22,13 +23,17 @@
     "./tsdown": {
       "import": "./scripts/tsdown.mjs",
       "types": "./scripts/tsdown.d.ts"
-    }
+    },
+    "./types/*": "./types/*.ts"
   },
   "scripts": {
     "oxlint": "oxlint",
     "lint": "oxlint && eslint ."
   },
   "dependencies": {
+    "@stryker-mutator/api": "^9.5.1",
+    "@stryker-mutator/core": "^9.5.1",
+    "@stryker-mutator/vitest-runner": "^9.5.1",
     "@types/node": "24.2.0",
     "@typescript-eslint/parser": "^8.46.2",
     "eslint": "catalog:",

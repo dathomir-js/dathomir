@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -13,7 +14,12 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "happy-dom",
+    browser: {
+      enabled: true,
+      headless: true,
+      provider: playwright(),
+      instances: [{ browser: "chromium" }],
+    },
     include: ["src/**/*.test.ts"],
     clearMocks: true,
     coverage: {

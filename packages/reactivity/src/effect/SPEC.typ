@@ -61,3 +61,4 @@ type EffectCleanup = () => void;
 - effect 内で onCleanup を登録し、stop() 時に実行される
 - effect 内で複数の onCleanup を登録すると順番に実行される
 - effect 再実行時に前回の onCleanup が破棄され新しいものが登録される
+- effect 内で作成した effect は、外側 effect 再実行時に自動クリーンアップされる

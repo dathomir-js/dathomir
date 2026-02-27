@@ -68,3 +68,5 @@ interface Signal<T> {
 - 値が変更されたときのみ effect が再実行される
 - 同じ値を設定しても effect は再実行されない
 - Object.is を使用して NaN を正しく扱う
+- __type__ が "signal" であることを確認する
+- 同じ値を設定しても downstream computed が再評価されない

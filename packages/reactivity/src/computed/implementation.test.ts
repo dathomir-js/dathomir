@@ -207,6 +207,13 @@ describe("computed", () => {
     });
   });
 
+  describe("Type identity", () => {
+    it("has __type__ 'computed'", () => {
+      const c = computed(() => 42);
+      expect(c.__type__).toBe("computed");
+    });
+  });
+
   describe("chained computed propagation", () => {
     it("propagates updates through a chain of computed values", () => {
       const base = signal(1);
@@ -217,6 +224,22 @@ describe("computed", () => {
 
       base.set(3);
       expect(quadrupled.value).toBe(12); // 3 * 2 * 2
+    });
+
+    it("effect observing chained computed receives updated value after signal change", () => {
+      const base = signal(1);
+      const doubled = computed(() => base.value * 2);
+      const quadrupled = computed(() => doubled.value * 2);
+      const observed: number[] = [];
+
+      effect(() => {
+        observed.push(quadrupled.value);
+      });
+
+      expect(observed).toEqual([4]);
+
+      base.set(3);
+      expect(observed).toEqual([4, 12]);
     });
 
     it("does not recompute downstream computed when intermediate value is unchanged", () => {
@@ -238,6 +261,30 @@ describe("computed", () => {
       // doubleFortyTwo must not recompute because its dependency value did not change
       expect(doubleFortyTwo.value).toBe(84);
       expect(downstream).toHaveBeenCalledTimes(1);
+    });
+
+    it("effect observing deeply chained computed does not re-run when intermediate value is unchanged", () => {
+      const flag = signal(false);
+      const alwaysFortyTwo = computed(() => {
+        void flag.value;
+        return 42;
+      });
+      const spy = vi.fn(() => alwaysFortyTwo.value * 2);
+      const doubleFortyTwo = computed(spy);
+      const observed: number[] = [];
+
+      effect(() => {
+        observed.push(doubleFortyTwo.value);
+      });
+
+      expect(observed).toEqual([84]);
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      flag.set(true);
+
+      // The effect must not re-run because doubleFortyTwo's value did not change
+      expect(observed).toEqual([84]);
+      expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -75,6 +75,13 @@ describe("signal", () => {
     });
   });
 
+  describe("Type identity", () => {
+    it("has __type__ 'signal'", () => {
+      const s = signal(0);
+      expect(s.__type__).toBe("signal");
+    });
+  });
+
   describe("Notification", () => {
     it("re-runs effect only when value changes", () => {
       const count = signal(0);
@@ -122,6 +129,20 @@ describe("signal", () => {
 
       num.set(NaN);
       expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not trigger computed re-evaluation when setting same value", () => {
+      const s = signal(1);
+      const getter = vi.fn(() => s.value * 2);
+      const c = computed(getter);
+
+      expect(c.value).toBe(2);
+      expect(getter).toHaveBeenCalledTimes(1);
+
+      s.set(1); // Same value — should not propagate
+
+      expect(c.value).toBe(2);
+      expect(getter).toHaveBeenCalledTimes(1);
     });
   });
 });

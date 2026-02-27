@@ -156,3 +156,38 @@ describe("effect - cleanup context restoration", () => {
     expect(log).toContain("root");
   });
 });
+
+describe("effect - nested effects", () => {
+  it("effect created inside another effect is automatically cleaned up when outer re-runs", () => {
+    const trigger = signal(0);
+    const count = signal(0);
+    const log: number[] = [];
+
+    createRoot(() => {
+      effect(() => {
+        void trigger.value; // outer depends on trigger
+
+        // Inner effect is created while outerEffectNode is the active subscriber,
+        // so link(innerEffectNode, outerEffectNode) is called, tying the inner
+        // effect's lifecycle to the outer effect.
+        effect(() => {
+          log.push(count.value);
+        });
+      });
+    });
+
+    expect(log).toEqual([0]); // inner ran once on creation
+
+    count.set(1);
+    expect(log).toEqual([0, 1]); // inner re-runs
+
+    // Re-running the outer effect should clean up the old inner effect
+    // and create a fresh one.
+    trigger.set(1);
+    expect(log).toEqual([0, 1, 1]); // new inner created, reads current count (1)
+
+    // Only the new inner effect should react — not the stale one.
+    count.set(2);
+    expect(log).toEqual([0, 1, 1, 2]);
+  });
+});

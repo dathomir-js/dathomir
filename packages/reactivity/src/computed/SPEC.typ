@@ -62,3 +62,6 @@ interface Computed<T> {
 - 最初の計算時に undefined を渡す
 - 以降の計算では前回の値を渡す
 - getter が throw しても状態を破損しない
+- __type__ が "computed" であることを確認する
+- signal → computed → computed → effect の chain で signal 変更時に effect が最新値を取得する
+- chain 途中の computed の値が変わらない場合、下流の effect は再実行されない

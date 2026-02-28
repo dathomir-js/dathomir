@@ -19,10 +19,12 @@ const insertedContent = new WeakMap<Node, Node[]>();
  * If anchor is null, appends to the end.
  *
  * For dynamic inserts (called within templateEffect), this function:
- * 1. On first call (Hydration): removes SSR content after the anchor
- * 2. On subsequent calls: removes previously inserted content
- * 3. Inserts the new content
- * 4. Tracks the newly inserted nodes for future cleanup
+ * 1. On first call with an SSR anchor (dh: prefix): removes server-rendered
+ *    content between the anchor and the next SSR marker.
+ * 2. On first call with a CSR anchor ({insert} from fromTree): no cleanup,
+ *    because siblings are other template nodes, not SSR content.
+ * 3. On subsequent calls: removes previously inserted dynamic content.
+ * 4. Inserts the new content and tracks it for future cleanup.
  *
  * @param parent The parent node.
  * @param child The child node to insert.
@@ -56,32 +58,43 @@ function insert(
       }
       insertedContent.delete(anchor);
     } else {
-      // First call after SSR: remove SSR content after the marker
-      // SSR renders: <!--marker-->content, so we need to remove content
-      let ssrNode = anchor.nextSibling;
-      const ssrNodesToRemove: Node[] = [];
+      // First call: remove SSR content after the marker if this is an SSR
+      // hydration anchor (e.g. <!--dh:i:0-->). CSR anchors created by fromTree
+      // have value "{insert}" and must NOT be cleaned up, because their
+      // siblings are other template nodes — not server-rendered content.
+      const isSSRAnchor =
+        anchor.nodeType === Node.COMMENT_NODE &&
+        (anchor as Comment).nodeValue?.startsWith("dh:");
 
-      // Collect SSR nodes until we hit another marker or end
-      while (ssrNode) {
-        // Stop if we hit another hydration marker (comment starting with "dh:")
-        if (
-          ssrNode.nodeType === Node.COMMENT_NODE &&
-          ssrNode.nodeValue?.startsWith("dh:")
-        ) {
-          break;
+      if (isSSRAnchor) {
+        // SSR hydration: remove server-rendered content after the marker
+        // SSR renders: <!--dh:i:0-->content<!--dh:...-->, so remove content
+        let ssrNode = anchor.nextSibling;
+        const ssrNodesToRemove: Node[] = [];
+
+        // Collect SSR nodes until we hit another marker or end
+        while (ssrNode) {
+          // Stop if we hit another hydration marker (comment starting with "dh:")
+          if (
+            ssrNode.nodeType === Node.COMMENT_NODE &&
+            ssrNode.nodeValue?.startsWith("dh:")
+          ) {
+            break;
+          }
+
+          const nextNode = ssrNode.nextSibling;
+          ssrNodesToRemove.push(ssrNode);
+          ssrNode = nextNode;
         }
 
-        const nextNode = ssrNode.nextSibling;
-        ssrNodesToRemove.push(ssrNode);
-        ssrNode = nextNode;
-      }
-
-      // Remove collected SSR nodes
-      for (const node of ssrNodesToRemove) {
-        if (node.parentNode) {
-          node.parentNode.removeChild(node);
+        // Remove collected SSR nodes
+        for (const node of ssrNodesToRemove) {
+          if (node.parentNode) {
+            node.parentNode.removeChild(node);
+          }
         }
       }
+      // For CSR anchors: nothing to clean up before the first insert
     }
   }
 

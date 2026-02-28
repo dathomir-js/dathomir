@@ -282,6 +282,8 @@ interface TreeResult {
 
 interface DynamicPart {
   type: "text" | "attr" | "event" | "spread" | "insert";
+  /** When true (component insert), skip templateEffect wrapping. */
+  isComponent?: boolean;
   path: number[];
   expression: t.Expression;
   key?: string;
@@ -472,6 +474,7 @@ function processChildren(
         const callExpr = buildComponentCall(child, state);
         dynamicParts.push({
           type: "insert",
+          isComponent: true,
           path: [...parentPath, childIndex],
           expression: callExpr,
         });
@@ -776,7 +779,6 @@ function transformJSXNode(
 
       case "insert": {
         state.runtimeImports.add("insert");
-        state.runtimeImports.add("templateEffect");
         state.runtimeImports.add("firstChild");
 
         // Get insert point reference (comment node - placeholder)
@@ -789,22 +791,38 @@ function transformJSXNode(
           ]),
         );
 
-        // Wrap insert in templateEffect for reactivity
-        // templateEffect(() => insert(placeholder.parentNode, content, placeholder))
-        setupStatements.push(
-          t.expressionStatement(
-            t.callExpression(t.identifier("templateEffect"), [
-              t.arrowFunctionExpression(
-                [],
-                t.callExpression(t.identifier("insert"), [
-                  t.memberExpression(nodeId, t.identifier("parentNode")),
-                  part.expression,
-                  nodeId,
-                ]),
-              ),
-            ]),
-          ),
-        );
+        if (part.isComponent) {
+          // Component inserts are called once — do NOT wrap in templateEffect.
+          // Wrapping would cause the component to be re-created on every signal
+          // change, resetting internal state (signals, effects, etc.).
+          setupStatements.push(
+            t.expressionStatement(
+              t.callExpression(t.identifier("insert"), [
+                t.memberExpression(nodeId, t.identifier("parentNode")),
+                part.expression,
+                nodeId,
+              ]),
+            ),
+          );
+        } else {
+          // Dynamic inserts (conditional expressions, list maps, etc.) are
+          // wrapped in templateEffect so they re-evaluate on signal change.
+          state.runtimeImports.add("templateEffect");
+          setupStatements.push(
+            t.expressionStatement(
+              t.callExpression(t.identifier("templateEffect"), [
+                t.arrowFunctionExpression(
+                  [],
+                  t.callExpression(t.identifier("insert"), [
+                    t.memberExpression(nodeId, t.identifier("parentNode")),
+                    part.expression,
+                    nodeId,
+                  ]),
+                ),
+              ]),
+            ),
+          );
+        }
         break;
       }
 

@@ -6,21 +6,35 @@ export default defineConfig({
   define: {
     __DEV__: true,
   },
+  esbuild: {
+    // Transform JSX using the Dathomir jsx-runtime (same source as production)
+    jsx: "automatic",
+    jsxImportSource: "@dathomir/core",
+  },
   resolve: {
     alias: {
       "@/": resolve(__dirname, "src") + "/",
       "@": resolve(__dirname, "src"),
+      // Map auto-imported JSX runtime paths to local src so no build step is needed
+      "@dathomir/core/jsx-runtime": resolve(
+        __dirname,
+        "src/jsx-runtime/index.ts",
+      ),
+      "@dathomir/core/jsx-dev-runtime": resolve(
+        __dirname,
+        "src/jsx-runtime/index.ts",
+      ),
     },
   },
   test: {
     environment: "happy-dom",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     clearMocks: true,
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      include: ["src/**/*.ts"],
-      exclude: ["src/**/*.d.ts", "src/**/*.test.ts"],
+      include: ["src/**/*.ts", "src/**/*.tsx"],
+      exclude: ["src/**/*.d.ts", "src/**/*.test.ts", "src/**/*.test.tsx"],
     },
   },
 });

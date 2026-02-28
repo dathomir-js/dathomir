@@ -118,9 +118,9 @@ export const SSRCounter = defineComponent(
       <div class="counter-container">
         <h2>SSR Counter</h2>
         <div class="counter">
-          <button onClick={() => initialCount.update((v) => v - 1)}>-</button>
+          <button onClick={() => initialCount.set((v) => v - 1)}>-</button>
           <span class="count">{initialCount.value}</span>
-          <button onClick={() => initialCount.update((v) => v + 1)}>+</button>
+          <button onClick={() => initialCount.set((v) => v + 1)}>+</button>
           {initialCount.value % 2 === 0 ? (
             <span class="even-indicator"> (Even)</span>
           ) : (

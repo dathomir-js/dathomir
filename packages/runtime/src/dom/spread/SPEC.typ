@@ -1,6 +1,6 @@
 = spread API
 
-#import "../../../../../SPEC/settings.typ": *
+#import "/SPEC/settings.typ": *
 #show: apply-settings
 
 == 目的

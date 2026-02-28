@@ -193,7 +193,7 @@ describe("transform", () => {
       expect(result.code).not.toContain("renderToString");
     });
 
-    it("should handle nested component elements with insert", () => {
+    it("should handle nested component elements with insert (no templateEffect)", () => {
       const code = `
         const element = (
           <div>
@@ -211,7 +211,9 @@ describe("transform", () => {
       expect(result.code).toContain("insert");
       expect(result.code).toContain("Counter");
       expect(result.code).toContain("initialCount");
-      expect(result.code).toContain("templateEffect");
+      // Components are inserted directly (NOT wrapped in templateEffect)
+      // to prevent re-creation on every signal change
+      expect(result.code).not.toContain("templateEffect");
     });
 
     it("should handle root component element without tree generation", () => {

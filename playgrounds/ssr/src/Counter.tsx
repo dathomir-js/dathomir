@@ -20,9 +20,9 @@ export function Counter({ initialCount = 0 }: { initialCount?: number }) {
     <div class="counter-container">
       <h2>SSR Counter</h2>
       <div class="counter">
-        <button onClick={() => count.update((v) => v - 1)}>-</button>
+        <button onClick={() => count.set((v) => v - 1)}>-</button>
         <span class="count">{count.value}</span>
-        <button onClick={() => count.update((v) => v + 1)}>+</button>
+        <button onClick={() => count.set((v) => v + 1)}>+</button>
         {count.value % 2 === 0 ? (
           <span class="even-indicator"> (Even)</span>
         ) : (

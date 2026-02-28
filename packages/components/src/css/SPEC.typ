@@ -1,4 +1,4 @@
-#import "../../../../SPEC/settings.typ": *
+#import "/SPEC/settings.typ": *
 #show: apply-settings
 
 = css tagged template literal

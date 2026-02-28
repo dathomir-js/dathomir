@@ -10,7 +10,7 @@ export function App() {
   const counter = signal(0);
 
   setInterval(() => {
-    counter.update((v) => v + 1);
+    counter.set((v) => v + 1);
   }, 1000);
 
   return (

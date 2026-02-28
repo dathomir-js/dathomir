@@ -1,6 +1,6 @@
 = transform 関数
 
-#import "../../../../SPEC/settings.typ": *
+#import "/SPEC/settings.typ": *
 #show: apply-settings
 
 == 目的
@@ -58,7 +58,8 @@ return Counter({ initialCount: 5 })
 - 動的な属性（式を含む）は `templateEffect` でラップする
 - イベントハンドラは `event()` 呼び出しに変換する
 - テキスト内の式は `setText()` で更新する
-- コンポーネント要素は関数呼び出しに変換し、`insert()` で挿入する
+- コンポーネント要素は関数呼び出しに変換し、`insert()` で挿入する（`templateEffect` でラップしない）
+- 式挿入（conditional, map など）は `templateEffect` でラップして `insert()` を呼ぶ
 - `@dathomir/runtime` からのインポート文を自動生成する
 
 === SSR モード
@@ -110,6 +111,21 @@ return Counter({ initialCount: 5 })
 1. 関数コンポーネントは一度だけ実行される（SolidJS スタイル）
 2. props は初期値として使われ、コンポーネント内部で signal に変換される
 3. リアクティブな props が必要な場合はコンポーネント側で対応
+
+=== ADR: コンポーネント insert を templateEffect でラップしない
+
+*決定:* コンポーネント（大文字タグ）を `insert()` で挿入する際、`templateEffect` でラップしない。
+直接 `insert(parent, Component({ props }), anchor)` として出力する。
+
+*理由:*
+1. コンポーネントは一度だけ実行される（SolidJS スタイル）。templateEffect でラップすると props 変化のたびにコンポーネントが再生成されてしまう
+2. コンポーネントの内部状態（signal）が毎回リセットされる問題を防ぐ
+3. コンポーネントに渡す props はスナップショット値（初期値）であり、リアクティブバインディングではない
+4. リアクティブな props 伝達はコンポーネント側の責務（Signal をそのまま渡すなどの手段で対応）
+
+*影響:*
+- 条件式（`{condition ? <A/> : <B/>}`）や map（`{items.map(...)}`）は引き続き templateEffect でラップする（これらは式全体の再評価が意図されているため）
+- コンポーネントへの `signal.value` 渡しは初期値のみ伝達され、signal 変化には追従しない
 
 == テストケース
 

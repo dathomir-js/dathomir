@@ -1,6 +1,6 @@
 = plugin（ビルドツール統合）
 
-#import "../../../../SPEC/settings.typ": *
+#import "/SPEC/settings.typ": *
 #show: apply-settings
 
 == 目的

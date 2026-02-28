@@ -1,6 +1,6 @@
 = navigation API
 
-#import "../../../../../SPEC/settings.typ": *
+#import "/SPEC/settings.typ": *
 #show: apply-settings
 
 == 目的
@@ -30,17 +30,22 @@ function nextSibling(node: Node): Node
 
 == 設計判断
 
-#adr[
-  *ADR: non-null assertion によるエラーハンドリング*
-
-  *背景*: Generated code では必ず次のノードが存在する前提。明示的なエラー処理はバンドルサイズを増やす。
-
-  *決定*: `!` (non-null assertion) を使用してコンパクトな実装を維持。
-  - `return child!` や `return node.nextSibling!` のように記述
-  - 万が一 null だった場合、ブラウザが `TypeError: Cannot read properties of null` を投げる
-  - Transformer が正しいコードを生成する責任を持つ
-  - バンドルサイズは最小限（明示的な if 文やエラーメッセージ不要）
-]
+#adr(
+  header("non-null assertion によるエラーハンドリング", Status.Accepted, "2026-02-11"),
+  [
+    Generated code では必ず次のノードが存在する前提。明示的なエラー処理はバンドルサイズを増やす。
+  ],
+  [
+    `!` (non-null assertion) を使用してコンパクトな実装を維持。
+    - `return child!` や `return node.nextSibling!` のように記述
+    - 万が一 null だった場合、ブラウザが `TypeError: Cannot read properties of null` を投げる
+    - Transformer が正しいコードを生成する責任を持つ
+    - バンドルサイズは最小限（明示的な if 文やエラーメッセージ不要）
+  ],
+  [
+    バンドルサイズを最小化しつつ、DOM 構造の不整合は実行時エラーで検出できる。
+  ],
+)
 
 - Transformer が生成するナビゲーションコード（`firstChild(firstChild(root))` 等）で使用
 - テキストノード探索は、テンプレート内のテキストプレースホルダーへの参照取得に必要

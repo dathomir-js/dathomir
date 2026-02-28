@@ -1,6 +1,6 @@
 = render API
 
-#import "../../../../../SPEC/settings.typ": *
+#import "/SPEC/settings.typ": *
 #show: apply-settings
 
 == 目的
@@ -89,51 +89,71 @@ type ComponentRenderer = (
 
 == 設計判断
 
-#adr[
-  *ADR: Declarative Shadow DOM 対応*
+#adr(
+  header("Declarative Shadow DOM 対応", Status.Accepted, "2026-02-11"),
+  [
+    Web Components の SSR には Declarative Shadow DOM (DSD) が必要。
+  ],
+  [
+    `ComponentRenderer` を使用して DSD を生成。
+    - カスタム要素（タグ名に `-` を含む）を検出
+    - `ComponentRenderer` が登録されていれば、DSD 形式で出力:
+      ```html
+      <my-component>
+        <template shadowrootmode="open">
+          {Shadow DOM content}
+        </template>
+      </my-component>
+      ```
+    - `ComponentRenderer` が `null` を返せば通常の要素として扱う
+  ],
+  [
+    Web Components を SSR で正しくレンダリングできる。クライアント側でのハイドレーション時に Shadow DOM を再構築する必要がない。
+  ],
+)
 
-  *背景*: Web Components の SSR には Declarative Shadow DOM (DSD) が必要。
+#adr(
+  header("グローバル ComponentRenderer", Status.Accepted, "2026-02-11"),
+  [
+    すべてのレンダリング関数で同じ ComponentRenderer を共有したい。
+  ],
+  [
+    `setComponentRenderer()` でグローバルに設定可能。
+    - 個別の `RenderOptions` でもオーバーライド可能
+  ],
+  [
+    コンポーネントレンダラーを一箇所で登録すれば全レンダリングに反映される。テスト時はオーバーライドで差し替えが可能。
+  ],
+)
 
-  *決定*: `ComponentRenderer` を使用して DSD を生成。
-  - カスタム要素（タグ名に `-` を含む）を検出
-  - `ComponentRenderer` が登録されていれば、DSD 形式で出力:
-    ```html
-    <my-component>
-      <template shadowrootmode="open">
-        {Shadow DOM content}
-      </template>
-    </my-component>
-    ```
-  - `ComponentRenderer` が `null` を返せば通常の要素として扱う
-]
+#adr(
+  header("state と dynamicValues の null 非許容", Status.Accepted, "2026-02-11"),
+  [
+    空オブジェクト/Map で統一したほうがコードが簡潔。
+  ],
+  [
+    `RenderContext` では `state` と `dynamicValues` を null 非許容で定義。
+    - `createContext` で `options.state ?? {}` のように初期化
+  ],
+  [
+    各関数で null チェックが不要になり、コードが簡潔になる。
+  ],
+)
 
-#adr[
-  *ADR: グローバル ComponentRenderer*
-
-  *背景*: すべてのレンダリング関数で同じ ComponentRenderer を共有したい。
-
-  *決定*: `setComponentRenderer()` でグローバルに設定可能。
-  - 個別の `RenderOptions` でもオーバーライド可能
-]
-
-#adr[
-  *ADR: state と dynamicValues の null 非許容*
-
-  *背景*: 空オブジェクト/Map で統一したほうがコードが簡潔。
-
-  *決定*: `RenderContext` では `state` と `dynamicValues` を null 非許容で定義。
-  - `createContext` で `options.state ?? {}` のように初期化
-]
-
-#adr[
-  *ADR: style オブジェクトのサポート*
-
-  *背景*: JSX で `style={{ padding: "20px" }}` のように書きたい。
-
-  *決定*: `renderAttrs` 内で style オブジェクトを CSS 文字列に変換。
-  - `camelCase` → `kebab-case` への変換
-  - null/空文字の値を除外
-]
+#adr(
+  header("style オブジェクトのサポート", Status.Accepted, "2026-02-11"),
+  [
+    JSX で `style={{ padding: "20px" }}` のように書きたい。
+  ],
+  [
+    `renderAttrs` 内で style オブジェクトを CSS 文字列に変換。
+    - `camelCase` → `kebab-case` への変換
+    - null/空文字の値を除外
+  ],
+  [
+    JSX の自然な記法でスタイルを記述でき、SSR でも正しく出力される。
+  ],
+)
 
 - Web 標準 API のみ使用（Node.js 依存ゼロ）
 - HTML エスケープは最小限の置換で実装（バンドルサイズ考慮）

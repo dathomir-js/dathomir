@@ -1,6 +1,6 @@
 = scule（文字列ケース変換）ユーティリティ
 
-#import "../../../../SPEC/settings.typ": *
+#import "/SPEC/settings.typ": *
 #show: apply-settings
 
 == 目的

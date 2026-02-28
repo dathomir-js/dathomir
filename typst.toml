@@ -1,4 +1,4 @@
 [package]
+entrypoint = "SPEC/SPEC.typ"
 name = "dathomir"
 version = "0.1.0"
-entrypoint = "SPEC/SPEC.typ"

@@ -32,7 +32,7 @@ type SpreadProps = Record<string, unknown>
 
 - 新しいキーは `setAttr` で設定
 - 削除されたキーは `setAttr(element, key, null)` で削除
-- イベントハンドラ（`on` + 大文字で始まるキー、値が関数）は `addEventListener`/`removeEventListener` で管理
+- イベントハンドラ（`on` で始まり 3 文字以上のキー、値が関数）は `addEventListener`/`removeEventListener` で管理
 - `WeakMap` で要素ごとのイベントハンドラを追跡
 
 == イベントハンドラ判定

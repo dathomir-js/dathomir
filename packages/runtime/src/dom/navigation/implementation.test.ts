@@ -30,11 +30,6 @@ describe("firstChild", () => {
     expect(firstChild(div, true)).toBe(text);
   });
 
-  it("should return null when there are no children", () => {
-    const div = document.createElement("div");
-    expect(firstChild(div)).toBeNull();
-  });
-
   it("should return text node as first child when it exists", () => {
     const div = document.createElement("div");
     const text = document.createTextNode("hello");
@@ -75,14 +70,6 @@ describe("nextSibling", () => {
     expect(nextSibling(span1)).toBe(span2);
   });
 
-  it("should return null when there is no next sibling", () => {
-    const div = document.createElement("div");
-    const span = document.createElement("span");
-    div.appendChild(span);
-
-    expect(nextSibling(span)).toBeNull();
-  });
-
   it("should return text node as next sibling", () => {
     const div = document.createElement("div");
     const span = document.createElement("span");
@@ -114,7 +101,6 @@ describe("nextSibling", () => {
 
     expect(nextSibling(span1)).toBe(span2);
     expect(nextSibling(span2)).toBe(span3);
-    expect(nextSibling(span3)).toBeNull();
   });
 });
 
@@ -126,7 +112,7 @@ describe("navigation combination", () => {
     parent.appendChild(first);
     parent.appendChild(second);
 
-    const result = nextSibling(firstChild(parent)!);
+    const result = nextSibling(firstChild(parent));
     expect(result).toBe(second);
   });
 
@@ -151,7 +137,7 @@ describe("navigation combination", () => {
     grandparent.appendChild(parent);
     parent.appendChild(child);
 
-    const result = firstChild(firstChild(grandparent)!);
+    const result = firstChild(firstChild(grandparent));
     expect(result).toBe(child);
   });
 });

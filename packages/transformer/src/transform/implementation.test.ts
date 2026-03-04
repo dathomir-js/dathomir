@@ -162,6 +162,88 @@ describe("transform", () => {
     expect(result.code).toContain("return count + 1");
   });
 
+  it("should transform spread attributes on HTML element using spread() and templateEffect", () => {
+    const code = `
+      const props = { class: "foo" };
+      const element = <div {...props}>Content</div>;
+    `;
+
+    const result = transform(code);
+
+    // Spread on HTML element should use spread() + templateEffect for reactivity
+    expect(result.code).toContain("spread");
+    expect(result.code).toContain("templateEffect");
+    expect(result.code).toContain("props");
+  });
+
+  it("should transform conditional rendering (ternary) using insert() and templateEffect", () => {
+    const code = `
+      const show = signal(true);
+      const element = <div>{show.value ? <span>Yes</span> : <span>No</span>}</div>;
+    `;
+
+    const result = transform(code);
+
+    // Conditional expression should use insert() wrapped in templateEffect
+    expect(result.code).toContain("insert");
+    expect(result.code).toContain("templateEffect");
+    expect(result.code).toContain("show.value");
+  });
+
+  it("should transform list rendering (.map()) using insert() and templateEffect", () => {
+    const code = `
+      const items = ["a", "b", "c"];
+      const element = <ul>{items.map(item => <li>{item}</li>)}</ul>;
+    `;
+
+    const result = transform(code);
+
+    // .map() expression should use insert() wrapped in templateEffect
+    expect(result.code).toContain("insert");
+    expect(result.code).toContain("templateEffect");
+    expect(result.code).toContain("items");
+    expect(result.code).toContain("map");
+  });
+
+  it("should insert runtime imports after existing import declarations", () => {
+    const code = `
+      import { signal } from "@dathomir/reactivity";
+      const element = <div>Hello</div>;
+    `;
+
+    const result = transform(code);
+
+    // Runtime imports should appear after the existing import
+    const importIndex = result.code.indexOf("@dathomir/reactivity");
+    const runtimeIndex = result.code.indexOf("@dathomir/runtime");
+    expect(importIndex).toBeGreaterThanOrEqual(0);
+    expect(runtimeIndex).toBeGreaterThanOrEqual(0);
+    // Both imports should be present
+    expect(result.code).toContain("import");
+    expect(result.code).toContain("fromTree");
+  });
+
+  it("should transform nested Fragment in CSR mode", () => {
+    const code = `
+      const element = (
+        <>
+          <div>First</div>
+          <>
+            <span>Second</span>
+            <span>Third</span>
+          </>
+        </>
+      );
+    `;
+
+    const result = transform(code);
+
+    // Outer fragment should be transformed, inner Fragment is processed as part of tree
+    expect(result.code).toContain("fromTree");
+    expect(result.code).toContain("div");
+    expect(result.code).toContain("span");
+  });
+
   describe("Component elements", () => {
     it("should transform component element to function call in CSR mode", () => {
       const code = `

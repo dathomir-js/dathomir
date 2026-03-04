@@ -206,6 +206,33 @@ interface ComponentClass extends Function {
 - 古いブラウザ（IE、古い Safari）は非対応
 - `defineComponent` がフォールバック処理を実装（DSD 非対応時は手動で ShadowRoot 構築）
 
+=== ADR-006: SSR における属性→プロップ型変換（coerceForSSR）
+
+*決定:* SSR の `coerceForSSR` は CSR の `coerceValue` と同じ型変換ルールに従う。
+
+*ルール:*
+- `Boolean` 型: 属性が存在する（`!== null`）→ `true`、存在しない（`null`）→ `false`
+- `Number` 型: `null` → `getDefaultValue(def)`（CSR と同様）。`Number(null) = 0` を返さない
+- `String` 型: `null` → `getDefaultValue(def)`（CSR と同様）。`null` のまま返さない
+- カスタム関数: `null` を含む任意の値をそのまま渡す（CSR と同様）
+
+*理由:*
+1. CSR と SSR でプロップの初期値が一致しないと Hydration Mismatch が発生する
+2. `Number(null) = 0` は `default: 5` のような設定を無視するバグになる
+3. `String` で `null` を返すと型安全性が破れる
+
+=== ADR-007: createComponentRenderer と _resetRendererState
+
+*決定:* `createComponentRenderer` と `_resetRendererState` をエクスポートする。
+
+*振る舞い:*
+- `createComponentRenderer()`: `renderComponentContent` を返すファクトリ関数（`@internal`）
+- `_resetRendererState()`: テスト用に `_rendererInitialized` フラグをリセットする（`@internal`）
+
+*理由:*
+1. `createComponentRenderer` は将来的にカスタムレンダラーを注入するフックポイントとして機能する
+2. `_resetRendererState` はテスト間の状態分離に必要
+
 == テストケース
 
 1. `renderDSD()` が完全な要素 HTML を生成する
@@ -215,11 +242,13 @@ interface ComponentClass extends Function {
 5. `renderDSDContent()` が DSD template のみ生成する
 6. `renderDSDContent()` に Component Class を渡せる
 7. `renderDSDContent()` が未登録コンポーネントで例外を投げる
-8. 属性値が正しく HTML エスケープされる（`"`, `<`, `>`, `&`）
+8. 属性値が正しく HTML エスケープされる（`"`, `<`, `>`, `&` 単体も含む）
 9. CSS が `<style>` タグとして DSD に含まれる
 10. 複数の `<style>` タグ（複数の cssTexts）が正しく出力される
 11. `ensureComponentRenderer()` が複数回呼ばれても安全（冪等性）
 12. `renderComponentContent()` が未登録コンポーネントで `null` を返す
+13. `Number` 型プロップ: `null` 属性はデフォルト値を使用する（`Number(null) = 0` にならない）
+14. `String` 型プロップ: `null` 属性はデフォルト値を使用する（`null` のまま返らない）
 
 == 使用例
 

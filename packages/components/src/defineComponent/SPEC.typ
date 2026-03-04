@@ -35,9 +35,12 @@ function defineComponent<const S extends PropsSchema = {}>(
 2. コンストラクタで Shadow DOM を生成（DSD フォールバック対応）
 3. `adoptedStyleSheets` にスタイルを適用
 4. props 定義に基づいてリアクティブシグナルを作成（型変換付き）
+   - `attribute: false` の prop はゲッター/セッターのみ定義し、属性監視はしない（シグナルはデフォルト値で初期化）
 5. 各 prop に対して JS property のゲッター/セッターを定義
 6. `connectedCallback` で `createRoot` スコープ内から関数コンポーネントを呼び出す（props をシグナルとして渡す）
-7. DSD が存在する場合は `hydrate` 関数を優先使用
+7. DSD が存在する場合の動作:
+   - `hydrate` オプションがある場合: `<style>` タグを削除（`sheets` がある場合のみ）し、`hydrate` 関数を呼び出す
+   - `hydrate` オプションがない場合: `shadowRoot.innerHTML = ""` でDSDコンテンツをクリアし、`setup` 関数を再実行する
 8. `disconnectedCallback` で `dispose` を呼び出し、cleanup を実行
 9. `attributeChangedCallback` で型変換後にシグナルを更新（関数コンポーネント内の effect が自動追跡）
 
@@ -353,6 +356,33 @@ defineComponent("my-counter", Counter, {
 *振る舞い:*
 - `connectedCallback` 内で `createRoot` がエラーを投げた場合、エラーをコンソールに出力し、`#dispose` は `undefined` のまま（以降の `disconnectedCallback` は安全に動作）
 - `attributeChangedCallback` 内でシグナル更新がエラーを投げた場合、エラーをコンソールに出力して無視する
+
+=== ADR-011: attribute: false による属性非監視プロパティ
+
+*決定:* `PropDefinition.attribute: false` を指定した prop は `observedAttributes` に含めず、シグナルを `getDefaultValue(def)` で初期化する（`getAttribute()` を呼ばない）。
+
+*理由:*
+1. JS property としてのみ値をセットしたい場合（SSR から属性として渡せないケースなど）に対応
+2. 属性として反映させない prop は `attributeChangedCallback` でも更新されない（監視対象外）
+3. ユーザーは `el.propName = value` でシグナルを直接更新する
+
+*影響:*
+- `attribute: false` の prop は `attrToProp` マップに登録されない
+- `observedAttrNames` に追加されない
+- コンストラクタでは `rawAttr = null` として扱い、`getDefaultValue(def)` でシグナルを初期化する
+
+=== ADR-012: DSD 存在時に hydrate なしの場合の再レンダリング
+
+*決定:* DSD（`shadowRoot.childNodes.length > 0`）が存在し、かつ `hydrate` オプションが未指定の場合、`shadowRoot.innerHTML = ""` でDSDコンテンツをクリアした後、`resolvedSetup` を再実行する。
+
+*理由:*
+1. SSR で生成した DSD を CSR で単純に再利用できない場合（フレームワーク側で `hydrate` を提供しない場合）
+2. `hydrate` を指定しないコンポーネントは毎回クリーンなセットアップを期待する
+3. DSD の `<style>` タグを `adoptedStyleSheets` に置き換える処理は `sheets` がある場合のみ実行（styles オプション未指定なら DSD の `<style>` はそのまま残してからクリア）
+
+*影響:*
+- `hydrate` なしで DSD がある場合、`shadowRoot.innerHTML = ""` → `setup` 実行の順番になる
+- SSR で描画された DSD コンテンツは CSR 初期化時に破棄される（意図的）
 
 == テストケース
 

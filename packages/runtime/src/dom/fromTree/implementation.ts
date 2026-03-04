@@ -5,8 +5,14 @@ const MATHML_NS = "http://www.w3.org/1998/Math/MathML";
 
 /**
  * Cache for template factories to enable DOM cloning optimization.
+ * Two-level cache: structure array → flags → factory.
+ * This ensures different namespace flags for the same structure
+ * produce independent templates.
  */
-const templateCache = new WeakMap<readonly Tree[], () => DocumentFragment>();
+const templateCache = new WeakMap<
+  readonly Tree[],
+  Map<Namespace, () => DocumentFragment>
+>();
 
 /**
  * Check if a tree node is a placeholder.
@@ -178,18 +184,24 @@ function fromTree(
   structure: readonly Tree[],
   flags: Namespace = Namespace.HTML,
 ): () => DocumentFragment {
-  // Check cache first
-  let factory = templateCache.get(structure);
-  if (factory !== undefined) {
-    return factory;
+  // Check cache first (two-level: structure → flags)
+  let byFlags = templateCache.get(structure);
+  if (byFlags !== undefined) {
+    const cached = byFlags.get(flags);
+    if (cached !== undefined) {
+      return cached;
+    }
+  } else {
+    byFlags = new Map();
+    templateCache.set(structure, byFlags);
   }
 
-  // Build template once
+  // Build template once for this structure + flags combination
   const template = buildFragment(structure, flags);
 
   // Create and cache factory
-  factory = () => template.cloneNode(true) as DocumentFragment;
-  templateCache.set(structure, factory);
+  const factory = () => template.cloneNode(true) as DocumentFragment;
+  byFlags.set(flags, factory);
 
   return factory;
 }

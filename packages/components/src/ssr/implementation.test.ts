@@ -72,6 +72,16 @@ describe("ssr", () => {
       expect(html).toContain("quote=\"test&quot;value&quot;here\"");
     });
 
+    // Test case #8 (補完): & alone is also escaped
+    it("should escape & alone in attribute values", () => {
+      const setup = () => "<div>Ampersand Test</div>";
+      registerComponent("amp-test", setup, []);
+
+      const html = renderDSD("amp-test", { value: "a&b" });
+
+      expect(html).toContain('value="a&amp;b"');
+    });
+
     it("should include CSS as <style> tags", () => {
       const setup = () => "<div>Styled</div>";
       const cssTexts = [
@@ -225,6 +235,42 @@ describe("ssr", () => {
       ];
       expect(ctx.props.name.value).toBe("test");
       expect(ctx.props.count.value).toBe(0);
+    });
+
+    // Test case #13: Number type prop with null attr uses default value (not Number(null) = 0)
+    it("should use default value for Number prop when attribute is absent", () => {
+      const setupSpy = vi.fn(() => "<div>Number Default Test</div>");
+      registerComponent("number-default-test", setupSpy, [], {
+        count: { type: Number, default: 42 },
+      });
+
+      // Do not pass 'count' attribute
+      renderDSD("number-default-test", {});
+
+      const [, ctx] = setupSpy.mock.calls[0] as unknown as [
+        HTMLElement,
+        ComponentContext,
+      ];
+      // Should use default value 42, not Number(null) = 0
+      expect(ctx.props.count.value).toBe(42);
+    });
+
+    // Test case #14: String type prop with null attr uses default value (not null)
+    it("should use default value for String prop when attribute is absent", () => {
+      const setupSpy = vi.fn(() => "<div>String Default Test</div>");
+      registerComponent("string-default-test", setupSpy, [], {
+        name: { type: String, default: "hello" },
+      });
+
+      // Do not pass 'name' attribute
+      renderDSD("string-default-test", {});
+
+      const [, ctx] = setupSpy.mock.calls[0] as unknown as [
+        HTMLElement,
+        ComponentContext,
+      ];
+      // Should use default value "hello", not null
+      expect(ctx.props.name.value).toBe("hello");
     });
 
     it("should handle boolean type coercion", () => {

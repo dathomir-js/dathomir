@@ -42,8 +42,6 @@ interface HydrationContext {
   markers: MarkerInfo[];
   /** Current marker index */
   markerIndex: number;
-  /** Text effect handlers: marker id -> update function */
-  textHandlers: Map<number, (value: unknown) => void>;
   /** Event handlers to connect */
   eventHandlers: Map<Element, Map<string, EventListener>>;
 }
@@ -151,7 +149,6 @@ function createHydrationContext(root: ShadowRoot): HydrationContext {
     walker,
     markers,
     markerIndex: 0,
-    textHandlers: new Map(),
     eventHandlers: new Map(),
   };
 }
@@ -282,6 +279,5 @@ export {
   HydrationMismatchError,
   isHydrated,
   markHydrated,
-  nextMarker,
 };
 export type { HydrationContext };

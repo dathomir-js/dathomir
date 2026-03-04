@@ -23,6 +23,7 @@ function fromTree(
 - `WeakMap` によるテンプレートキャッシュで、2回目以降は `cloneNode(true)` による高速クローン
 - プレースホルダー（`{text}`、`{insert}`、`{each}` 等）はスキップし、静的部分のみ生成
 - `flags` で名前空間を指定（HTML=0、SVG=1、MathML=2）
+- キャッシュキーは `structure` 配列参照と `flags` の組み合わせ（異なる `flags` は独立したキャッシュエントリ）
 
 == 型定義
 

@@ -17,39 +17,7 @@ import {
   serializeState,
   type StateObject,
 } from "@/ssr/serialize/implementation";
-import { Namespace, type Tree, type TreeNode } from "@/types/tree";
-
-const SVG_NS_ELEMENTS = new Set([
-  "svg",
-  "path",
-  "circle",
-  "rect",
-  "line",
-  "polyline",
-  "polygon",
-  "ellipse",
-  "g",
-  "defs",
-  "use",
-  "symbol",
-  "clipPath",
-  "mask",
-  "pattern",
-  "filter",
-  "linearGradient",
-  "radialGradient",
-  "stop",
-  "text",
-  "tspan",
-  "textPath",
-  "image",
-  "foreignObject",
-  "marker",
-  "animate",
-  "animateMotion",
-  "animateTransform",
-  "set",
-]);
+import { type Tree, type TreeNode } from "@/types/tree";
 
 const VOID_ELEMENTS = new Set([
   "area",
@@ -109,8 +77,6 @@ interface RenderContext {
   state: StateObject;
   /** Dynamic values to render */
   dynamicValues: Map<number, unknown>;
-  /** Current namespace (HTML/SVG/MathML) */
-  namespace: Namespace;
   /** Component renderer for Declarative Shadow DOM */
   componentRenderer?: ComponentRenderer;
 }
@@ -152,7 +118,6 @@ function createContext(options: RenderOptions = {}): RenderContext {
     markerId: 0,
     state: options.state ?? {},
     dynamicValues: options.dynamicValues ?? new Map(),
-    namespace: Namespace.HTML,
     componentRenderer: options.componentRenderer ?? globalComponentRenderer,
   };
 }
@@ -306,19 +271,12 @@ function renderNode(node: Tree, ctx: RenderContext): string {
       }
     }
 
-    // Track namespace changes
-    const prevNamespace = ctx.namespace;
-    if (SVG_NS_ELEMENTS.has(tag)) {
-      ctx.namespace = Namespace.SVG;
-    }
-
     // Build opening tag
     const attrStr = attrs ? renderAttrs(attrs) : "";
     let html = `<${tag}${attrStr}`;
 
     // Void elements
     if (VOID_ELEMENTS.has(tag.toLowerCase())) {
-      ctx.namespace = prevNamespace;
       return html + " />";
     }
 
@@ -331,9 +289,6 @@ function renderNode(node: Tree, ctx: RenderContext): string {
 
     // Closing tag
     html += `</${tag}>`;
-
-    // Restore namespace
-    ctx.namespace = prevNamespace;
 
     return html;
   }

@@ -138,3 +138,8 @@ return Counter({ initialCount: 5 })
 - *コンポーネント要素を関数呼び出しに変換する（CSR）*
 - *コンポーネント要素を関数呼び出しに変換する（SSR）*
 - *ネストされたコンポーネント要素を insert として扱う*
+- スプレッド属性（HTML 要素）を `spread()` + `templateEffect` に変換する
+- 条件付きレンダリング（ternary 式）を `insert()` + `templateEffect` に変換する
+- リストレンダリング（`.map()` 式）を `insert()` + `templateEffect` に変換する
+- 既存 import 文がある場合、ランタイムインポートをその直後に挿入する
+- ネストされた Fragment（CSR）を処理する（親 Fragment 内の子は個別に処理しない）

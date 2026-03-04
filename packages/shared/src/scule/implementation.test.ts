@@ -25,8 +25,13 @@ describe("isUppercase", () => {
     expect(isUppercase("z")).toBe(false);
   });
 
-  it("should return undefined for empty string", () => {
+  it("should return false for empty string (default arg)", () => {
     expect(isUppercase("")).toBe(false);
+  });
+
+  it("should return undefined for numeric characters", () => {
+    expect(isUppercase("1")).toBe(undefined);
+    expect(isUppercase("9")).toBe(undefined);
   });
 });
 
@@ -199,5 +204,11 @@ describe("titleCase", () => {
 
   it("should handle empty call", () => {
     expect(titleCase()).toBe("");
+  });
+
+  it("should keep exception words lowercase when using separators", () => {
+    expect(titleCase("beauty-and-the-beast")).toBe("Beauty and the Beast");
+    expect(titleCase("lord-of-the-rings")).toBe("Lord of the Rings");
+    expect(titleCase("war_and_peace")).toBe("War and Peace");
   });
 });

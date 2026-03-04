@@ -223,6 +223,23 @@ describe("createRoot - edge cases", () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
   });
+
+  it("continues other cleanups when one cleanup throws during dispose", () => {
+    const log: string[] = [];
+
+    const dispose = createRoot(() => {
+      onCleanup(() => log.push("first"));
+      onCleanup(() => {
+        throw new Error("cleanup error");
+      });
+      onCleanup(() => log.push("third"));
+    });
+
+    // dispose() must not propagate the error and must run all cleanups
+    expect(() => dispose()).not.toThrow();
+    expect(log).toContain("first");
+    expect(log).toContain("third");
+  });
 });
 
 describe("createRoot - owner context restoration", () => {

@@ -88,8 +88,8 @@ async function createServer() {
     }
   });
 
-  server.listen(port, () => {
-    console.log(`\n  🚀 SSR Server running at http://localhost:${port}\n`);
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`\n  SSR Server running at http://localhost:${port}\n`);
   });
 }
 

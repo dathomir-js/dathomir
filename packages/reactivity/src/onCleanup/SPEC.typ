@@ -40,5 +40,5 @@ function onCleanup(fn: () => void): void
 - createRoot 外でクリーンアップを登録しない
 - カスタムクリーンアップの前に effect をクリーンアップする
 - dispose でのすべてのクリーンアップを実行する
-- あるクリーンアップが throw しても他のクリーンアップを継続実行する
+- あるクリーンアップが throw しても他のクリーンアップを継続実行する（first と third が両方実行される）
 - createRoot 外で呼び出されたときは何もしない

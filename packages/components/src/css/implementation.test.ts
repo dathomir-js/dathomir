@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { css } from "./implementation";
+import { css, getCssText } from "./implementation";
 
 describe("css", () => {
   it("should return a CSSStyleSheet instance", () => {
@@ -41,5 +41,18 @@ describe("css", () => {
       }
     `;
     expect(sheet).toBeInstanceOf(CSSStyleSheet);
+  });
+
+  // Test case #5: getCssText() returns __cssText from a CSSStyleSheet
+  it("getCssText() should return __cssText from a css sheet", () => {
+    const sheet = css`:host { color: blue; }`;
+    const text = getCssText(sheet);
+    expect(text).toBe(":host { color: blue; }");
+  });
+
+  // Test case #6: getCssText() returns string argument as-is
+  it("getCssText() should return a plain string as-is", () => {
+    const rawCss = ":host { display: block; }";
+    expect(getCssText(rawCss)).toBe(rawCss);
   });
 });

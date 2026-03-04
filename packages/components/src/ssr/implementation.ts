@@ -17,23 +17,40 @@ import { signal } from "@dathomir/reactivity";
 import { setComponentRenderer } from "@dathomir/runtime/ssr";
 
 /**
+ * Get the default value for a PropDefinition (mirrors CSR getDefaultValue).
+ * @internal
+ */
+function getDefaultValue(def: PropDefinition): unknown {
+  if (def.default !== undefined) return def.default;
+  if (def.type === String) return "";
+  if (def.type === Number) return 0;
+  if (def.type === Boolean) return false;
+  return undefined;
+}
+
+/**
  * Coerce an attribute value for SSR context (mirrors CSR coercion logic).
  * @internal
  */
 function coerceForSSR(def: PropDefinition, attrValue: string | null): unknown {
   if (def.type === Boolean) return attrValue !== null;
-  if (def.type === Number) return Number(attrValue);
-  if (def.type === String) return attrValue;
+  if (def.type === Number) {
+    // Per SPEC ADR-006: null → default value (Number(null) = 0 would hide the real default)
+    if (attrValue === null) return getDefaultValue(def);
+    return Number(attrValue);
+  }
+  if (def.type === String) {
+    // Per SPEC ADR-006: null → default value
+    if (attrValue === null) return getDefaultValue(def);
+    return attrValue;
+  }
   // Custom coercion function - pass null through as per SPEC
   if (typeof def.type === "function") {
     return def.type(attrValue);
   }
   // Fallback for null with no custom function
   if (attrValue === null) {
-    if (def.default !== undefined) return def.default;
-    if (def.type === String) return "";
-    if (def.type === Number) return 0;
-    return undefined;
+    return getDefaultValue(def);
   }
   return attrValue;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { computed, createRoot, effect, onCleanup, signal } from "../index";
+import { batch, computed, createRoot, effect, onCleanup, signal } from "../index";
 
 describe("effect", () => {
   it("reacts to changes and cleanup stops re-execution", () => {
@@ -51,6 +51,27 @@ describe("effect", () => {
     count.set(2);
 
     expect(observed).toEqual([0, 2, 4]);
+  });
+
+  it("groups multiple signal updates into a single notification when batched", () => {
+    const a = signal(0);
+    const b = signal(0);
+    const spy = vi.fn();
+
+    effect(() => {
+      spy(a.value + b.value);
+    });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    batch(() => {
+      a.set(1);
+      b.set(2);
+    });
+
+    // Both updates must produce exactly one re-execution
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenLastCalledWith(3);
   });
 });
 

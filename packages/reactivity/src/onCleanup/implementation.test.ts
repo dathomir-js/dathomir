@@ -67,7 +67,6 @@ describe("onCleanup", () => {
 
   it("continues executing other cleanups when one throws", () => {
     const cleanups: string[] = [];
-    const errors: Error[] = [];
 
     const dispose = createRoot(() => {
       onCleanup(() => cleanups.push("first"));
@@ -77,13 +76,11 @@ describe("onCleanup", () => {
       onCleanup(() => cleanups.push("third"));
     });
 
-    try {
-      dispose();
-    } catch (e) {
-      errors.push(e as Error);
-    }
+    dispose();
 
+    // All non-throwing cleanups must have run despite the error in the middle
     expect(cleanups).toContain("first");
+    expect(cleanups).toContain("third");
   });
 
   it("does nothing when called outside createRoot", () => {

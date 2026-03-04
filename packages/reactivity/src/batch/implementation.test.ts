@@ -56,4 +56,37 @@ describe("batch", () => {
 
     expect(spy).toHaveBeenCalledTimes(2);
   });
+
+  it("nested batch extends outer batch - flush only at outermost end", () => {
+    const count = signal(0);
+    const spy = vi.fn();
+
+    effect(() => {
+      spy(count.value);
+    });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    batch(() => {
+      count.set(1);
+      batch(() => {
+        count.set(2);
+        // At this point, the inner batch ends but the outer batch is still active,
+        // so no flush should occur yet.
+        expect(spy).toHaveBeenCalledTimes(1);
+      });
+      // Still inside outer batch, no flush yet
+      expect(spy).toHaveBeenCalledTimes(1);
+      count.set(3);
+    });
+
+    // Flush happens only at the outermost batch boundary
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenLastCalledWith(3);
+  });
+
+  it("returns callback result", () => {
+    const result = batch(() => 42);
+    expect(result).toBe(42);
+  });
 });

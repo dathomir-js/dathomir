@@ -269,4 +269,197 @@ describe("defineComponent", () => {
     const Comp = defineComponent(tag, () => document.createTextNode("test"));
     expect(typeof Comp).toBe("function");
   });
+
+  // Test case #5: observedAttributes is auto-generated from props schema
+  it("should generate observedAttributes from props schema", () => {
+    const tag = uniqueTag();
+    const Comp = defineComponent(
+      tag,
+      () => document.createTextNode("test"),
+      { props: { count: { type: Number }, label: { type: String }, active: { type: Boolean } } },
+    ) as any;
+    const observed = Comp.observedAttributes as string[];
+    expect(observed).toContain("count");
+    expect(observed).toContain("label");
+    expect(observed).toContain("active");
+  });
+
+  // Test case #6: props signals are initialized with correct type conversion
+  it("should initialize Number and Boolean prop signals with type coercion", async () => {
+    const tag = uniqueTag();
+    let capturedProps: any;
+
+    defineComponent(
+      tag,
+      (props) => {
+        capturedProps = props;
+        return document.createTextNode("test");
+      },
+      { props: { count: { type: Number }, active: { type: Boolean } } },
+    );
+
+    const el = document.createElement(tag);
+    el.setAttribute("count", "42");
+    el.setAttribute("active", "");
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(capturedProps.count.value).toBe(42);
+    expect(capturedProps.active.value).toBe(true);
+
+    el.remove();
+  });
+
+  // Test case #8: JS property setter sets value directly on signal
+  it("should allow setting prop value via JS property setter", async () => {
+    const tag = uniqueTag();
+    let capturedProps: any;
+
+    defineComponent(
+      tag,
+      (props) => {
+        capturedProps = props;
+        return document.createTextNode("test");
+      },
+      { props: { count: { type: Number } } },
+    );
+
+    const el = document.createElement(tag) as any;
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    el.count = 99;
+    expect(capturedProps.count.value).toBe(99);
+    expect(el.count).toBe(99);
+
+    el.remove();
+  });
+
+  // Test case #9: Boolean prop: attribute presence = true, absence = false
+  it("should coerce Boolean prop from attribute presence/absence", async () => {
+    const tag = uniqueTag();
+    let capturedProps: any;
+
+    defineComponent(
+      tag,
+      (props) => {
+        capturedProps = props;
+        return document.createTextNode("test");
+      },
+      { props: { disabled: { type: Boolean } } },
+    );
+
+    // Without attribute
+    const el = document.createElement(tag);
+    document.body.appendChild(el);
+    await waitForMicrotask();
+    expect(capturedProps.disabled.value).toBe(false);
+    el.remove();
+
+    // With attribute
+    const el2 = document.createElement(tag);
+    el2.setAttribute("disabled", "");
+    document.body.appendChild(el2);
+    await waitForMicrotask();
+    expect(capturedProps.disabled.value).toBe(true);
+    el2.remove();
+  });
+
+  // Test case #10: default value is applied when attribute is absent
+  it("should apply default value when attribute is absent", async () => {
+    const tag = uniqueTag();
+    let capturedProps: any;
+
+    defineComponent(
+      tag,
+      (props) => {
+        capturedProps = props;
+        return document.createTextNode("test");
+      },
+      {
+        props: {
+          count: { type: Number, default: 5 },
+          label: { type: String, default: "hello" },
+        },
+      },
+    );
+
+    const el = document.createElement(tag);
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(capturedProps.count.value).toBe(5);
+    expect(capturedProps.label.value).toBe("hello");
+
+    el.remove();
+  });
+
+  // Test case #15: __tagName__ and __propsSchema__ are attached to the returned class
+  it("should attach __tagName__ and __propsSchema__ to the returned class", () => {
+    const tag = uniqueTag();
+    const schema = { count: { type: Number } } as const;
+    const Comp = defineComponent(tag, () => document.createTextNode("test"), {
+      props: schema,
+    }) as any;
+
+    expect(Comp.__tagName__).toBe(tag);
+    expect(Comp.__propsSchema__).toBe(schema);
+  });
+
+  // Test case #18: Number prop: null attribute uses default value (not Number(null) = 0)
+  it("should use default value for Number prop when attribute is absent, not Number(null)", async () => {
+    const tag = uniqueTag();
+    let capturedProps: any;
+
+    defineComponent(
+      tag,
+      (props) => {
+        capturedProps = props;
+        return document.createTextNode("test");
+      },
+      { props: { count: { type: Number, default: 42 } } },
+    );
+
+    const el = document.createElement(tag);
+    // Do not set 'count' attribute
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    // Should be 42 (default), not 0 (Number(null))
+    expect(capturedProps.count.value).toBe(42);
+
+    el.remove();
+  });
+
+  // Test case #19: setup throwing an error leaves #dispose undefined; reconnect is safe
+  it("should handle setup error gracefully so reconnect still works", async () => {
+    const tag = uniqueTag();
+    let shouldThrow = true;
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    defineComponent(tag, () => {
+      if (shouldThrow) throw new Error("setup error");
+      return document.createTextNode("recovered");
+    });
+
+    const el = document.createElement(tag);
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    // Error should be logged
+    expect(consoleError).toHaveBeenCalled();
+
+    // disconnectedCallback with undefined #dispose should not throw
+    expect(() => el.remove()).not.toThrow();
+    await waitForMicrotask();
+
+    // Reconnect after fixing the error should work
+    shouldThrow = false;
+    document.body.appendChild(el);
+    await waitForMicrotask();
+    expect(el.shadowRoot!.textContent).toBe("recovered");
+
+    el.remove();
+    consoleError.mockRestore();
+  });
 });

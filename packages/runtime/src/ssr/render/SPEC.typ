@@ -53,21 +53,8 @@ interface RenderContext {
   markerId: number;
   state: StateObject;
   dynamicValues: Map<number, unknown>;
-  namespace: Namespace;
   componentRenderer?: ComponentRenderer;
 }
-
-interface RenderOptions {
-  state?: StateObject;
-  dynamicValues?: Map<number, unknown>;
-  includeState?: boolean;
-  componentRenderer?: ComponentRenderer;
-}
-
-type ComponentRenderer = (
-  tagName: string,
-  attrs: Record<string, unknown>
-) => string | null;
 ```
 
 `ComponentRenderer` は Web Components の Declarative Shadow DOM (DSD) 内容を生成する関数。
@@ -84,7 +71,6 @@ type ComponentRenderer = (
 - `renderAttrs`: 属性のレンダリング（boolean 属性、style オブジェクト対応）
 - Void 要素（`<br>`、`<img>` 等）の閉じタグ省略
 - Boolean 属性（`disabled`, `checked` 等）の判定
-- SVG/MathML 名前空間の自動切り替え
 - Declarative Shadow DOM の生成（カスタム要素向け）
 
 == 設計判断

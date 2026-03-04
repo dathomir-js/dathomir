@@ -112,6 +112,14 @@ interface PluginOptions {
 === エラーハンドリング
 
 - transform 失敗時にファイル名を含むエラーメッセージをスローする
+- 非 Error オブジェクトがスローされた場合はそのまま再スローする
+- transformer がソースマップを返さない場合は `map` を `undefined` にする
+
+=== unplugin ファクトリ（非 Vite バンドラー向け）
+
+- `transformInclude` で対象ファイルを正しくフィルタリングする
+- unplugin の `transform` フックが変換を正しく実行する
+- unplugin の `transform` フックが edge/ssr 環境名から SSR モードを検出する
 
 === エクスポート
 

@@ -46,15 +46,14 @@
     "@babel/types": "^7.28.4",
     "@dathomir/config": "workspace:*",
     "@takuma-ru/rlse": "catalog:",
-    "@types/babel__generator": "^7.27.0",
     "@types/babel__traverse": "^7.28.0",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@babel/generator": "^7.28.3",
     "@babel/parser": "^7.28.4",
-    "@babel/traverse": "^7.28.4"
+    "@babel/traverse": "^7.28.4",
+    "esrap": "^2.2.3"
   }
 }

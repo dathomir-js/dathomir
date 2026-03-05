@@ -384,4 +384,71 @@ describe("transform", () => {
       expect(result.code).toContain("...");
     });
   });
+
+  describe("Fragment dynamic content", () => {
+    it("should generate templateEffect and setText for dynamic text inside Fragment", () => {
+      const code = `
+        const count = signal(0);
+        const element = (
+          <>
+            <span>{count.value}</span>
+          </>
+        );
+      `;
+
+      const result = transform(code);
+
+      // Fragment with dynamic text must produce templateEffect + setText
+      expect(result.code).toContain("templateEffect");
+      expect(result.code).toContain("setText");
+      expect(result.code).toContain("count.value");
+    });
+
+    it("should generate insert for component inside Fragment", () => {
+      const code = `
+        const element = (
+          <>
+            <Counter initialCount={5} />
+          </>
+        );
+      `;
+
+      const result = transform(code);
+
+      // Fragment with component child must produce insert
+      expect(result.code).toContain("insert");
+      expect(result.code).toContain("Counter");
+      expect(result.code).toContain("initialCount");
+    });
+  });
+
+  describe("Attribute name edge cases", () => {
+    it("should use string literal key for hyphenated attribute names", () => {
+      const code = `
+        const element = <div data-foo="bar" aria-label="test">Content</div>;
+      `;
+
+      const result = transform(code);
+
+      // Hyphenated attribute names must be quoted in the output object
+      expect(result.code).toContain('"data-foo"');
+      expect(result.code).toContain('"aria-label"');
+      expect(result.code).toContain("bar");
+      expect(result.code).toContain("test");
+    });
+
+    it("should not wrap static expression attribute (no reactive access) in templateEffect", () => {
+      const code = `
+        function getClass() { return "foo"; }
+        const element = <div class={getClass()}>Content</div>;
+      `;
+
+      const result = transform(code);
+
+      // Non-reactive expression attribute should NOT produce templateEffect+setAttr
+      expect(result.code).not.toContain("templateEffect");
+      expect(result.code).not.toContain("setAttr");
+      expect(result.code).toContain("getClass");
+    });
+  });
 });

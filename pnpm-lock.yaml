@@ -273,15 +273,15 @@ importers:
 
   packages/transformer:
     dependencies:
-      '@babel/generator':
-        specifier: ^7.28.3
-        version: 7.28.3
       '@babel/parser':
         specifier: ^7.28.4
         version: 7.28.4
       '@babel/traverse':
         specifier: ^7.28.4
         version: 7.28.4
+      esrap:
+        specifier: ^2.2.3
+        version: 2.2.3
     devDependencies:
       '@babel/types':
         specifier: ^7.28.4
@@ -292,9 +292,6 @@ importers:
       '@takuma-ru/rlse':
         specifier: 'catalog:'
         version: 0.0.1-beta.8
-      '@types/babel__generator':
-        specifier: ^7.27.0
-        version: 7.27.0
       '@types/babel__traverse':
         specifier: ^7.28.0
         version: 7.28.0
@@ -2306,9 +2303,6 @@ packages:
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
-  '@types/babel__generator@7.27.0':
-    resolution: {integrity: sha512-ufFd2Xi92OAVPYsy+P4n7/U7e68fex0+Ee8gSG9KX7eo084CWiQ4sdxktvdl0bOPupXtVJPY19zk6EwWqUQ8lg==}
-
   '@types/babel__traverse@7.28.0':
     resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
 
@@ -3284,6 +3278,9 @@ packages:
   esquery@1.6.0:
     resolution: {integrity: sha512-ca9pw9fomFcKPvFLXhBKUK90ZvGibiGOvRJNbjljY7s7uq/5YO4BOzcYtJqExdx99rF6aAcnRxHmcUHcz6sQsg==}
     engines: {node: '>=0.10'}
+
+  esrap@2.2.3:
+    resolution: {integrity: sha512-8fOS+GIGCQZl/ZIlhl59htOlms6U8NvX6ZYgYHpRU/b6tVSh3uHkOHZikl3D4cMbYM0JlpBe+p/BkZEi8J9XIQ==}
 
   esrecurse@4.3.0:
     resolution: {integrity: sha512-KmfKL3b6G+RXvP8N1vr3Tq1kL/oCFgn2NYXEtqP8/L3pKapUA4G8cFVaoF3SU323CD4XypR/ffioHmkti6/Tag==}
@@ -7486,10 +7483,6 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@types/babel__generator@7.27.0':
-    dependencies:
-      '@babel/types': 7.28.4
-
   '@types/babel__traverse@7.28.0':
     dependencies:
       '@babel/types': 7.28.4
@@ -8766,6 +8759,10 @@ snapshots:
   esquery@1.6.0:
     dependencies:
       estraverse: 5.3.0
+
+  esrap@2.2.3:
+    dependencies:
+      '@jridgewell/sourcemap-codec': 1.5.5
 
   esrecurse@4.3.0:
     dependencies:

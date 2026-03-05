@@ -1,7 +1,8 @@
-import generateDefault from "@babel/generator";
 import { parse, type ParserOptions } from "@babel/parser";
 import traverseDefault, { type NodePath } from "@babel/traverse";
 import * as t from "@babel/types";
+import { print } from "esrap";
+import ts from "esrap/languages/ts";
 import type { TransformOptions, TransformResult } from "../types";
 
 // Handle CJS/ESM interop
@@ -9,10 +10,6 @@ const traverse =
   typeof traverseDefault === "function"
     ? traverseDefault
     : (traverseDefault as any).default;
-const generate =
-  typeof generateDefault === "function"
-    ? generateDefault
-    : (generateDefault as any).default;
 
 /**
  * Runtime import identifiers (CSR).
@@ -109,6 +106,65 @@ function getEventType(key: string): string {
 }
 
 /**
+ * Check if a node is a string literal in either Babel or ESTree format.
+ * When @babel/parser runs with the `estree` plugin, string literals from the
+ * parsed source are represented as ESTree `Literal` nodes rather than Babel
+ * `StringLiteral` nodes. Babel builders (t.stringLiteral()) still produce
+ * Babel-format nodes. This helper handles both representations.
+ */
+function isStringLiteralNode(
+  node: unknown,
+): node is { type: string; value: string } {
+  if (!node || typeof node !== "object") return false;
+  const n = node as Record<string, unknown>;
+  return (
+    (n["type"] === "StringLiteral" ||
+      (n["type"] === "Literal" && typeof n["value"] === "string")) &&
+    typeof n["value"] === "string"
+  );
+}
+
+/**
+ * Convert a string literal node (Babel or ESTree) to a Babel StringLiteral.
+ * Required because t.objectProperty() validates that its value is a Babel
+ * Expression node. ESTree Literal nodes fail this validation.
+ */
+function toStringLiteral(
+  node: { value: string },
+): t.StringLiteral {
+  return t.stringLiteral(node.value);
+}
+
+/**
+ * Ensure an expression node is a valid Babel Expression.
+ *
+ * When the `estree` plugin is active, numeric and string literals inside JSX
+ * expression containers are parsed as ESTree `Literal` nodes. Babel's node
+ * builders reject these when used as values in `t.objectProperty()`.
+ * This function converts ESTree Literals to their Babel equivalents so that
+ * all downstream builder calls receive valid Babel nodes.
+ */
+function ensureBabelExpression(node: t.Expression): t.Expression {
+  const n = node as unknown as Record<string, unknown>;
+  if (n["type"] === "Literal") {
+    if (typeof n["value"] === "string") return t.stringLiteral(n["value"]);
+    if (typeof n["value"] === "number") return t.numericLiteral(n["value"]);
+    if (typeof n["value"] === "boolean") return t.booleanLiteral(n["value"]);
+    if (n["value"] === null) return t.nullLiteral();
+  }
+  return node;
+}
+
+/**
+ * Check if a string is a valid JavaScript identifier.
+ * Attribute names like "data-foo" or "aria-label" are not valid identifiers
+ * and must be quoted as string literal keys in object expressions.
+ */
+function isValidIdentifier(name: string): boolean {
+  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name);
+}
+
+/**
  * Check if a JSX element name represents a component (starts with uppercase).
  * Per JSX convention: uppercase = component, lowercase = HTML element.
  * JSXMemberExpression (e.g. Foo.Bar) is always a component.
@@ -171,11 +227,14 @@ function buildComponentCall(
 
     if (attr.value === null) {
       value = t.booleanLiteral(true);
-    } else if (t.isStringLiteral(attr.value)) {
-      value = attr.value;
+    } else if (isStringLiteralNode(attr.value)) {
+      // attr.value may be an ESTree Literal (from parsed source) or a Babel
+      // StringLiteral (from builders). Convert to Babel form so t.objectProperty
+      // validation passes.
+      value = toStringLiteral(attr.value as { value: string });
     } else if (t.isJSXExpressionContainer(attr.value)) {
       if (t.isJSXEmptyExpression(attr.value.expression)) continue;
-      value = attr.value.expression;
+      value = ensureBabelExpression(attr.value.expression);
     } else {
       continue;
     }
@@ -198,7 +257,7 @@ function buildComponentCall(
         childExprs.push(t.stringLiteral(child.value.trim()));
       } else if (t.isJSXExpressionContainer(child)) {
         if (!t.isJSXEmptyExpression(child.expression)) {
-          childExprs.push(child.expression);
+          childExprs.push(ensureBabelExpression(child.expression));
         }
       } else if (t.isJSXElement(child)) {
         if (isComponentTag(child.openingElement.name)) {
@@ -219,7 +278,7 @@ function buildComponentCall(
             if (text) childExprs.push(t.stringLiteral(text));
           } else if (t.isJSXExpressionContainer(fragChild)) {
             if (!t.isJSXEmptyExpression(fragChild.expression)) {
-              childExprs.push(fragChild.expression);
+              childExprs.push(ensureBabelExpression(fragChild.expression));
             }
           } else if (t.isJSXElement(fragChild)) {
             if (isComponentTag(fragChild.openingElement.name)) {
@@ -267,7 +326,10 @@ function jsxToTree(
     const children = processChildren(node.children, state, dynamicParts, []);
     return {
       tree: t.arrayExpression(children.map((c) => c.tree)),
-      dynamicParts: children.flatMap((c) => c.dynamicParts),
+      // dynamicParts is mutated in-place by processChildren (via push); return
+      // the local variable directly rather than children.flatMap(c => c.dynamicParts),
+      // which is always empty because processChildren pushes into the parameter.
+      dynamicParts,
     };
   }
 
@@ -393,20 +455,32 @@ function processAttributes(
     if (value === null) {
       // Boolean attribute: <button disabled />
       staticProps.push(
-        t.objectProperty(t.identifier(key), t.booleanLiteral(true)),
+        t.objectProperty(
+          isValidIdentifier(key) ? t.identifier(key) : t.stringLiteral(key),
+          t.booleanLiteral(true),
+        ),
       );
       continue;
     }
 
-    if (t.isStringLiteral(value)) {
-      // Static string attribute
-      staticProps.push(t.objectProperty(t.identifier(key), value));
+    if (isStringLiteralNode(value)) {
+      // Static string attribute. Convert to Babel StringLiteral so that
+      // t.objectProperty() validation passes (ESTree Literal nodes are not
+      // recognised as Babel Expression nodes by the validator).
+      staticProps.push(
+        t.objectProperty(
+          isValidIdentifier(key) ? t.identifier(key) : t.stringLiteral(key),
+          toStringLiteral(value as { value: string }),
+        ),
+      );
       continue;
     }
-
     if (t.isJSXExpressionContainer(value)) {
-      const expr = value.expression;
-      if (t.isJSXEmptyExpression(expr)) continue;
+      const rawExpr = value.expression;
+      if (t.isJSXEmptyExpression(rawExpr)) continue;
+      // Normalize ESTree Literal nodes (produced by the estree parser plugin)
+      // to Babel equivalents so all downstream builder calls are valid.
+      const expr = ensureBabelExpression(rawExpr);
 
       if (isEventHandlerKey(key)) {
         // Event handler
@@ -420,8 +494,13 @@ function processAttributes(
           key,
         });
       } else {
-        // Static expression attribute
-        staticProps.push(t.objectProperty(t.identifier(key), expr));
+        // Static expression attribute (no reactive .value access).
+        staticProps.push(
+          t.objectProperty(
+            isValidIdentifier(key) ? t.identifier(key) : t.stringLiteral(key),
+            expr,
+          ),
+        );
       }
     }
   }
@@ -508,8 +587,11 @@ function processChildren(
     }
 
     if (t.isJSXExpressionContainer(child)) {
-      const expr = child.expression;
-      if (t.isJSXEmptyExpression(expr)) continue;
+      const rawExpr = child.expression;
+      if (t.isJSXEmptyExpression(rawExpr)) continue;
+      // Normalize ESTree Literal nodes to Babel equivalents so all downstream
+      // builder calls (t.callExpression, t.objectProperty, etc.) are valid.
+      const expr = ensureBabelExpression(rawExpr);
 
       // Check if it's an array (map for lists)
       if (t.isCallExpression(expr) && t.isMemberExpression(expr.callee)) {
@@ -995,6 +1077,75 @@ function addRuntimeImports(
 }
 
 /**
+ * Normalize Babel-format AST nodes to ESTree format.
+ *
+ * Babel's node builders (t.stringLiteral(), t.objectProperty(), etc.) produce
+ * Babel-specific node types. After traversal and replacement, the AST is a mix
+ * of ESTree nodes (from parsing with the estree plugin) and Babel nodes (from
+ * builders). This function converts the Babel-specific types so esrap can
+ * generate code from the unified ESTree AST.
+ *
+ * Only 5 types require conversion; all others share identical names/shapes.
+ */
+function normalizeToESTree(node: unknown): unknown {
+  if (!node || typeof node !== "object") return node;
+
+  if (Array.isArray(node)) {
+    const arr = node as unknown[];
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = normalizeToESTree(arr[i]);
+    }
+    return arr;
+  }
+
+  const n = node as Record<string, unknown>;
+
+  switch (n["type"]) {
+    case "StringLiteral":
+      return {
+        type: "Literal",
+        value: n["value"],
+        raw: JSON.stringify(n["value"]),
+      };
+    case "NumericLiteral":
+      return {
+        type: "Literal",
+        value: n["value"],
+        raw: String(n["value"]),
+      };
+    case "BooleanLiteral":
+      return {
+        type: "Literal",
+        value: n["value"],
+        raw: String(n["value"]),
+      };
+    case "NullLiteral":
+      return { type: "Literal", value: null, raw: "null" };
+    case "ObjectProperty":
+      return {
+        type: "Property",
+        key: normalizeToESTree(n["key"]),
+        value: normalizeToESTree(n["value"]),
+        kind: "init",
+        computed: n["computed"],
+        method: false,
+        shorthand: n["shorthand"],
+      };
+  }
+
+  // Recursively normalize child nodes in-place.
+  for (const key of Object.keys(n)) {
+    const val = n[key];
+    if (Array.isArray(val)) {
+      n[key] = normalizeToESTree(val);
+    } else if (val && typeof val === "object" && (val as Record<string, unknown>)["type"]) {
+      n[key] = normalizeToESTree(val);
+    }
+  }
+  return n;
+}
+
+/**
  * Transform source code containing JSX.
  */
 function transform(
@@ -1010,7 +1161,7 @@ function transform(
 
   const parserOptions: ParserOptions = {
     sourceType: "module",
-    plugins: ["jsx", "typescript"],
+    plugins: ["jsx", "typescript", "estree"],
   };
 
   const ast = parse(code, parserOptions);
@@ -1108,15 +1259,22 @@ function transform(
   // Add runtime imports
   addRuntimeImports(ast.program, state.runtimeImports, runtimeModule);
 
-  // Generate output
-  const output = generate(ast, {
-    sourceMaps: sourceMap,
-    sourceFileName: filename,
-  });
+  // Normalize Babel-format nodes (created by t.xxx() builders) to ESTree format,
+  // so esrap can generate code from the transformed AST.
+  normalizeToESTree(ast.program as unknown);
+
+  // Generate output using esrap
+  const { code: outputCode, map: outputMap } = print(
+    ast.program as { type: string },
+    ts(),
+    sourceMap
+      ? { sourceMapSource: filename, sourceMapContent: code }
+      : undefined,
+  );
 
   return {
-    code: output.code,
-    map: sourceMap && output.map ? JSON.stringify(output.map) : undefined,
+    code: outputCode,
+    map: sourceMap && outputMap ? JSON.stringify(outputMap) : undefined,
   };
 }
 

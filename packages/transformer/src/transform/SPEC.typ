@@ -6,7 +6,8 @@
 == 目的
 
 JSX が変換された JavaScript コードを解析し、構造化配列方式（fromTree）への変換を行う。
-Babel の parser/traverse/generator を使用して AST を操作する。
+Babel の parser（estree プラグイン付き）と traverse を使用して AST を操作し、
+esrap でコードを生成する。ESTree 互換の AST を使用することで、将来的な oxc-parser への移行を容易にする。
 
 == シグネチャ
 
@@ -71,19 +72,46 @@ return Counter({ initialCount: 5 })
 
 === 変換の流れ
 
-1. Babel でソースコードをパースして AST を生成
+1. Babel parser（`estree` プラグイン付き）でソースコードをパースして ESTree 互換 AST を生成
 2. AST を走査し、JSX 要素を検出
 3. *コンポーネント判別*: タグ名の先頭文字（大文字 → 関数呼び出し、小文字 → ツリーノード）
 4. HTML 要素を構造化配列表現に変換
 5. DOM ナビゲーション（firstChild, nextSibling）コードを生成
 6. 動的バインディング用の templateEffect コードを生成
 7. 必要なランタイムインポートを追加
-8. Babel generator でコードを再生成
+8. traverse で挿入された Babel 形式ノード（StringLiteral 等）を ESTree 形式（Literal 等）に正規化
+9. esrap でコードを再生成
+
+=== ADR: ESTree パイプラインへの段階的移行
+
+*決定:* `@babel/parser` に `estree` プラグインを適用し、コード生成を `@babel/generator` から `esrap` に移行する。
+
+*理由:*
+1. ESTree 形式に統一することで、将来的な `oxc-parser` への移行を容易にする（oxc-parser は ESTree 互換 AST を出力する）
+2. `esrap` は `@babel/generator` より軽量（672KB → 140KB）
+3. `@babel/traverse` と Babel のノードビルダー（`t.xxx()`）は維持し、移行コストを最小化する
+
+*Babel ノードビルダーの正規化（traverse 後）:*
+`@babel/traverse` の `path.replaceWith(t.xxx())` で挿入されるノードは Babel 形式のため、
+コード生成前に ESTree 形式へ変換する正規化ステップが必要。
+変換が必要な型は以下の 5 種類のみ（その他は同一名）:
+- `StringLiteral` / `NumericLiteral` / `BooleanLiteral` / `NullLiteral` → `Literal`
+- `ObjectProperty` → `Property`
+
+*ESTree ノードの traverse 中正規化（パース済みノード → Babel ビルダー）:*
+`estree` プラグインでパースすると、JSX 属性値や式コンテナ内のリテラルが
+ESTree の `Literal` ノードとして生成される（Babel の `StringLiteral` 等ではなく）。
+これらを `t.objectProperty()` や `t.callExpression()` に直接渡すと Babel のバリデーターが拒否する。
+
+対策として、JSX 式コンテナから式を取り出す全ての箇所（`processAttributes`, `processChildren`,
+`buildComponentCall`）で `ensureBabelExpression()` を適用し、ESTree `Literal` を Babel ノードに変換する。
+また `t.isStringLiteral()` の代わりに `isStringLiteralNode()` を使用し、
+Babel / ESTree 両形式のリテラルを正しく判定する。
 
 == エッジケース
 
 - 空の JSX 要素
-- Fragment の処理
+- Fragment の処理（動的コンテンツを含む Fragment も正しく変換される）
 - ネストされた JSX 要素
 - スプレッド属性
 - 条件付きレンダリング
@@ -91,6 +119,9 @@ return Counter({ initialCount: 5 })
 - *コンポーネント要素（大文字タグ）*: 関数呼び出しに変換
 - *JSXMemberExpression*（`<Foo.Bar />`）: コンポーネントとして扱う
 - *コンポーネントの children*: テキスト/式/JSX を `children` prop として渡す
+- *ハイフン付き属性名*（`data-foo`, `aria-label` 等）: 有効な JS 識別子でない場合は文字列リテラルキーを使用
+- *静的式属性*（`.value` アクセスを含まない式）: `templateEffect` でラップせず静的属性として扱う
+- *式コンテナ内の関数呼び出し*（`{fn()}`）: `.map()` 以外の CallExpression は `{insert}` プレースホルダー + `templateEffect` でラップして `insert()` する
 
 == 設計決定
 
@@ -127,7 +158,33 @@ return Counter({ initialCount: 5 })
 - 条件式（`{condition ? <A/> : <B/>}`）や map（`{items.map(...)}`）は引き続き templateEffect でラップする（これらは式全体の再評価が意図されているため）
 - コンポーネントへの `signal.value` 渡しは初期値のみ伝達され、signal 変化には追従しない
 
-== テストケース
+=== ADR: 静的式属性（reactive access なし）の扱い
+
+*決定:* `.value` アクセスを含まない式属性（例: `<div class={getClass()}>`）は `templateEffect` でラップせず、静的属性オブジェクトに含める。
+
+*理由:*
+1. リアクティブな追跡は `.value` アクセスが検出された場合のみ必要
+2. `getClass()` のような非 reactive な式は一度だけ評価すれば十分
+3. 静的扱いにすることで不要なエフェクトの生成を防ぐ
+
+=== ADR: ハイフン付き属性名の扱い
+
+*決定:* `data-foo` や `aria-label` のような有効な JavaScript 識別子でない属性名は、`t.identifier()` ではなく `t.stringLiteral()` をキーとして使用した ObjectProperty を生成する。
+
+*理由:*
+1. `t.identifier("data-foo")` は構文的に無効な識別子を生成し、esrap が `{ data-foo: "bar" }` という構文エラーのある JS を出力する
+2. `{ "data-foo": "bar" }` が正しい表現
+
+*判定基準:* 属性名が `/^[a-zA-Z_$][a-zA-Z0-9_$]*$/` に一致しない場合は文字列リテラルキーを使用する。
+
+=== ADR: Fragment の dynamicParts の正しい収集
+
+*決定:* `jsxToTree` の Fragment パスでは、`processChildren` が参照渡しで push する `dynamicParts` ローカル変数をそのまま戻り値に含める。`children.flatMap((c) => c.dynamicParts)` は使用しない。
+
+*理由:*
+`processChildren` は `dynamicParts` パラメータに直接 `.push()` する設計のため、各 `TreeResult.dynamicParts` フィールドは常に空配列。Fragment 内の動的コンテンツ（テキスト・属性・コンポーネント insert 等）が消失するバグを防ぐ。
+
+JSXElement パス（非 Fragment）では `dynamicParts` ローカル変数をそのまま返しているが、Fragment パスも同様の扱いとする。
 
 - 単純な JSX 要素を変換する
 - 属性付き要素を変換する
@@ -143,3 +200,7 @@ return Counter({ initialCount: 5 })
 - リストレンダリング（`.map()` 式）を `insert()` + `templateEffect` に変換する
 - 既存 import 文がある場合、ランタイムインポートをその直後に挿入する
 - ネストされた Fragment（CSR）を処理する（親 Fragment 内の子は個別に処理しない）
+- *Fragment 内の動的テキスト*: `templateEffect` + `setText` が正しく生成される
+- *Fragment 内のコンポーネント*: `insert()` が正しく生成される
+- *ハイフン付き属性名*（`data-foo` 等）: 文字列リテラルキーで ObjectProperty を生成する
+- *静的式属性*（reactive access なし）: `templateEffect` を生成しない

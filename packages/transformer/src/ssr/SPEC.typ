@@ -50,20 +50,17 @@ SSR 固有のランタイムインポート名のリスト:
 
 == 設計決定
 
-=== ADR-001: @babel/types 依存の除去（ESTree プレーンオブジェクトへの移行）
+=== ADR: ESTree プレーンオブジェクトの使用
 
-`@babel/types` パッケージを依存から除去し、`transform` モジュールと同様にプレーンな ESTree ノードオブジェクトを直接構築する方式に統一する。
+プレーンな ESTree ノードオブジェクトを直接構築する方式を採用する（`transform` モジュールと統一）。
 
 *理由:*
-- `@babel/types` は Babel エコシステム固有の型/ビルダーであり、このプロジェクトは oxc-parser + esrap を採用しているため不要な依存となっている
-- `transform` モジュールはすでに `@babel/types` を使わずプレーン ESTree ノードで実装されており、`ssr` モジュールも同じ方針に統一することで依存を削減できる
+- このプロジェクトは oxc-parser + esrap を採用しているため、外部 AST ビルダーライブラリは不要
 - プレーン ESTree オブジェクト（`{ type: "CallExpression", ... }` 等）は追加ライブラリなしで構築でき、`esrap` による出力とも直接互換性がある
 
-*影響:*
-- `implementation.ts` の `import * as t from "@babel/types"` を削除し、ローカルで ESTree ビルダーヘルパー（`nCall`, `nNew`, `nArr`, `nId`, `nLit`, `nObj`, `nProp`）を定義する
-- `implementation.test.ts` の `import * as t from "@babel/types"` を削除し、アサーションをプレーン `.type` チェックに置き換える
-- `package.json` の `dependencies` から `"@babel/types"` を削除する
-- 関数シグネチャ（`generateSSRRender`, `generateStateObject`）の型は `t.Expression` から `ESTNode`（ローカル定義）に変更される
+*実装方針:*
+- ローカルで ESTree ビルダーヘルパー（`nCall`, `nNew`, `nArr`, `nId`, `nLit`, `nObj`, `nProp`）を定義する
+- 関数シグネチャの型は `ESTNode`（ローカル定義）を使用する
 
 == テストケース
 

@@ -1,6 +1,6 @@
 # @dathomir/transformer
 
-Babel-based transformer that converts JSX into Dathomir runtime calls using structured arrays. Supports both CSR and SSR output modes.
+JSX transformer that converts JSX into Dathomir runtime calls using structured arrays. Supports both CSR and SSR output modes.
 
 ## Install
 
@@ -49,12 +49,12 @@ templateEffect(() => setText(_text, count.value));
 **Output (SSR):**
 
 ```js
-import { renderToString } from "@dathomir/runtime/ssr";
+import { renderToString } from "@dathomir/runtime";
 
-const _html = renderToString(
-  [["button", { class: "btn" }, "Count: ", ["{text}", null]]],
+renderToString(
+  [["button", { class: "btn" }, "Count:", ["{text}", null]]],
   {},
-  [() => count.value]
+  new Map([[1, count.value]])
 );
 ```
 

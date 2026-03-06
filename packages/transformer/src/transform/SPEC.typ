@@ -7,7 +7,7 @@
 
 JSX が変換された JavaScript コードを解析し、構造化配列方式（fromTree）への変換を行う。
 `oxc-parser` で ESTree 互換 AST を生成し、`zimmerframe` で走査・変換、`esrap` でコードを再生成する。
-純粋な ESTree ノードのみを使用し、Babel 依存をすべて排除することで高速かつ軽量なパイプラインを実現する。
+純粋な ESTree ノードのみを使用し、高速かつ軽量なパイプラインを実現する。
 
 == シグネチャ
 
@@ -82,46 +82,27 @@ return Counter({ initialCount: 5 })
 8. `esrap` でコードを再生成
 
 *なぜ zimmerframe か:*
-- `@babel/traverse` の代替として ESTree/任意 AST に対応する walker
-- `walk(node, state, visitors)` で `@babel/traverse` に近い書き方が可能
+- ESTree/任意 AST に対応した軽量 walker
+- `walk(node, state, visitors)` で visitor パターンによる AST 走査が可能
 - 走査不要なサブツリーは visitor 内で `next()` を呼ばないことで自然にスキップできる
 - Svelte コンパイラで実際に使用されており、esrap（同作者・同エコシステム）と親和性が高い
 - ノード置換は visitor の戻り値として新ノードを返すだけ（immutable 変換）
 
-=== ADR: oxc-parser + zimmerframe への完全移行
+=== ADR: oxc-parser + zimmerframe の採用
 
-*決定:* `@babel/parser` / `@babel/traverse` / `@babel/types` をすべて排除し、
-`oxc-parser` + `zimmerframe` + 素の ESTree ノードオブジェクト組み立てに移行する。
+*決定:* `oxc-parser` + `zimmerframe` + 素の ESTree ノードオブジェクト組み立てを使用する。
 
 *理由:*
-1. `oxc-parser` は Rust 実装で `@babel/parser` より大幅に高速（10–100x 程度）
-2. Babel への依存をゼロにすることでバンドルサイズが大きく削減される
-3. `oxc-parser` は純粋な ESTree 互換 AST を出力するため、`normalizeToESTree()` / `ensureBabelExpression()` 等のアダプタ層が不要
-4. `zimmerframe` は ESTree 任意 AST に対応した軽量 walker で、Babel traverse と同等のことが実現できる
-
-*削除されたヘルパー（Babel 依存により不要になった関数）:*
-- `isStringLiteralNode()` → `node.type === "Literal" && typeof node.value === "string"` で統一
-- `toStringLiteral()` → 不要（ESTree `Literal` をそのまま使う）
-- `ensureBabelExpression()` → 不要（oxc-parser はすでに ESTree 形式を出力）
-- `normalizeToESTree()` → 不要（ビルダーが最初から ESTree ノードを生成）
-- `transformJSX()` / `transformJSXForSSR()` → NodePath を受け取る wrapper 関数（zimmerframe では不要）
+1. `oxc-parser` は Rust 実装で高速（10–100x 程度）かつ純粋な ESTree 互換 AST を出力するため、アダプタ層が不要
+2. 外部 AST ライブラリへの依存をゼロにすることでバンドルサイズが削減される
+3. `zimmerframe` は ESTree 任意 AST に対応した軽量 walker で、visitor パターンで AST を走査できる
 
 *ESTree ノードの組み立て方針:*
-`t.xxx()` Babel ビルダーの代わりに、純粋な ESTree ノードオブジェクトリテラルを直接組み立てる。
-```typescript
-// 旧（Babel）
-t.callExpression(t.identifier("fromTree"), [tree, t.numericLiteral(0)])
-
-// 新（ESTree）
-{ type: "CallExpression", callee: { type: "Identifier", name: "fromTree" }, arguments: [tree, { type: "Literal", value: 0, raw: "0" }], optional: false }
-```
-
-内部ヘルパー関数群（`n.literal()`, `n.id()`, `n.call()` 等）で ESTree ノードを生成し、
+内部ヘルパー関数群（`nLit()`, `nId()`, `nCall()` 等）でプレーンな ESTree ノードを生成し、
 可読性と型安全性を確保する。
 
 *zimmerframe での根要素のみ変換:*
-`@babel/traverse` は `path.findParent()` で祖先を遡れたが、zimmerframe は state で親文脈を引き渡す。
-visitor で `inJSX: false` の状態でのみ変換し、その際 `next()` を呼ばないことで
+zimmerframe は state で親文脈を引き渡す。visitor で `inJSX: false` の状態でのみ変換し、その際 `next()` を呼ばないことで
 子 JSX への再帰的変換を防止する。
 
 == エッジケース

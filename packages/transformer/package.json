@@ -43,17 +43,16 @@
     "release": "rlse"
   },
   "devDependencies": {
-    "@babel/types": "^7.28.4",
     "@dathomir/config": "workspace:*",
     "@takuma-ru/rlse": "catalog:",
-    "@types/babel__traverse": "^7.28.0",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@babel/parser": "^7.28.4",
-    "@babel/traverse": "^7.28.4",
-    "esrap": "^2.2.3"
+    "@babel/types": "^7.29.0",
+    "esrap": "^2.2.3",
+    "oxc-parser": "^0.116.0",
+    "zimmerframe": "^1.1.4"
   }
 }

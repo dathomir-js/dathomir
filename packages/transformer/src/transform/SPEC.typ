@@ -6,8 +6,8 @@
 == 目的
 
 JSX が変換された JavaScript コードを解析し、構造化配列方式（fromTree）への変換を行う。
-Babel の parser（estree プラグイン付き）と traverse を使用して AST を操作し、
-esrap でコードを生成する。ESTree 互換の AST を使用することで、将来的な oxc-parser への移行を容易にする。
+`oxc-parser` で ESTree 互換 AST を生成し、`zimmerframe` で走査・変換、`esrap` でコードを再生成する。
+純粋な ESTree ノードのみを使用し、Babel 依存をすべて排除することで高速かつ軽量なパイプラインを実現する。
 
 == シグネチャ
 
@@ -72,41 +72,57 @@ return Counter({ initialCount: 5 })
 
 === 変換の流れ
 
-1. Babel parser（`estree` プラグイン付き）でソースコードをパースして ESTree 互換 AST を生成
-2. AST を走査し、JSX 要素を検出
+1. `oxc-parser` でソースコードをパースして純粋な ESTree 互換 AST を生成
+2. `zimmerframe` で AST を走査し、JSX 要素を検出（根要素のみ処理、ネストは無視）
 3. *コンポーネント判別*: タグ名の先頭文字（大文字 → 関数呼び出し、小文字 → ツリーノード）
-4. HTML 要素を構造化配列表現に変換
+4. HTML 要素を構造化配列表現に変換（純粋な ESTree ノードオブジェクトとして組み立て）
 5. DOM ナビゲーション（firstChild, nextSibling）コードを生成
 6. 動的バインディング用の templateEffect コードを生成
 7. 必要なランタイムインポートを追加
-8. traverse で挿入された Babel 形式ノード（StringLiteral 等）を ESTree 形式（Literal 等）に正規化
-9. esrap でコードを再生成
+8. `esrap` でコードを再生成
 
-=== ADR: ESTree パイプラインへの段階的移行
+*なぜ zimmerframe か:*
+- `@babel/traverse` の代替として ESTree/任意 AST に対応する walker
+- `walk(node, state, visitors)` で `@babel/traverse` に近い書き方が可能
+- 走査不要なサブツリーは visitor 内で `next()` を呼ばないことで自然にスキップできる
+- Svelte コンパイラで実際に使用されており、esrap（同作者・同エコシステム）と親和性が高い
+- ノード置換は visitor の戻り値として新ノードを返すだけ（immutable 変換）
 
-*決定:* `@babel/parser` に `estree` プラグインを適用し、コード生成を `@babel/generator` から `esrap` に移行する。
+=== ADR: oxc-parser + zimmerframe への完全移行
+
+*決定:* `@babel/parser` / `@babel/traverse` / `@babel/types` をすべて排除し、
+`oxc-parser` + `zimmerframe` + 素の ESTree ノードオブジェクト組み立てに移行する。
 
 *理由:*
-1. ESTree 形式に統一することで、将来的な `oxc-parser` への移行を容易にする（oxc-parser は ESTree 互換 AST を出力する）
-2. `esrap` は `@babel/generator` より軽量（672KB → 140KB）
-3. `@babel/traverse` と Babel のノードビルダー（`t.xxx()`）は維持し、移行コストを最小化する
+1. `oxc-parser` は Rust 実装で `@babel/parser` より大幅に高速（10–100x 程度）
+2. Babel への依存をゼロにすることでバンドルサイズが大きく削減される
+3. `oxc-parser` は純粋な ESTree 互換 AST を出力するため、`normalizeToESTree()` / `ensureBabelExpression()` 等のアダプタ層が不要
+4. `zimmerframe` は ESTree 任意 AST に対応した軽量 walker で、Babel traverse と同等のことが実現できる
 
-*Babel ノードビルダーの正規化（traverse 後）:*
-`@babel/traverse` の `path.replaceWith(t.xxx())` で挿入されるノードは Babel 形式のため、
-コード生成前に ESTree 形式へ変換する正規化ステップが必要。
-変換が必要な型は以下の 5 種類のみ（その他は同一名）:
-- `StringLiteral` / `NumericLiteral` / `BooleanLiteral` / `NullLiteral` → `Literal`
-- `ObjectProperty` → `Property`
+*削除されたヘルパー（Babel 依存により不要になった関数）:*
+- `isStringLiteralNode()` → `node.type === "Literal" && typeof node.value === "string"` で統一
+- `toStringLiteral()` → 不要（ESTree `Literal` をそのまま使う）
+- `ensureBabelExpression()` → 不要（oxc-parser はすでに ESTree 形式を出力）
+- `normalizeToESTree()` → 不要（ビルダーが最初から ESTree ノードを生成）
+- `transformJSX()` / `transformJSXForSSR()` → NodePath を受け取る wrapper 関数（zimmerframe では不要）
 
-*ESTree ノードの traverse 中正規化（パース済みノード → Babel ビルダー）:*
-`estree` プラグインでパースすると、JSX 属性値や式コンテナ内のリテラルが
-ESTree の `Literal` ノードとして生成される（Babel の `StringLiteral` 等ではなく）。
-これらを `t.objectProperty()` や `t.callExpression()` に直接渡すと Babel のバリデーターが拒否する。
+*ESTree ノードの組み立て方針:*
+`t.xxx()` Babel ビルダーの代わりに、純粋な ESTree ノードオブジェクトリテラルを直接組み立てる。
+```typescript
+// 旧（Babel）
+t.callExpression(t.identifier("fromTree"), [tree, t.numericLiteral(0)])
 
-対策として、JSX 式コンテナから式を取り出す全ての箇所（`processAttributes`, `processChildren`,
-`buildComponentCall`）で `ensureBabelExpression()` を適用し、ESTree `Literal` を Babel ノードに変換する。
-また `t.isStringLiteral()` の代わりに `isStringLiteralNode()` を使用し、
-Babel / ESTree 両形式のリテラルを正しく判定する。
+// 新（ESTree）
+{ type: "CallExpression", callee: { type: "Identifier", name: "fromTree" }, arguments: [tree, { type: "Literal", value: 0, raw: "0" }], optional: false }
+```
+
+内部ヘルパー関数群（`n.literal()`, `n.id()`, `n.call()` 等）で ESTree ノードを生成し、
+可読性と型安全性を確保する。
+
+*zimmerframe での根要素のみ変換:*
+`@babel/traverse` は `path.findParent()` で祖先を遡れたが、zimmerframe は state で親文脈を引き渡す。
+visitor で `inJSX: false` の状態でのみ変換し、その際 `next()` を呼ばないことで
+子 JSX への再帰的変換を防止する。
 
 == エッジケース
 

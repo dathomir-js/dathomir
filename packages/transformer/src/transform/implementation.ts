@@ -902,11 +902,17 @@ function transformNestedJSX(expr: ESTNode, state: TransformState): ESTNode {
       if (isComponentTag(el.openingElement.name)) {
         return buildComponentCall(el, state);
       }
-      // Transform nested HTML JSX (does NOT recurse into its own children via
-      // zimmerframe since we return without calling next())
+      // Transform nested HTML JSX according to the current rendering mode so
+      // that SSR mode generates renderToString calls instead of fromTree DOM ops.
+      if (state.mode === "ssr") {
+        return transformJSXForSSRNode(el, state);
+      }
       return transformJSXNode(el, state);
     },
     JSXFragment(node: ESTNode, { next: _next }: { next: () => void }) {
+      if (state.mode === "ssr") {
+        return transformJSXForSSRNode(node as JSXFragment, state);
+      }
       return transformJSXNode(node as JSXFragment, state);
     },
   });

@@ -451,4 +451,48 @@ describe("transform", () => {
       expect(result.code).toContain("getClass");
     });
   });
+
+  describe("SSR mode conditional rendering", () => {
+    it("should transform conditional JSX branches with renderToString in SSR mode (not fromTree)", () => {
+      const code = `
+        const flag = true;
+        const element = <div>{flag ? <span>Yes</span> : <span>No</span>}</div>;
+      `;
+
+      const result = transform(code, { mode: "ssr" });
+
+      // SSR mode: no DOM-dependent fromTree must appear
+      expect(result.code).not.toContain("fromTree");
+      // Both branches must be wrapped in renderToString (SSR)
+      expect(result.code).toContain("renderToString");
+    });
+
+    it("should not use setText/templateEffect for SSR conditional branches", () => {
+      const code = `
+        const flag = true;
+        const element = <div>{flag ? <em>A</em> : <strong>B</strong>}</div>;
+      `;
+
+      const result = transform(code, { mode: "ssr" });
+
+      // SSR mode: no DOM mutation helpers
+      expect(result.code).not.toContain("fromTree");
+      expect(result.code).not.toContain("firstChild");
+      expect(result.code).not.toContain("nextSibling");
+      expect(result.code).not.toContain("setText");
+    });
+
+    it("should transform .map() JSX branches with renderToString in SSR mode", () => {
+      const code = `
+        const items = ["a", "b"];
+        const element = <ul>{items.map(i => <li>{i}</li>)}</ul>;
+      `;
+
+      const result = transform(code, { mode: "ssr" });
+
+      // SSR mode: no DOM-dependent fromTree must appear
+      expect(result.code).not.toContain("fromTree");
+      expect(result.code).toContain("renderToString");
+    });
+  });
 });

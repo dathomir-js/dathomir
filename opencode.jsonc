@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-6",
+  "autoupdate": true,
+  "plugin": ["./.opencode/plugins/format-lint.ts"],
+  "server": {
+    "port": 31077,
+    "hostname": "0.0.0.0",
+    "mdns": true,
+    "cors": []
+  },
+  // "keybinds": {
+  //   "app_exit": "ctrl+d,<leader>q",
+  //   "input_submit": "ctrl+return",
+  //   "input_newline": "shift+return,return,alt+return,ctrl+j"
+  // }
+}

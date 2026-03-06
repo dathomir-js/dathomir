@@ -42,7 +42,11 @@ catalogs:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      '@opencode-ai/plugin':
+        specifier: ^1.2.19
+        version: 1.2.19
 
   config:
     dependencies:
@@ -211,7 +215,7 @@ importers:
         version: 24.2.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 4.0.4(@vitest/browser@4.0.4(vite@7.3.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2))(vitest@4.0.4))(vitest@4.0.4)
+        version: 4.0.4(@vitest/browser@4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2))(vitest@4.0.4))(vitest@4.0.4)
       vitest:
         specifier: 'catalog:'
         version: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(happy-dom@20.5.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2)
@@ -273,9 +277,6 @@ importers:
 
   packages/transformer:
     dependencies:
-      '@babel/types':
-        specifier: ^7.29.0
-        version: 7.29.0
       esrap:
         specifier: ^2.2.3
         version: 2.2.3
@@ -297,7 +298,7 @@ importers:
         version: 24.2.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 4.0.4(@vitest/browser@4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2))(vitest@4.0.4))(vitest@4.0.4)
+        version: 4.0.4(@vitest/browser@4.0.4(vite@7.3.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2))(vitest@4.0.4))(vitest@4.0.4)
       vitest:
         specifier: 'catalog:'
         version: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(happy-dom@20.5.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2)
@@ -1294,6 +1295,12 @@ packages:
     peerDependenciesMeta:
       rolldown:
         optional: true
+
+  '@opencode-ai/plugin@1.2.19':
+    resolution: {integrity: sha512-r2hvyco2q0EgwyY8t+/EpW9wdzymaTg8QKXREh/Ux26mp1vOva3lwVlYtFBuUnILYQmfOUkbSh9kL6+1kfbW7w==}
+
+  '@opencode-ai/sdk@1.2.19':
+    resolution: {integrity: sha512-z3P0GzbShr1Y3hPsfPb4u/PzADXbOURLCYk5dU1ZOummE0QBn0BxLS/BwQ5LlzL5v1nA9yfuZiBsqd/IU4xorw==}
 
   '@oxc-minify/binding-android-arm-eabi@0.112.0':
     resolution: {integrity: sha512-m7TGBR2hjsBJIN9UJ909KBoKsuogo6CuLsHKvUIBXdjI0JVHP8g4ZHeB+BJpGn5LJdeSGDfz9MWiuXrZDRzunw==}
@@ -5776,6 +5783,9 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.1.8:
+    resolution: {integrity: sha512-5R1P+WwQqmmMIEACyzSvo4JXHY5WiAFHRMg+zBZKgKS+Q1viRa0C1hmUKtHltoIFKtIdki3pRxkmpP74jnNYHQ==}
+
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
@@ -6918,6 +6928,13 @@ snapshots:
       - vue-tsc
       - yaml
 
+  '@opencode-ai/plugin@1.2.19':
+    dependencies:
+      '@opencode-ai/sdk': 1.2.19
+      zod: 4.1.8
+
+  '@opencode-ai/sdk@1.2.19': {}
+
   '@oxc-minify/binding-android-arm-eabi@0.112.0':
     optional: true
 
@@ -7765,20 +7782,6 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-rc.2
       vite: 7.3.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2)
       vue: 3.5.28(typescript@5.9.3)
-
-  '@vitest/browser-playwright@4.0.4(playwright@1.56.1)(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2))(vitest@4.0.4)':
-    dependencies:
-      '@vitest/browser': 4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2))(vitest@4.0.4)
-      '@vitest/mocker': 4.0.4(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2))
-      playwright: 1.56.1
-      tinyrainbow: 3.0.3
-      vitest: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(happy-dom@20.5.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2)
-    transitivePeerDependencies:
-      - bufferutil
-      - msw
-      - utf-8-validate
-      - vite
-    optional: true
 
   '@vitest/browser-playwright@4.0.4(playwright@1.56.1)(vite@7.3.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2))(vitest@4.0.4)':
     dependencies:
@@ -11456,7 +11459,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.2.0
-      '@vitest/browser-playwright': 4.0.4(playwright@1.56.1)(vite@6.4.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2))(vitest@4.0.4)
+      '@vitest/browser-playwright': 4.0.4(playwright@1.56.1)(vite@7.3.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2))(vitest@4.0.4)
       happy-dom: 20.5.3
     transitivePeerDependencies:
       - jiti
@@ -11628,5 +11631,7 @@ snapshots:
       readable-stream: 4.7.0
 
   zod@3.25.76: {}
+
+  zod@4.1.8: {}
 
   zod@4.3.6: {}

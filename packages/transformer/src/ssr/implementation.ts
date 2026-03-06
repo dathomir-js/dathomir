@@ -8,9 +8,74 @@
  *
  * Note: The main SSR transformation is handled in transform.ts
  * This file contains utility functions for SSR-specific operations.
+ *
+ * Uses plain ESTree nodes (no @babel/types dependency) to match
+ * the approach used in the transform module (see ADR-001 in SPEC.typ).
  */
 
-import * as t from "@babel/types";
+// ---------------------------------------------------------------------------
+// Minimal ESTree node types
+// ---------------------------------------------------------------------------
+
+/** A generic ESTree node with a `type` discriminant. */
+interface ESTNode {
+  type: string;
+  [key: string]: unknown;
+}
+
+// ---------------------------------------------------------------------------
+// ESTree node builder helpers
+// ---------------------------------------------------------------------------
+
+/** Build a Literal node. */
+function nLit(value: string | number | boolean | null): ESTNode {
+  if (value === null) return { type: "Literal", value: null, raw: "null" };
+  if (typeof value === "string")
+    return { type: "Literal", value, raw: JSON.stringify(value) };
+  return { type: "Literal", value, raw: String(value) };
+}
+
+/** Build an Identifier node. */
+function nId(name: string): ESTNode {
+  return { type: "Identifier", name };
+}
+
+/** Build a CallExpression node. */
+function nCall(callee: ESTNode, args: ESTNode[]): ESTNode {
+  return { type: "CallExpression", callee, arguments: args, optional: false };
+}
+
+/** Build an ArrayExpression node. */
+function nArr(elements: (ESTNode | null)[]): ESTNode {
+  return { type: "ArrayExpression", elements };
+}
+
+/** Build an ObjectExpression node. */
+function nObj(properties: ESTNode[]): ESTNode {
+  return { type: "ObjectExpression", properties };
+}
+
+/** Build a Property node (ESTree object property). */
+function nProp(key: ESTNode, value: ESTNode): ESTNode {
+  return {
+    type: "Property",
+    key,
+    value,
+    kind: "init",
+    computed: false,
+    method: false,
+    shorthand: false,
+  };
+}
+
+/** Build a NewExpression node. */
+function nNew(callee: ESTNode, args: ESTNode[]): ESTNode {
+  return { type: "NewExpression", callee, arguments: args };
+}
+
+// ---------------------------------------------------------------------------
+// SSR utilities
+// ---------------------------------------------------------------------------
 
 /**
  * Runtime imports specific to SSR.
@@ -35,27 +100,24 @@ function isSSRImport(name: string): name is SSRImport {
 /**
  * Generate SSR render code for a tree.
  *
- * SSR output generates:
- * - renderToString(tree, state, dynamicValues)
+ * Produces: renderToString([tree], state, new Map([[1, v1], [2, v2], ...]))
  */
 function generateSSRRender(
-  tree: t.Expression,
-  dynamicValues: t.Expression[],
-  stateExpr: t.Expression | null,
-): t.Expression {
-  // Create dynamic values map
+  tree: ESTNode,
+  dynamicValues: ESTNode[],
+  stateExpr: ESTNode | null,
+): ESTNode {
+  // Build indexed map entries: [[1, val1], [2, val2], ...]
   const mapEntries = dynamicValues.map((value, index) =>
-    t.arrayExpression([t.numericLiteral(index + 1), value]),
+    nArr([nLit(index + 1), value]),
   );
 
-  const dynamicValuesMap = t.newExpression(t.identifier("Map"), [
-    t.arrayExpression(mapEntries),
-  ]);
+  const dynamicValuesMap = nNew(nId("Map"), [nArr(mapEntries)]);
 
-  // Call renderToString(tree, state, dynamicValues)
-  return t.callExpression(t.identifier("renderToString"), [
-    t.arrayExpression([tree]),
-    stateExpr ?? t.objectExpression([]),
+  // renderToString([tree], state, dynamicValuesMap)
+  return nCall(nId("renderToString"), [
+    nArr([tree]),
+    stateExpr ?? nObj([]),
     dynamicValuesMap,
   ]);
 }
@@ -63,16 +125,16 @@ function generateSSRRender(
 /**
  * Generate state object expression from Signals.
  */
-function generateStateObject(signals: Map<string, t.Expression>): t.Expression {
+function generateStateObject(signals: Map<string, ESTNode>): ESTNode {
   if (signals.size === 0) {
-    return t.objectExpression([]);
+    return nObj([]);
   }
 
   const properties = Array.from(signals.entries()).map(([name, expr]) =>
-    t.objectProperty(t.identifier(name), expr),
+    nProp(nId(name), expr),
   );
 
-  return t.objectExpression(properties);
+  return nObj(properties);
 }
 
 export { generateSSRRender, generateStateObject, isSSRImport, SSR_IMPORTS };

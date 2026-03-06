@@ -2,7 +2,6 @@
  * Tests for SSR mode transformation.
  */
 
-import * as t from "@babel/types";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -12,6 +11,54 @@ import {
   SSR_IMPORTS,
 } from "./implementation";
 import { transform } from "../transform/implementation";
+
+// ---------------------------------------------------------------------------
+// Minimal ESTree node types used in tests
+// ---------------------------------------------------------------------------
+
+interface ESTNode {
+  type: string;
+  [key: string]: unknown;
+}
+
+interface CallExpression extends ESTNode {
+  type: "CallExpression";
+  callee: ESTNode;
+  arguments: ESTNode[];
+}
+
+interface NewExpression extends ESTNode {
+  type: "NewExpression";
+  callee: ESTNode;
+  arguments: ESTNode[];
+}
+
+interface ArrayExpression extends ESTNode {
+  type: "ArrayExpression";
+  elements: (ESTNode | null)[];
+}
+
+interface ObjectExpression extends ESTNode {
+  type: "ObjectExpression";
+  properties: ESTNode[];
+}
+
+interface Property extends ESTNode {
+  type: "Property";
+  key: ESTNode;
+  value: ESTNode;
+}
+
+interface Identifier extends ESTNode {
+  type: "Identifier";
+  name: string;
+}
+
+interface Literal extends ESTNode {
+  type: "Literal";
+  value: string | number | boolean | null;
+  raw: string;
+}
 
 describe("SSR Mode Transformation", () => {
   it("generates renderToString import in SSR mode", () => {
@@ -136,68 +183,92 @@ describe("isSSRImport", () => {
 
 describe("generateSSRRender", () => {
   it("generates renderToString call with empty Map when no dynamic values", () => {
-    const tree = t.arrayExpression([t.stringLiteral("div"), t.nullLiteral()]);
+    const tree: ESTNode = {
+      type: "ArrayExpression",
+      elements: [
+        { type: "Literal", value: "div", raw: '"div"' },
+        { type: "Literal", value: null, raw: "null" },
+      ],
+    };
     const result = generateSSRRender(tree, [], null);
 
-    expect(t.isCallExpression(result)).toBe(true);
-    const call = result as t.CallExpression;
-    expect(t.isIdentifier(call.callee, { name: "renderToString" })).toBe(true);
+    expect(result.type).toBe("CallExpression");
+    const call = result as CallExpression;
+    expect(call.callee.type).toBe("Identifier");
+    expect((call.callee as Identifier).name).toBe("renderToString");
     // Third argument should be new Map([])
-    expect(t.isNewExpression(call.arguments[2])).toBe(true);
+    expect(call.arguments[2]?.type).toBe("NewExpression");
   });
 
   it("generates renderToString call with indexed Map entries for dynamic values", () => {
-    const tree = t.arrayExpression([t.stringLiteral("div"), t.nullLiteral()]);
-    const val1 = t.stringLiteral("hello");
-    const val2 = t.numericLiteral(42);
+    const tree: ESTNode = {
+      type: "ArrayExpression",
+      elements: [
+        { type: "Literal", value: "div", raw: '"div"' },
+        { type: "Literal", value: null, raw: "null" },
+      ],
+    };
+    const val1: ESTNode = { type: "Literal", value: "hello", raw: '"hello"' };
+    const val2: ESTNode = { type: "Literal", value: 42, raw: "42" };
     const result = generateSSRRender(tree, [val1, val2], null);
 
-    expect(t.isCallExpression(result)).toBe(true);
-    const call = result as t.CallExpression;
-    const mapExpr = call.arguments[2] as t.NewExpression;
-    expect(t.isNewExpression(mapExpr)).toBe(true);
-    // Map should have 2 entries
-    const entries = (mapExpr.arguments[0] as t.ArrayExpression).elements;
+    expect(result.type).toBe("CallExpression");
+    const call = result as CallExpression;
+    const mapExpr = call.arguments[2] as NewExpression;
+    expect(mapExpr.type).toBe("NewExpression");
+    // Map constructor receives an ArrayExpression of entries
+    const entries = (mapExpr.arguments[0] as ArrayExpression).elements;
     expect(entries).toHaveLength(2);
     // First entry: [1, val1]
-    const first = entries[0] as t.ArrayExpression;
-    expect((first.elements[0] as t.NumericLiteral).value).toBe(1);
+    const first = entries[0] as ArrayExpression;
+    expect((first.elements[0] as Literal).value).toBe(1);
     // Second entry: [2, val2]
-    const second = entries[1] as t.ArrayExpression;
-    expect((second.elements[0] as t.NumericLiteral).value).toBe(2);
+    const second = entries[1] as ArrayExpression;
+    expect((second.elements[0] as Literal).value).toBe(2);
   });
 
   it("uses empty object as state when stateExpr is null", () => {
-    const tree = t.arrayExpression([]);
+    const tree: ESTNode = { type: "ArrayExpression", elements: [] };
     const result = generateSSRRender(tree, [], null);
 
-    const call = result as t.CallExpression;
+    const call = result as CallExpression;
     // Second argument (state) should be an empty object expression
-    expect(t.isObjectExpression(call.arguments[1])).toBe(true);
-    const stateArg = call.arguments[1] as t.ObjectExpression;
+    expect(call.arguments[1]?.type).toBe("ObjectExpression");
+    const stateArg = call.arguments[1] as ObjectExpression;
     expect(stateArg.properties).toHaveLength(0);
   });
 
   it("uses provided stateExpr as state argument", () => {
-    const tree = t.arrayExpression([]);
-    const stateExpr = t.objectExpression([
-      t.objectProperty(t.identifier("count"), t.numericLiteral(0)),
-    ]);
+    const tree: ESTNode = { type: "ArrayExpression", elements: [] };
+    const stateExpr: ESTNode = {
+      type: "ObjectExpression",
+      properties: [
+        {
+          type: "Property",
+          key: { type: "Identifier", name: "count" },
+          value: { type: "Literal", value: 0, raw: "0" },
+          kind: "init",
+          computed: false,
+          method: false,
+          shorthand: false,
+        },
+      ],
+    };
     const result = generateSSRRender(tree, [], stateExpr);
 
-    const call = result as t.CallExpression;
-    // Second argument (state) should be the provided expression
+    const call = result as CallExpression;
+    // Second argument (state) should be the provided expression (same reference)
     expect(call.arguments[1]).toBe(stateExpr);
   });
 
   it("returns a CallExpression with callee name renderToString", () => {
-    const tree = t.arrayExpression([]);
+    const tree: ESTNode = { type: "ArrayExpression", elements: [] };
     const result = generateSSRRender(tree, [], null);
 
-    expect(t.isCallExpression(result)).toBe(true);
-    const call = result as t.CallExpression;
-    expect(t.isIdentifier(call.callee)).toBe(true);
-    expect((call.callee as t.Identifier).name).toBe("renderToString");
+    expect(result.type).toBe("CallExpression");
+    const call = result as CallExpression;
+    expect(call.callee.type).toBe("Identifier");
+    expect((call.callee as Identifier).name).toBe("renderToString");
   });
 });
 
@@ -205,25 +276,27 @@ describe("generateStateObject", () => {
   it("returns an empty ObjectExpression when signals Map is empty", () => {
     const result = generateStateObject(new Map());
 
-    expect(t.isObjectExpression(result)).toBe(true);
-    const obj = result as t.ObjectExpression;
+    expect(result.type).toBe("ObjectExpression");
+    const obj = result as ObjectExpression;
     expect(obj.properties).toHaveLength(0);
   });
 
   it("returns ObjectExpression with properties for each signal entry", () => {
-    const signals = new Map<string, t.Expression>([
-      ["count", t.numericLiteral(0)],
-      ["name", t.stringLiteral("Alice")],
+    const val1: ESTNode = { type: "Literal", value: 0, raw: "0" };
+    const val2: ESTNode = { type: "Literal", value: "Alice", raw: '"Alice"' };
+    const signals = new Map<string, ESTNode>([
+      ["count", val1],
+      ["name", val2],
     ]);
     const result = generateStateObject(signals);
 
-    expect(t.isObjectExpression(result)).toBe(true);
-    const obj = result as t.ObjectExpression;
+    expect(result.type).toBe("ObjectExpression");
+    const obj = result as ObjectExpression;
     expect(obj.properties).toHaveLength(2);
 
     // Verify property names
     const propNames = obj.properties.map(
-      (p) => ((p as t.ObjectProperty).key as t.Identifier).name,
+      (p) => ((p as Property).key as Identifier).name,
     );
     expect(propNames).toContain("count");
     expect(propNames).toContain("name");

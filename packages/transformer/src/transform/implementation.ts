@@ -35,6 +35,15 @@ interface CallExpression extends ESTNode {
   optional: boolean;
 }
 
+/** ESTree MemberExpression. */
+interface MemberExpression extends ESTNode {
+  type: "MemberExpression";
+  object: ESTNode;
+  property: ESTNode;
+  computed: boolean;
+  optional: boolean;
+}
+
 /** ESTree ArrowFunctionExpression. */
 interface ArrowFunctionExpression extends ESTNode {
   type: "ArrowFunctionExpression";
@@ -49,11 +58,18 @@ interface BlockStatement extends ESTNode {
   body: ESTNode[];
 }
 
+/** ESTree VariableDeclarator. */
+interface VariableDeclarator extends ESTNode {
+  type: "VariableDeclarator";
+  id: Identifier;
+  init: ESTNode | null;
+}
+
 /** ESTree VariableDeclaration. */
 interface VariableDeclaration extends ESTNode {
   type: "VariableDeclaration";
   kind: "const" | "let" | "var";
-  declarations: ESTNode[];
+  declarations: VariableDeclarator[];
 }
 
 /** ESTree ReturnStatement. */
@@ -134,7 +150,7 @@ function nBlock(stmts: ESTNode[]): BlockStatement {
 }
 
 /** Build a const VariableDeclaration. */
-function nConst(id: ESTNode, init: ESTNode): VariableDeclaration {
+function nConst(id: Identifier, init: ESTNode): VariableDeclaration {
   return {
     type: "VariableDeclaration",
     kind: "const",
@@ -158,7 +174,7 @@ function nSpread(arg: ESTNode): ESTNode {
 }
 
 /** Build a MemberExpression. */
-function nMember(object: ESTNode, property: ESTNode, computed = false): ESTNode {
+function nMember(object: ESTNode, property: ESTNode, computed = false): MemberExpression {
   return {
     type: "MemberExpression",
     object,
@@ -216,46 +232,53 @@ interface JSXNamespacedName {
 
 type JSXName = JSXIdentifier | JSXMemberExpression | JSXNamespacedName;
 
-interface JSXAttribute {
+interface JSXOpeningElement {
+  type: "JSXOpeningElement";
+  name: JSXName;
+  attributes: (JSXAttribute | JSXSpreadAttribute)[];
+  selfClosing: boolean;
+}
+
+interface JSXAttribute extends ESTNode {
   type: "JSXAttribute";
   name: JSXIdentifier | JSXNamespacedName;
   value: ESTNode | null;
 }
 
-interface JSXSpreadAttribute {
+interface JSXSpreadAttribute extends ESTNode {
   type: "JSXSpreadAttribute";
   argument: ESTNode;
 }
 
-interface JSXElement {
+interface JSXElement extends ESTNode {
   type: "JSXElement";
-  openingElement: {
-    type: "JSXOpeningElement";
-    name: JSXName;
-    attributes: (JSXAttribute | JSXSpreadAttribute)[];
-    selfClosing: boolean;
-  };
+  openingElement: JSXOpeningElement;
   children: JSXChild[];
   closingElement: ESTNode | null;
 }
 
-interface JSXFragment {
+interface JSXFragment extends ESTNode {
   type: "JSXFragment";
   children: JSXChild[];
 }
 
-interface JSXText {
+interface JSXText extends ESTNode {
   type: "JSXText";
   value: string;
 }
 
-interface JSXExpressionContainer {
+interface JSXExpressionContainer extends ESTNode {
   type: "JSXExpressionContainer";
   expression: ESTNode;
 }
 
-interface JSXEmptyExpression {
+interface JSXEmptyExpression extends ESTNode {
   type: "JSXEmptyExpression";
+}
+
+interface JSXSpreadChild extends ESTNode {
+  type: "JSXSpreadChild";
+  expression: ESTNode;
 }
 
 type JSXChild =
@@ -263,7 +286,7 @@ type JSXChild =
   | JSXFragment
   | JSXText
   | JSXExpressionContainer
-  | ESTNode;
+  | JSXSpreadChild;
 
 // ---------------------------------------------------------------------------
 // Runtime import tracking
@@ -313,6 +336,55 @@ interface DynamicPart {
 }
 
 // ---------------------------------------------------------------------------
+// Type guards
+// ---------------------------------------------------------------------------
+
+/** Type guard for MemberExpression nodes. */
+function isMemberExpression(node: ESTNode): node is MemberExpression {
+  return node.type === "MemberExpression";
+}
+
+/** Type guard for Identifier nodes. */
+function isIdentifier(node: ESTNode): node is Identifier {
+  return node.type === "Identifier";
+}
+
+/** Type guard for CallExpression nodes. */
+function isCallExpression(node: ESTNode): node is CallExpression {
+  return node.type === "CallExpression";
+}
+
+/** Type guard for VariableDeclaration nodes. */
+function isVariableDeclaration(node: ESTNode): node is VariableDeclaration {
+  return node.type === "VariableDeclaration";
+}
+
+/** Type guard for JSXElement nodes. */
+function isJSXElement(node: ESTNode): node is JSXElement {
+  return node.type === "JSXElement";
+}
+
+/** Type guard for JSXFragment nodes. */
+function isJSXFragment(node: ESTNode): node is JSXFragment {
+  return node.type === "JSXFragment";
+}
+
+/** Type guard for JSXExpressionContainer nodes. */
+function isJSXExpressionContainer(node: ESTNode): node is JSXExpressionContainer {
+  return node.type === "JSXExpressionContainer";
+}
+
+/** Type guard for JSXEmptyExpression nodes. */
+function isJSXEmptyExpression(node: ESTNode): node is JSXEmptyExpression {
+  return node.type === "JSXEmptyExpression";
+}
+
+/** Type guard for string Literal nodes. */
+function isStringLiteral(node: ESTNode | null): node is Literal {
+  return node !== null && node.type === "Literal" && typeof node["value"] === "string";
+}
+
+// ---------------------------------------------------------------------------
 // Utility helpers
 // ---------------------------------------------------------------------------
 
@@ -336,9 +408,9 @@ function isValidIdentifier(name: string): boolean {
  */
 function containsReactiveAccess(node: ESTNode): boolean {
   if (
-    node.type === "MemberExpression" &&
-    (node.property as ESTNode | undefined)?.type === "Identifier" &&
-    ((node.property as Identifier).name === "value")
+    isMemberExpression(node) &&
+    isIdentifier(node.property) &&
+    node.property.name === "value"
   ) {
     return true;
   }
@@ -346,10 +418,10 @@ function containsReactiveAccess(node: ESTNode): boolean {
   let found = false;
   walk(node, null, {
     MemberExpression(n: ESTNode, { next }: { next: () => void }) {
-      const prop = (n as Record<string, unknown>)["property"] as ESTNode | undefined;
       if (
-        prop?.type === "Identifier" &&
-        (prop as Identifier).name === "value"
+        isMemberExpression(n) &&
+        isIdentifier(n.property) &&
+        n.property.name === "value"
       ) {
         found = true;
       }
@@ -366,7 +438,7 @@ function containsReactiveAccess(node: ESTNode): boolean {
  */
 function isComponentTag(name: JSXName): boolean {
   if (name.type === "JSXIdentifier") {
-    return /^[A-Z]/.test((name as JSXIdentifier).name);
+    return /^[A-Z]/.test(name.name);
   }
   if (name.type === "JSXMemberExpression") {
     return true;
@@ -380,15 +452,13 @@ function isComponentTag(name: JSXName): boolean {
  */
 function jsxNameToExpression(name: JSXName): ESTNode {
   if (name.type === "JSXIdentifier") {
-    return nId((name as JSXIdentifier).name);
+    return nId(name.name);
   }
   if (name.type === "JSXMemberExpression") {
-    const m = name as JSXMemberExpression;
-    return nMember(jsxNameToExpression(m.object), nId(m.property.name));
+    return nMember(jsxNameToExpression(name.object), nId(name.property.name));
   }
   // JSXNamespacedName: convert to "ns_local" identifier
-  const ns = name as JSXNamespacedName;
-  return nId(`${ns.namespace.name}_${ns.name.name}`);
+  return nId(`${name.namespace.name}_${name.name.name}`);
 }
 
 /**
@@ -396,32 +466,12 @@ function jsxNameToExpression(name: JSXName): ESTNode {
  */
 function getTagName(name: JSXName): string {
   if (name.type === "JSXIdentifier") {
-    return (name as JSXIdentifier).name;
+    return name.name;
   }
   if (name.type === "JSXMemberExpression") {
-    const m = name as JSXMemberExpression;
-    return `${getTagName(m.object)}.${m.property.name}`;
+    return `${getTagName(name.object)}.${name.property.name}`;
   }
-  const ns = name as JSXNamespacedName;
-  return `${ns.namespace.name}:${ns.name.name}`;
-}
-
-/**
- * Check if a JSX attribute value is a string literal (ESTree Literal with string value).
- */
-function isStringLiteral(node: ESTNode | null): node is Literal {
-  return (
-    node !== null &&
-    node.type === "Literal" &&
-    typeof (node as Literal).value === "string"
-  );
-}
-
-/**
- * Check if a node is a JSXEmptyExpression.
- */
-function isJSXEmptyExpression(node: ESTNode): node is JSXEmptyExpression {
-  return node.type === "JSXEmptyExpression";
+  return `${name.namespace.name}:${name.name.name}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -445,24 +495,22 @@ function buildComponentCall(
 
   for (const attr of opening.attributes) {
     if (attr.type === "JSXSpreadAttribute") {
-      propsProperties.push(nSpread((attr as JSXSpreadAttribute).argument));
+      propsProperties.push(nSpread(attr.argument));
       continue;
     }
 
-    const jsxAttr = attr as JSXAttribute;
-    if (jsxAttr.name.type !== "JSXIdentifier") continue;
+    if (attr.name.type !== "JSXIdentifier") continue;
 
-    const key = (jsxAttr.name as JSXIdentifier).name;
+    const key = attr.name.name;
     let value: ESTNode;
 
-    if (jsxAttr.value === null) {
+    if (attr.value === null) {
       value = nLit(true);
-    } else if (isStringLiteral(jsxAttr.value as ESTNode)) {
-      value = jsxAttr.value as ESTNode;
-    } else if ((jsxAttr.value as ESTNode).type === "JSXExpressionContainer") {
-      const container = jsxAttr.value as JSXExpressionContainer;
-      if (isJSXEmptyExpression(container.expression)) continue;
-      value = container.expression;
+    } else if (isStringLiteral(attr.value)) {
+      value = attr.value;
+    } else if (isJSXExpressionContainer(attr.value)) {
+      if (isJSXEmptyExpression(attr.value.expression)) continue;
+      value = attr.value.expression;
     } else {
       continue;
     }
@@ -477,60 +525,50 @@ function buildComponentCall(
   }
 
   // Handle children
-  const significantChildren = node.children.filter((c) => {
-    const child = c as ESTNode;
-    if (child.type === "JSXText")
-      return ((child as JSXText).value.trim() !== "");
-    if (child.type === "JSXExpressionContainer")
-      return !isJSXEmptyExpression((child as JSXExpressionContainer).expression);
+  const significantChildren = node.children.filter((child) => {
+    if (child.type === "JSXText") return child.value.trim() !== "";
+    if (isJSXExpressionContainer(child)) return !isJSXEmptyExpression(child.expression);
     return true;
   });
 
   if (significantChildren.length > 0) {
     const childExprs: ESTNode[] = [];
 
-    for (const rawChild of significantChildren) {
-      const child = rawChild as ESTNode;
-
+    for (const child of significantChildren) {
       if (child.type === "JSXText") {
-        const text = (child as JSXText).value.trim();
+        const text = child.value.trim();
         if (text) childExprs.push(nLit(text));
-      } else if (child.type === "JSXExpressionContainer") {
-        const container = child as JSXExpressionContainer;
-        if (!isJSXEmptyExpression(container.expression)) {
-          childExprs.push(container.expression);
+      } else if (isJSXExpressionContainer(child)) {
+        if (!isJSXEmptyExpression(child.expression)) {
+          childExprs.push(child.expression);
         }
-      } else if (child.type === "JSXElement") {
-        const jsxEl = child as JSXElement;
-        if (isComponentTag(jsxEl.openingElement.name)) {
-          childExprs.push(buildComponentCall(jsxEl, state));
+      } else if (isJSXElement(child)) {
+        if (isComponentTag(child.openingElement.name)) {
+          childExprs.push(buildComponentCall(child, state));
         } else {
           childExprs.push(
             state.mode === "ssr"
-              ? transformJSXForSSRNode(jsxEl, state)
-              : transformJSXNode(jsxEl, state),
+              ? transformJSXForSSRNode(child, state)
+              : transformJSXNode(child, state),
           );
         }
-      } else if (child.type === "JSXFragment") {
-        for (const fragRaw of (child as JSXFragment).children) {
-          const fragChild = fragRaw as ESTNode;
+      } else if (isJSXFragment(child)) {
+        for (const fragChild of child.children) {
           if (fragChild.type === "JSXText") {
-            const text = (fragChild as JSXText).value.trim();
+            const text = fragChild.value.trim();
             if (text) childExprs.push(nLit(text));
-          } else if (fragChild.type === "JSXExpressionContainer") {
-            const container = fragChild as JSXExpressionContainer;
-            if (!isJSXEmptyExpression(container.expression)) {
-              childExprs.push(container.expression);
+          } else if (isJSXExpressionContainer(fragChild)) {
+            if (!isJSXEmptyExpression(fragChild.expression)) {
+              childExprs.push(fragChild.expression);
             }
-          } else if (fragChild.type === "JSXElement") {
-            const el = fragChild as JSXElement;
-            if (isComponentTag(el.openingElement.name)) {
-              childExprs.push(buildComponentCall(el, state));
+          } else if (isJSXElement(fragChild)) {
+            if (isComponentTag(fragChild.openingElement.name)) {
+              childExprs.push(buildComponentCall(fragChild, state));
             } else {
               childExprs.push(
                 state.mode === "ssr"
-                  ? transformJSXForSSRNode(el, state)
-                  : transformJSXNode(el, state),
+                  ? transformJSXForSSRNode(fragChild, state)
+                  : transformJSXNode(fragChild, state),
               );
             }
           }
@@ -568,7 +606,7 @@ function jsxToTree(
 
   if (node.type === "JSXFragment") {
     const children = processChildren(
-      (node as JSXFragment).children,
+      node.children,
       state,
       dynamicParts,
       [],
@@ -582,7 +620,7 @@ function jsxToTree(
     };
   }
 
-  const result = jsxElementToTree(node as JSXElement, state, dynamicParts, [0]);
+  const result = jsxElementToTree(node, state, dynamicParts, [0]);
   return { tree: nArr([result.tree]), dynamicParts };
 }
 
@@ -664,17 +702,16 @@ function processAttributes(
 
   for (const attr of attributes) {
     if (attr.type === "JSXSpreadAttribute") {
-      spreads.push((attr as JSXSpreadAttribute).argument);
+      spreads.push(attr.argument);
       continue;
     }
 
-    const jsxAttr = attr as JSXAttribute;
-    if (jsxAttr.name.type !== "JSXIdentifier") continue;
+    if (attr.name.type !== "JSXIdentifier") continue;
 
-    const key = (jsxAttr.name as JSXIdentifier).name;
+    const key = attr.name.name;
     const keyNode = isValidIdentifier(key) ? nId(key) : nLit(key);
     const computed = !isValidIdentifier(key);
-    const value = jsxAttr.value as ESTNode | null;
+    const value = attr.value;
 
     if (value === null) {
       // Boolean attribute: <button disabled />
@@ -688,9 +725,8 @@ function processAttributes(
       continue;
     }
 
-    if (value.type === "JSXExpressionContainer") {
-      const container = value as JSXExpressionContainer;
-      const expr = container.expression;
+    if (isJSXExpressionContainer(value)) {
+      const expr = value.expression;
       if (isJSXEmptyExpression(expr)) continue;
 
       if (isEventHandlerKey(key)) {
@@ -729,12 +765,10 @@ function processChildren(
   const results: TreeResult[] = [];
   let childIndex = 0;
 
-  for (const rawChild of children) {
-    const child = rawChild as ESTNode;
-
+  for (const child of children) {
     if (child.type === "JSXText") {
       // Skip whitespace-only text
-      const text = (child as JSXText).value.trim();
+      const text = child.value.trim();
       if (text) {
         results.push({ tree: nLit(text), dynamicParts: [] });
         childIndex++;
@@ -742,11 +776,10 @@ function processChildren(
       continue;
     }
 
-    if (child.type === "JSXElement") {
-      const el = child as JSXElement;
-      if (isComponentTag(el.openingElement.name)) {
+    if (isJSXElement(child)) {
+      if (isComponentTag(child.openingElement.name)) {
         // Component elements → function call + insert placeholder
-        const callExpr = buildComponentCall(el, state);
+        const callExpr = buildComponentCall(child, state);
         dynamicParts.push({
           type: "insert",
           isComponent: true,
@@ -762,14 +795,14 @@ function processChildren(
       }
       // HTML elements → tree node
       const childPath = [...parentPath, childIndex];
-      results.push(jsxElementToTree(el, state, dynamicParts, childPath));
+      results.push(jsxElementToTree(child, state, dynamicParts, childPath));
       childIndex++;
       continue;
     }
 
-    if (child.type === "JSXFragment") {
+    if (isJSXFragment(child)) {
       const processed = processChildren(
-        (child as JSXFragment).children,
+        child.children,
         state,
         dynamicParts,
         parentPath,
@@ -779,19 +812,14 @@ function processChildren(
       continue;
     }
 
-    if (child.type === "JSXExpressionContainer") {
-      const container = child as JSXExpressionContainer;
-      const expr = container.expression;
+    if (isJSXExpressionContainer(child)) {
+      const expr = child.expression;
       if (isJSXEmptyExpression(expr)) continue;
 
       // Check if it's a .map() call (list rendering)
-      if (
-        expr.type === "CallExpression" &&
-        (expr as CallExpression).callee.type === "MemberExpression"
-      ) {
-        const callee = (expr as CallExpression).callee as Record<string, unknown>;
-        const method = callee["property"] as ESTNode | undefined;
-        if (method?.type === "Identifier" && (method as Identifier).name === "map") {
+      if (isCallExpression(expr) && isMemberExpression(expr.callee)) {
+        const method = expr.callee.property;
+        if (isIdentifier(method) && method.name === "map") {
           // Transform any JSX inside the .map() callback
           const transformed = transformNestedJSX(expr, state);
           dynamicParts.push({
@@ -809,7 +837,7 @@ function processChildren(
       }
 
       // Check if it's any other function call (component or computed insert)
-      if (expr.type === "CallExpression") {
+      if (isCallExpression(expr)) {
         const transformed = transformNestedJSX(expr, state);
         dynamicParts.push({
           type: "insert",
@@ -870,21 +898,18 @@ function processChildren(
 function transformNestedJSX(expr: ESTNode, state: TransformState): ESTNode {
   return walk(expr, null, {
     JSXElement(node: ESTNode, { next: _next }: { next: () => void }) {
-      const el = node as unknown as JSXElement;
+      const el = node as JSXElement;
       if (isComponentTag(el.openingElement.name)) {
-        return buildComponentCall(el, state) as unknown as ESTNode;
+        return buildComponentCall(el, state);
       }
       // Transform nested HTML JSX (does NOT recurse into its own children via
       // zimmerframe since we return without calling next())
-      return transformJSXNode(el, state) as unknown as ESTNode;
+      return transformJSXNode(el, state);
     },
     JSXFragment(node: ESTNode, { next: _next }: { next: () => void }) {
-      return transformJSXNode(
-        node as unknown as JSXFragment,
-        state,
-      ) as unknown as ESTNode;
+      return transformJSXNode(node as JSXFragment, state);
     },
-  }) as unknown as ESTNode;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1038,14 +1063,7 @@ function transformJSXNode(
 
         // Avoid re-declaring the node variable if it was already declared
         const alreadyDeclared = setupStatements.some(
-          (s) =>
-            s.type === "VariableDeclaration" &&
-            ((s as VariableDeclaration).declarations[0] as Record<string, unknown>)?.["id"] &&
-            (
-              ((s as VariableDeclaration).declarations[0] as Record<string, unknown>)[
-                "id"
-              ] as Identifier
-            )?.name === nodeId.name,
+          (s) => isVariableDeclaration(s) && s.declarations[0]?.id.name === nodeId.name,
         );
 
         if (!alreadyDeclared) {
@@ -1114,13 +1132,7 @@ function transformJSXNode(
         state.runtimeImports.add("templateEffect");
 
         const alreadyDeclared = setupStatements.some(
-          (s) =>
-            s.type === "VariableDeclaration" &&
-            (
-              ((s as VariableDeclaration).declarations[0] as Record<string, unknown>)[
-                "id"
-              ] as Identifier
-            )?.name === nodeId.name,
+          (s) => isVariableDeclaration(s) && s.declarations[0]?.id.name === nodeId.name,
         );
 
         if (!alreadyDeclared) {
@@ -1258,7 +1270,7 @@ function transform(
   // When we encounter a root JSX node we do NOT call next(), which prevents
   // zimmerframe from traversing into nested JSX children (they are handled
   // recursively by jsxToTree / processChildren).
-  const transformedProgram = walk(parsed.program as ESTNode, { inJSX: false }, {
+  const transformedProgram = walk(parsed.program as unknown as ESTNode, { inJSX: false }, {
     JSXElement(
       node: ESTNode,
       { state: walkState, next }: { state: { inJSX: boolean }; next: (s?: { inJSX: boolean }) => void },
@@ -1268,18 +1280,18 @@ function transform(
         next({ inJSX: true });
         return;
       }
-      const el = node as unknown as JSXElement;
+      const el = node as JSXElement;
 
       if (mode === "ssr") {
         if (isComponentTag(el.openingElement.name)) {
-          return buildComponentCall(el, state) as unknown as ESTNode;
+          return buildComponentCall(el, state);
         }
-        return transformJSXForSSRNode(el, state) as unknown as ESTNode;
+        return transformJSXForSSRNode(el, state);
       } else {
         if (isComponentTag(el.openingElement.name)) {
-          return buildComponentCall(el, state) as unknown as ESTNode;
+          return buildComponentCall(el, state);
         }
-        return transformJSXNode(el, state) as unknown as ESTNode;
+        return transformJSXNode(el, state);
       }
     },
     JSXFragment(
@@ -1290,13 +1302,13 @@ function transform(
         next({ inJSX: true });
         return;
       }
-      const frag = node as unknown as JSXFragment;
+      const frag = node as JSXFragment;
       if (mode === "ssr") {
-        return transformJSXForSSRNode(frag, state) as unknown as ESTNode;
+        return transformJSXForSSRNode(frag, state);
       }
-      return transformJSXNode(frag, state) as unknown as ESTNode;
+      return transformJSXNode(frag, state);
     },
-  }) as unknown as Program;
+  }) as Program;
 
   // Insert template declarations after imports
   if (state.templates.length > 0) {
@@ -1314,9 +1326,13 @@ function transform(
   // Add runtime imports
   addRuntimeImports(transformedProgram, state.runtimeImports, runtimeModule);
 
-  // Generate output using esrap
+  // Generate output using esrap.
+  // The cast through `any` is required because esrap's internal `Node` union
+  // is overly specific; our plain ESTree objects are structurally compatible
+  // at runtime but cannot satisfy the type statically.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { code: outputCode, map: outputMap } = print(
-    transformedProgram as { type: string },
+    transformedProgram as any,
     ts(),
     sourceMap
       ? { sourceMapSource: filename, sourceMapContent: code }

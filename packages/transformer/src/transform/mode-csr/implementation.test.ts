@@ -81,4 +81,88 @@ describe("transform/mode-csr", () => {
 
     expect(state.runtimeImports.has("event")).toBe(true);
   });
+
+  it("declares insert anchors before templateEffect expressions", () => {
+    const state = createInitialState("csr");
+    const node = {
+      ...makeElement(),
+      children: [
+        {
+          type: "JSXExpressionContainer",
+          expression: {
+            type: "LogicalExpression",
+            operator: "&&",
+            left: { type: "Literal", value: true, raw: "true" },
+            right: {
+              type: "JSXElement",
+              openingElement: {
+                type: "JSXOpeningElement",
+                name: { type: "JSXIdentifier", name: "span" },
+                attributes: [],
+                selfClosing: false,
+              },
+              children: [{ type: "JSXText", value: "A" }],
+              closingElement: null,
+            },
+          },
+        },
+        {
+          type: "JSXExpressionContainer",
+          expression: {
+            type: "ObjectExpression",
+            properties: [
+              {
+                type: "Property",
+                key: { type: "Identifier", name: "node" },
+                value: {
+                  type: "JSXElement",
+                  openingElement: {
+                    type: "JSXOpeningElement",
+                    name: { type: "JSXIdentifier", name: "em" },
+                    attributes: [],
+                    selfClosing: false,
+                  },
+                  children: [{ type: "JSXText", value: "B" }],
+                  closingElement: null,
+                },
+                kind: "init",
+                computed: false,
+                method: false,
+                shorthand: false,
+              },
+            ],
+          },
+        },
+      ],
+    } as JSXElement;
+
+    const output = transformJSXNode(node, state, nested) as unknown as {
+      callee: {
+        body: {
+          body: Array<{ type: string; declarations?: Array<{ id: { name: string } }> }>;
+        };
+      };
+    };
+
+    const statements = output.callee.body.body;
+    const firstTemplateEffectIndex = statements.findIndex(
+      (stmt) =>
+        stmt.type === "ExpressionStatement" &&
+        (stmt as unknown as { expression?: { callee?: { name?: string } } }).expression
+          ?.callee?.name === "templateEffect",
+    );
+    const insertNodeDeclarationIndexes = statements
+      .map((stmt, index) => ({
+        index,
+        name:
+          stmt.type === "VariableDeclaration" ? (stmt.declarations?.[0]?.id.name ?? "") : "",
+      }))
+      .filter(({ name }) => name.startsWith("_n0_"));
+
+    expect(firstTemplateEffectIndex).toBeGreaterThan(-1);
+    expect(insertNodeDeclarationIndexes.length).toBeGreaterThanOrEqual(2);
+    expect(insertNodeDeclarationIndexes.every(({ index }) => index < firstTemplateEffectIndex)).toBe(
+      true,
+    );
+  });
 });

@@ -17,17 +17,24 @@ function transformJSXForSSRNode(
 
   state.runtimeImports.add("renderToString");
 
-  const dynamicValueEntries: ESTNode[] = [];
+  const markerDynamicParts = dynamicParts.filter(
+    (part) => part.type === "text" || part.type === "insert",
+  );
+  const nonMarkerDynamicParts = dynamicParts.filter(
+    (part) => part.type === "attr" || part.type === "spread",
+  );
 
-  for (const part of dynamicParts) {
-    if (
-      part.type === "text" ||
-      part.type === "insert" ||
-      part.type === "attr" ||
-      part.type === "spread"
-    ) {
-      dynamicValueEntries.push(nArr([nLit(dynamicValueEntries.length + 1), part.expression]));
-    }
+  const dynamicValueEntries: ESTNode[] = [];
+  let dynamicId = 1;
+
+  for (const part of markerDynamicParts) {
+    dynamicValueEntries.push(nArr([nLit(dynamicId), part.expression]));
+    dynamicId++;
+  }
+
+  for (const part of nonMarkerDynamicParts) {
+    dynamicValueEntries.push(nArr([nLit(dynamicId), part.expression]));
+    dynamicId++;
   }
 
   const dynamicValuesMap =

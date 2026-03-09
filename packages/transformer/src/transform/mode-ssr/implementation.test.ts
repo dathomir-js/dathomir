@@ -59,4 +59,70 @@ describe("transform/mode-ssr", () => {
     expect(mapArg.type).toBe("ArrayExpression");
     expect(mapArg.elements.length).toBeGreaterThan(0);
   });
+
+  it("keeps text/insert keys stable even when attr dynamic part appears first", () => {
+    const state = createInitialState("ssr");
+    const output = transformJSXForSSRNode(
+      {
+        type: "JSXElement",
+        openingElement: {
+          type: "JSXOpeningElement",
+          name: { type: "JSXIdentifier", name: "div" },
+          attributes: [
+            {
+              type: "JSXAttribute",
+              name: { type: "JSXIdentifier", name: "class" },
+              value: {
+                type: "JSXExpressionContainer",
+                expression: {
+                  type: "MemberExpression",
+                  object: { type: "Identifier", name: "state" },
+                  property: { type: "Identifier", name: "value" },
+                  computed: false,
+                  optional: false,
+                },
+              },
+            },
+          ],
+          selfClosing: false,
+        },
+        children: [
+          {
+            type: "JSXExpressionContainer",
+            expression: {
+              type: "LogicalExpression",
+              operator: "&&",
+              left: { type: "Identifier", name: "visible" },
+              right: {
+                type: "JSXElement",
+                openingElement: {
+                  type: "JSXOpeningElement",
+                  name: { type: "JSXIdentifier", name: "span" },
+                  attributes: [],
+                  selfClosing: false,
+                },
+                children: [{ type: "JSXText", value: "ok" }],
+                closingElement: null,
+              },
+            },
+          },
+        ],
+        closingElement: null,
+      },
+      state,
+      nested,
+    ) as unknown as {
+      arguments: Array<{ type: string; arguments?: unknown[] }>;
+    };
+
+    const mapArg = output.arguments[2]?.arguments?.[0] as {
+      type: string;
+      elements: Array<{ type: string; elements: Array<{ value?: unknown }> }>;
+    };
+
+    expect(mapArg.type).toBe("ArrayExpression");
+    expect(mapArg.elements.length).toBe(2);
+    expect(mapArg.elements[0]?.elements[0]?.value).toBe(1);
+    expect(mapArg.elements[1]?.elements[0]?.value).toBe(2);
+  });
 });

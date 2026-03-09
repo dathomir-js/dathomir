@@ -450,6 +450,69 @@ describe("transform", () => {
       expect(result.code).not.toContain("setAttr");
       expect(result.code).toContain("getClass");
     });
+
+    it("should support namespaced attributes like xlink:href", () => {
+      const code = `
+        const element = <use xlink:href="#icon" />;
+      `;
+
+      const result = transform(code);
+
+      expect(result.code).toContain('"xlink:href"');
+      expect(result.code).toContain("#icon");
+    });
+  });
+
+  describe("Expression container edge cases", () => {
+    it("should transform logical expression rendering using insert() and templateEffect", () => {
+      const code = `
+        const visible = signal(true);
+        const element = <div>{visible.value && <span>Shown</span>}</div>;
+      `;
+
+      const result = transform(code);
+
+      expect(result.code).toContain("insert");
+      expect(result.code).toContain("templateEffect");
+      expect(result.code).toContain("visible.value");
+      expect(result.code).toContain("span");
+    });
+
+    it("should transform expressions containing nested JSX via insert()", () => {
+      const code = `
+        const element = <div>{[<em>A</em>, <strong>B</strong>]}</div>;
+      `;
+
+      const result = transform(code);
+
+      expect(result.code).toContain("insert");
+      expect(result.code).toContain("em");
+      expect(result.code).toContain("strong");
+    });
+
+    it("should transform JSXSpreadChild as insert dynamic part", () => {
+      const code = `
+        const items = [<li>A</li>, <li>B</li>];
+        const element = <ul>{...items}</ul>;
+      `;
+
+      const result = transform(code);
+
+      expect(result.code).toContain("insert");
+      expect(result.code).toContain("items");
+    });
+
+    it("should transform logical expression JSX branches with renderToString in SSR mode", () => {
+      const code = `
+        const visible = true;
+        const element = <div>{visible && <span>SSR</span>}</div>;
+      `;
+
+      const result = transform(code, { mode: "ssr" });
+
+      expect(result.code).not.toContain("fromTree");
+      expect(result.code).toContain("renderToString");
+    });
   });
 
   describe("SSR mode conditional rendering", () => {

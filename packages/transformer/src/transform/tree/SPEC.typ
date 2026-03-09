@@ -39,4 +39,25 @@ JSX を構造化配列 tree に変換し、
 - `signal.value` を含む属性が attr dynamic part になる
 - イベント属性が event dynamic part になる
 - `.map()` / ternary / call expression が insert dynamic part になる
+- `logical expression`（`&&` / `||`）が insert dynamic part になる
+- JSX を含む一般式（Array/Object/Binary など）が insert dynamic part になる
+- `JSXSpreadChild` が insert dynamic part になる
+- namespaced 属性（`xlink:href`）が文字列キーとして保持される
 - Fragment 内の動的テキスト・コンポーネント insert を取りこぼさない
+
+=== ADR: 式コンテナの mode-aware JSX フォールバック
+
+*決定:* `.map()` / ternary / call に加えて、式サブツリー内に JSX ノードを含む場合は
+`insert` dynamic part として扱い `transformNestedJSX` を適用する。
+
+*理由:*
+1. 条件分岐や配列・オブジェクト式に JSX が埋め込まれるケースを取りこぼさないため
+2. text dynamic part へ誤分類すると JSX ノードの評価が破綻するため
+
+=== ADR: namespaced 属性キーの正規化
+
+*決定:* `JSXNamespacedName` 属性は `namespace:name` 文字列キーとして扱う。
+
+*理由:*
+1. JavaScript 識別子に変換できない属性名を安全に保持するため
+2. SVG 属性（`xlink:href` など）を落とさず変換するため

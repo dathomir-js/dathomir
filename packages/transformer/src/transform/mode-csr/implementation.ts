@@ -1,5 +1,4 @@
 import {
-  isVariableDeclaration,
   nArrowBlock,
   nBlock,
   nCall,
@@ -37,16 +36,31 @@ function transformJSXNode(
   const fragmentId = nId("_f");
   setupStatements.push(nConst(fragmentId, nCall(templateId, [])));
 
+  const nodeDeclarations: ESTNode[] = [];
+  const updateStatements: ESTNode[] = [];
+  const declaredNodeIds = new Set<string>();
+
+  function ensureNodeDeclaration(path: number[]): ESTNode {
+    const nodeName = `_n${path.join("_")}`;
+    const nodeId = nId(nodeName);
+
+    if (!declaredNodeIds.has(nodeName)) {
+      declaredNodeIds.add(nodeName);
+      nodeDeclarations.push(nConst(nodeId, generateNavigation(fragmentId, path, state)));
+    }
+
+    return nodeId;
+  }
+
   for (const part of dynamicParts) {
-    const nodeId = nId(`_n${part.path.join("_")}`);
+    const nodeId = ensureNodeDeclaration(part.path);
 
     switch (part.type) {
       case "text": {
         state.runtimeImports.add("setText");
         state.runtimeImports.add("templateEffect");
 
-        setupStatements.push(nConst(nodeId, generateNavigation(fragmentId, part.path, state)));
-        setupStatements.push(
+        updateStatements.push(
           nExprStmt(
             nCall(nId("templateEffect"), [
               nArrowBlock(
@@ -63,8 +77,7 @@ function transformJSXNode(
         state.runtimeImports.add("setAttr");
         state.runtimeImports.add("templateEffect");
 
-        setupStatements.push(nConst(nodeId, generateNavigation(fragmentId, part.path, state)));
-        setupStatements.push(
+        updateStatements.push(
           nExprStmt(
             nCall(nId("templateEffect"), [
               nArrowBlock(
@@ -83,15 +96,8 @@ function transformJSXNode(
 
       case "event": {
         state.runtimeImports.add("event");
-        const alreadyDeclared = setupStatements.some(
-          (s) => isVariableDeclaration(s) && s.declarations[0]?.id.name === nodeId.name,
-        );
 
-        if (!alreadyDeclared) {
-          setupStatements.push(nConst(nodeId, generateNavigation(fragmentId, part.path, state)));
-        }
-
-        setupStatements.push(
+        updateStatements.push(
           nExprStmt(nCall(nId("event"), [nLit(part.key ?? ""), nodeId, part.expression])),
         );
         break;
@@ -100,10 +106,8 @@ function transformJSXNode(
       case "insert": {
         state.runtimeImports.add("insert");
 
-        setupStatements.push(nConst(nodeId, generateNavigation(fragmentId, part.path, state)));
-
         if (part.isComponent) {
-          setupStatements.push(
+          updateStatements.push(
             nExprStmt(
               nCall(nId("insert"), [
                 nMember(nodeId, nId("parentNode")),
@@ -114,7 +118,7 @@ function transformJSXNode(
           );
         } else {
           state.runtimeImports.add("templateEffect");
-          setupStatements.push(
+          updateStatements.push(
             nExprStmt(
               nCall(nId("templateEffect"), [
                 nArrowBlock(
@@ -140,15 +144,7 @@ function transformJSXNode(
         state.runtimeImports.add("spread");
         state.runtimeImports.add("templateEffect");
 
-        const alreadyDeclared = setupStatements.some(
-          (s) => isVariableDeclaration(s) && s.declarations[0]?.id.name === nodeId.name,
-        );
-
-        if (!alreadyDeclared) {
-          setupStatements.push(nConst(nodeId, generateNavigation(fragmentId, part.path, state)));
-        }
-
-        setupStatements.push(
+        updateStatements.push(
           nExprStmt(
             nCall(nId("templateEffect"), [
               nArrowBlock(
@@ -163,6 +159,8 @@ function transformJSXNode(
     }
   }
 
+  setupStatements.push(...nodeDeclarations);
+  setupStatements.push(...updateStatements);
   setupStatements.push(nReturn(fragmentId));
   return nCall(nArrowBlock([], nBlock(setupStatements)), []);
 }

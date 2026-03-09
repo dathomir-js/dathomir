@@ -7,6 +7,7 @@ import type {
   JSXElement,
   JSXExpressionContainer,
   JSXFragment,
+  JSXSpreadChild,
   JSXText,
 } from "@/transform/jsx/implementation";
 
@@ -30,7 +31,15 @@ function expr(expression: ESTNode): JSXExpressionContainer {
   return { type: "JSXExpressionContainer", expression };
 }
 
-function div(children: (JSXElement | JSXFragment | JSXText | JSXExpressionContainer)[]): JSXElement {
+function div(
+  children: (
+    | JSXElement
+    | JSXFragment
+    | JSXText
+    | JSXExpressionContainer
+    | JSXSpreadChild
+  )[],
+): JSXElement {
   return {
     type: "JSXElement",
     openingElement: {
@@ -122,5 +131,97 @@ describe("transform/tree", () => {
 
     expect(insertPart).toBeDefined();
     expect(insertPart?.isComponent).toBe(true);
+  });
+
+  it("processAttributes keeps namespaced attribute keys as string literals", () => {
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+    const attributes: Parameters<typeof processAttributes>[0] = [
+      {
+        type: "JSXAttribute",
+        name: {
+          type: "JSXNamespacedName",
+          namespace: { type: "JSXIdentifier", name: "xlink" },
+          name: { type: "JSXIdentifier", name: "href" },
+        },
+        value: { type: "Literal", value: "#icon", raw: '"#icon"' },
+      },
+    ];
+
+    const result = processAttributes(attributes, dynamicParts, [0]);
+
+    expect(result.attrs.type).toBe("ObjectExpression");
+    const objectExpression = result.attrs as {
+      type: "ObjectExpression";
+      properties: Array<{ key: { type: string; value?: unknown } }>;
+    };
+    const keyNode = objectExpression.properties[0]?.key;
+    expect(keyNode?.type).toBe("Literal");
+    expect(keyNode?.value).toBe("xlink:href");
+  });
+
+  it("jsxToTree treats logical expression children as insert dynamic parts", () => {
+    const state = createInitialState("csr");
+    const tree = div([
+      expr({
+        type: "LogicalExpression",
+        operator: "&&",
+        left: nId("visible"),
+        right: {
+          type: "JSXElement",
+          openingElement: {
+            type: "JSXOpeningElement",
+            name: { type: "JSXIdentifier", name: "span" },
+            attributes: [],
+            selfClosing: false,
+          },
+          children: [{ type: "JSXText", value: "ok" }],
+          closingElement: null,
+        },
+      }),
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(true);
+  });
+
+  it("jsxToTree treats expressions that contain nested JSX as insert dynamic parts", () => {
+    const state = createInitialState("csr");
+    const tree = div([
+      expr({
+        type: "ArrayExpression",
+        elements: [
+          {
+            type: "JSXElement",
+            openingElement: {
+              type: "JSXOpeningElement",
+              name: { type: "JSXIdentifier", name: "em" },
+              attributes: [],
+              selfClosing: false,
+            },
+            children: [{ type: "JSXText", value: "a" }],
+            closingElement: null,
+          },
+        ],
+      }),
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(true);
+  });
+
+  it("jsxToTree treats JSXSpreadChild as insert dynamic parts", () => {
+    const state = createInitialState("csr");
+    const tree = div([
+      {
+        type: "JSXSpreadChild",
+        expression: nId("children"),
+      },
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(true);
   });
 });

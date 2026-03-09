@@ -249,13 +249,16 @@ function hydrate(
   return hydrateRoot(root, (ctx) => {
     // Process text bindings
     if (bindings.texts) {
-      for (const marker of ctx.markers) {
+      let marker = nextMarker(ctx);
+      while (marker !== null) {
         if (marker.type === HydrationMarkerType.Text) {
           const getValue = bindings.texts.get(marker.id);
           if (getValue) {
             hydrateTextMarker(marker, getValue);
           }
         }
+
+        marker = nextMarker(ctx);
       }
     }
 

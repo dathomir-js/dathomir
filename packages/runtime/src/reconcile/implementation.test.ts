@@ -505,7 +505,7 @@ describe("reconcile", () => {
         { id: 2, text: "b" },
       ];
       const updateFn = vi.fn(
-        (node: Node, item: Item, index: number): void => {},
+        (_node: Node, _item: Item, _index: number): void => {},
       );
 
       reconcile(parent, items, createKeyFn, createNodeFn, updateFn);

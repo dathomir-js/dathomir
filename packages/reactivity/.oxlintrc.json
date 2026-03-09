@@ -1,5 +1,0 @@
-{
-  "extends": [
-    "./node_modules/@dathomir/config/templates/oxlintrc.template.json"
-  ]
-}

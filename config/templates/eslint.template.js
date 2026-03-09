@@ -69,7 +69,7 @@ export const eslint = () => {
         "no-relative-import-paths/no-relative-import-paths": "off",
       },
     },
-    // ...oxlint.buildFromOxlintConfigFile(`${cwd()}/.oxlintrc.json`),
+    // ...oxlint.buildFromOxlintConfigFile(`${cwd()}/oxlint.config.ts`),
     ...oxlint.configs['flat/recommended'],
   ]
 

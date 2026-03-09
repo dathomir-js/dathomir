@@ -190,9 +190,7 @@ describe("templateEffect", () => {
     it("should be tracked by current owner", () => {
       const count = signal(0);
       const spy = vi.fn();
-      let dispose: (() => void) | undefined;
-
-      dispose = createRoot(() => {
+      const dispose = createRoot(() => {
         templateEffect(() => spy(count.value));
       });
 

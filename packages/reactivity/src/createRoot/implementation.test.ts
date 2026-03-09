@@ -17,9 +17,7 @@ describe("createRoot", () => {
   it("should track and cleanup effects created within scope", () => {
     const count = signal(0);
     const spy = vi.fn();
-    let dispose: (() => void) | undefined;
-
-    dispose = createRoot(() => {
+    const dispose = createRoot(() => {
       templateEffect(() => {
         spy(count.value);
       });
@@ -43,9 +41,7 @@ describe("createRoot", () => {
     const count = signal(0);
     const spy1 = vi.fn();
     const spy2 = vi.fn();
-    let dispose: (() => void) | undefined;
-
-    dispose = createRoot(() => {
+    const dispose = createRoot(() => {
       templateEffect(() => spy1(count.value));
       templateEffect(() => spy2(count.value * 2));
     });
@@ -87,10 +83,8 @@ describe("createRoot", () => {
     const count = signal(0);
     const outerSpy = vi.fn();
     const innerSpy = vi.fn();
-    let outerDispose: (() => void) | undefined;
     let innerDispose: (() => void) | undefined;
-
-    outerDispose = createRoot(() => {
+    const outerDispose = createRoot(() => {
       templateEffect(() => outerSpy(count.value));
 
       innerDispose = createRoot(() => {

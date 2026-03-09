@@ -1,18 +1,14 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin } from "@opencode-ai/plugin";
 
-/**
- * Runs oxfmt and oxlint after each agent response completes.
- * Triggered by the `session.idle` event.
- */
-export const FormatLintPlugin: Plugin = async ({ $, directory }) => {
+export const FormatLintPlugin: Plugin = async ({ $, directory: _directory }) => {
   return {
     event: async ({ event }) => {
       if (event.type !== "session.idle") return
 
-      // Run formatter
-      await $`oxfmt ${directory}`.catch(() => {})
-      // Run linter
-      await $`oxlint ${directory}`.catch(() => {})
+      // Run formatter via config package where prettier is installed
+      // await $`pnpm `.catch(() => {})
+      // Run linter via config package where oxlint is installed
+      await $`pnpm lint`.catch(() => {})
     },
   }
 }

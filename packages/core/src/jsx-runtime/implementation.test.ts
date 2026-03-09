@@ -28,7 +28,9 @@ describe("jsx / createElement", () => {
     });
 
     it("should create element with multiple text children (jsxs)", () => {
-      const el = jsxs("p", { children: ["Hello", " ", "World"] }) as HTMLElement;
+      const el = jsxs("p", {
+        children: ["Hello", " ", "World"],
+      }) as HTMLElement;
       expect(el.textContent).toContain("Hello");
       expect(el.textContent).toContain("World");
     });
@@ -72,7 +74,9 @@ describe("jsx / createElement", () => {
 
     it("should call function components with empty props when null", () => {
       const MyComponent = (props: Record<string, unknown>) => {
-        return jsx("div", { children: String(Object.keys(props).length) }) as Node;
+        return jsx("div", {
+          children: String(Object.keys(props).length),
+        }) as Node;
       };
       const el = jsx(MyComponent, null) as HTMLElement;
       expect(el.textContent).toContain("0");
@@ -115,7 +119,7 @@ describe("jsx / createElement", () => {
 
   describe("reactive text children (getter functions)", () => {
     it("should support getter functions as reactive text children", () => {
-      let count = 0;
+      const count = 0;
       const getter = () => count;
       const el = jsx("span", { children: getter }) as HTMLElement;
       // Initial render

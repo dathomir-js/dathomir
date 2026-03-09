@@ -29,7 +29,13 @@
 
 ### 変更を加える前に
 
-- implementation.ts の修正を行う場合は、まず、その機能と同じディレクトリに存在する SPEC.typ と implementation.test.ts を implementation.ts に加えようとしている変更内容の仕様、設計、テストケースを作成してから行うこと
+- SPEC.typ と implementation.test.ts を正とし、implementation.ts はそれらに従う実装として扱うこと
+- すべての SPEC.typ の記法は `SPEC/SPEC.typ` を正準とし、新規作成・更新時はその見出し構成と記法に合わせること
+- SPEC.typ では `/SPEC/functions.typ` のマクロ（`interface_spec`、`behavior_spec`、`feature_spec`、`adr`）を優先して使用すること
+- SPEC.typ 内の ADR は設計判断の履歴として扱い、Status.Accepted になった ADR の意味内容は後から書き換えないこと
+- Status.Accepted の ADR に判断変更が必要な場合は、既存 ADR を継承または supersede する新しい ADR を追加して扱うこと
+- implementation.ts の修正を行う場合は、まず、その機能と同じディレクトリに存在する SPEC.typ と implementation.test.ts に変更内容の仕様、設計、テストケースを反映してから行うこと
+- SPEC.typ・implementation.test.ts・implementation.ts の 3 ファイルは、常に相互に整合している状態を保つこと
 - コードを修正する前に十分なコンテキストを収集すること（関連するコード、ドキュメント、依存関係など）
 - 依存パッケージの最新仕様を理解すること(Context7 等を活用)
 - SPEC.typ と implementation.test.ts を必ず読むこと
@@ -38,7 +44,11 @@
 
 ### 禁止事項
 
+- implementation.ts を基準にして SPEC.typ や implementation.test.ts の内容を決めないこと
+- `=== ADR:` や `=== ADR-001:` のような独自 ADR 見出し形式を新たに追加しないこと
+- Status.Accepted の ADR に対して、意味内容が変わる修正を直接加えないこと
 - SPEC.typ と implementation.test.ts に変更を加えずに implementation.ts を修正しないこと
+- SPEC.typ・implementation.test.ts・implementation.ts の整合性が崩れた状態を放置しないこと
 - 明示的な許可なしにテストを削除・変更しないこと
 - 依頼されたスコープ外の変更を行わないこと
 - 適切な検証なしにタスクを「完了」と宣言しないこと
@@ -91,15 +101,16 @@ packages/{package-name}/src/{api-name}/
 ```
 
 **各ファイルの役割：**
-- **SPEC.typ**: 仕様と設計決定を記述。実装の「何を」「なぜ」を定義
-- **implementation.test.ts**: 実装の正しさを検証するテストケース
-- **implementation.ts**: SPEC.typ に基づいた実装コード
+- **SPEC.typ**: 仕様と設計決定を記述する正本。実装の「何を」「なぜ」を定義
+- **implementation.test.ts**: 期待される振る舞いを検証する正本。回帰を防ぐためのテストケースを定義
+- **implementation.ts**: SPEC.typ と implementation.test.ts に整合する実装コード
 - **AGENTS.md**: AI エージェントに対し、まず SPEC.typ と implementation.test.ts を読むよう指示 (ほとんど変更しない)
 
 **実装前の必須手順：**
 1. SPEC.typ を読み、仕様と設計を理解する
 2. implementation.test.ts を読み、期待される振る舞いを確認する
-3. implementation.ts を実装し、すべてのテストが通ることを確認する
+3. 必要な変更がある場合は、先に SPEC.typ と implementation.test.ts を更新し、仕様とテストの整合性を確定する
+4. implementation.ts を実装し、3 ファイルの整合性とすべてのテストが通ることを確認する
 
 ## ディレクトリ構成
 このプロジェクトを理解する補完情報として読んでください

@@ -1,5 +1,6 @@
 = plugin（ビルドツール統合）
 
+#import "/SPEC/functions.typ": *
 #import "/SPEC/settings.typ": *
 #show: apply-settings
 
@@ -9,119 +10,75 @@ Vite、webpack 等のビルドツール向けプラグインを提供する。
 unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイルに対して
 `\@dathomir/transformer` を適用する。
 
-== 提供する関数
+== インターフェース仕様
 
-=== dathomir
+#interface_spec(
+  name: "plugin API",
+  summary: [
+    unplugin ベースで複数バンドラーに対応し、JSX/TSX ファイルへ `@dathomir/transformer` を適用するプラグイン API。
+  ],
+  format: [
+    *エクスポート*:
+    - `dathomir: UnpluginInstance<PluginOptions | undefined>`
+    - `dathomirVitePlugin(options?: PluginOptions): VitePlugin`
+    - `dathomirWebpackPlugin(options?: PluginOptions): WebpackPlugin`
+    - `dathomirRollupPlugin(options?: PluginOptions): RollupPlugin`
+    - `dathomirEsbuildPlugin(options?: PluginOptions): EsbuildPlugin`
 
-```typescript
-const dathomir: UnpluginInstance<PluginOptions | undefined>
-```
+    *オプション*:
+    ```typescript
+    interface PluginOptions {
+      include?: string[];
+      exclude?: string[];
+      runtimeModule?: string;
+      mode?: 'csr' | 'ssr';
+    }
+    ```
+  ],
+  constraints: [
+    - `include` に一致し `exclude` に一致しないファイルのみ変換する
+    - デフォルトで `.tsx` と `.jsx` を対象とする
+    - モード判定の優先順位は `options.mode` → `environment.name` → `options.ssr` → CSR
+    - `@dathomir/transformer` の `transform()` を呼び出し、`filename` と `runtimeModule` を渡す
+    - transform 失敗時はファイルパスを付与したエラーとして再スローする
+  ],
+)
 
-unplugin インスタンス。複数のバンドラーに対応。デフォルトエクスポートでもある。
+== 機能仕様
 
-=== dathomirVitePlugin
+#feature_spec(
+  name: "plugin integration coverage",
+  summary: [
+    ファイルフィルタリング、モード判定、transform 呼び出し、エラーハンドリング、各バンドラー向けエクスポートを検証する。
+  ],
+  test_cases: [
+    *基本機能*:
+    - JSX/TSX ファイルを変換する
+    - 非対象ファイルを無視する
+    - 除外パターンに一致するファイルをスキップする
+    - カスタム include 拡張子を適用する
 
-```typescript
-function dathomirVitePlugin(options?: PluginOptions): VitePlugin
-```
+    *モード判定*:
+    - CSR/SSR モードを正しく判定する
+    - 強制モードが SSR フラグより優先される
+    - Environment API の edge モードを SSR として扱う
 
-Vite 専用プラグイン。Environment API でモード判定を行う。
+    *オプション*:
+    - `runtimeModule` オプションが transformer に正しく渡される
+    - `filename` が変換対象ファイルの ID として渡される
 
-=== dathomirWebpackPlugin
+    *エラーハンドリング*:
+    - transform 失敗時にファイル名を含むエラーメッセージをスローする
+    - 非 Error オブジェクトがスローされた場合はそのまま再スローする
+    - transformer がソースマップを返さない場合は `map` を `undefined` にする
 
-```typescript
-const dathomirWebpackPlugin: (options?: PluginOptions) => WebpackPlugin
-```
+    *unplugin ファクトリ（非 Vite バンドラー向け）*:
+    - `transformInclude` で対象ファイルを正しくフィルタリングする
+    - unplugin の `transform` フックが変換を正しく実行する
+    - unplugin の `transform` フックが edge/ssr 環境名から SSR モードを検出する
 
-webpack 専用プラグイン。
-
-=== dathomirRollupPlugin
-
-```typescript
-const dathomirRollupPlugin: (options?: PluginOptions) => RollupPlugin
-```
-
-Rollup 専用プラグイン。
-
-=== dathomirEsbuildPlugin
-
-```typescript
-const dathomirEsbuildPlugin: (options?: PluginOptions) => EsbuildPlugin
-```
-
-esbuild 専用プラグイン。
-
-== 設定
-
-```typescript
-interface PluginOptions {
-  include?: string[];        // 対象ファイル拡張子（デフォルト: ['.tsx', '.jsx']）
-  exclude?: string[];        // 除外パターン
-  runtimeModule?: string;    // ランタイムモジュール名（デフォルト: '\@dathomir/core'）
-  mode?: 'csr' | 'ssr';     // 強制モード指定
-}
-```
-
-== 動作
-
-=== ファイルフィルタリング
-
-- `include` に一致し `exclude` に一致しないファイルのみ変換
-- デフォルトで `.tsx` と `.jsx` ファイルを対象
-
-=== モード判定
-
-優先順位:
-1. `options.mode`（明示的指定）
-2. Vite Environment API（`environment.name`）
-3. `options.ssr`（Vite SSR フラグ）
-4. デフォルト: CSR
-
-=== 変換
-
-- `\@dathomir/transformer` の `transform()` を呼び出す
-- ソースマップを生成する
-- `filename` として変換対象ファイルの ID を渡す
-- `runtimeModule` オプションを transformer に渡す
-
-=== エラーハンドリング
-
-- transform 失敗時は元のエラーメッセージにファイルパスを付与してスローする
-- フォーマット: `[dathomir] Error transforming {filename}: {original message}`
-
-== テストケース
-
-=== 基本機能
-
-- JSX/TSX ファイルを変換する
-- 非対象ファイルを無視する
-- 除外パターンに一致するファイルをスキップする
-- カスタム include 拡張子を適用する
-
-=== モード判定
-
-- CSR/SSR モードを正しく判定する
-- 強制モードが SSR フラグより優先される
-- Environment API の edge モードを SSR として扱う
-
-=== オプション
-
-- `runtimeModule` オプションが transformer に正しく渡される
-- `filename` が変換対象ファイルの ID として渡される
-
-=== エラーハンドリング
-
-- transform 失敗時にファイル名を含むエラーメッセージをスローする
-- 非 Error オブジェクトがスローされた場合はそのまま再スローする
-- transformer がソースマップを返さない場合は `map` を `undefined` にする
-
-=== unplugin ファクトリ（非 Vite バンドラー向け）
-
-- `transformInclude` で対象ファイルを正しくフィルタリングする
-- unplugin の `transform` フックが変換を正しく実行する
-- unplugin の `transform` フックが edge/ssr 環境名から SSR モードを検出する
-
-=== エクスポート
-
-- 全てのプラグインファクトリ（Vite/webpack/Rollup/esbuild）が正しくエクスポートされる
-- デフォルトエクスポートとして `dathomir` が提供される
+    *エクスポート*:
+    - 全てのプラグインファクトリ（Vite/webpack/Rollup/esbuild）が正しくエクスポートされる
+    - デフォルトエクスポートとして `dathomir` が提供される
+  ],
+)

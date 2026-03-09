@@ -1,5 +1,6 @@
 = fromEntries ユーティリティ
 
+#import "/SPEC/functions.typ": *
 #import "/SPEC/settings.typ": *
 #show: apply-settings
 
@@ -8,29 +9,34 @@
 `Object.fromEntries()` の型安全なラッパーを提供する。
 エントリー配列からオブジェクトを生成し、キーと値の型情報を保持する。
 
-== シグネチャ
+== 機能仕様
 
-```typescript
-function fromEntries<T extends [PropertyKey, unknown][]>(
-  entries: T
-): FromEntries<T>
+#feature_spec(
+  name: "fromEntries",
+  summary: [
+    `Object.fromEntries()` と同等のランタイム挙動を持ちつつ、エントリー配列からキーと値の型を保持したオブジェクト型を導出する。
+  ],
+  api: [
+    ```typescript
+    function fromEntries<T extends [PropertyKey, unknown][]>(
+      entries: T
+    ): FromEntries<T>
 
-type FromEntries<T extends [PropertyKey, unknown][]> = {
-  [K in T[number][0]]: Extract<T[number], [K, unknown]>[1];
-};
-```
+    type FromEntries<T extends [PropertyKey, unknown][]> = {
+      [K in T[number][0]]: Extract<T[number], [K, unknown]>[1];
+    };
+    ```
 
-== 動作
-
-- エントリー配列を `reduce` で処理し、オブジェクトを構築する
-- キーと値の型をエントリー配列から推論する
-- ランタイムの挙動は `Object.fromEntries()` と同等
-
-== テストケース
-
-- エントリー配列からオブジェクトを型安全に生成する
-- 空配列に対して空オブジェクトを返す
-- 単一エントリーを正しく処理する
-- 数値型の値を正しく処理する
-- null および undefined の値を正しく処理する
-- 重複キーが存在する場合、最後の値が使用される
+    - エントリー配列を `reduce` で処理し、オブジェクトを構築する
+    - キーと値の型をエントリー配列から推論する
+    - ランタイムの挙動は `Object.fromEntries()` と同等
+  ],
+  test_cases: [
+    - エントリー配列からオブジェクトを型安全に生成する
+    - 空配列に対して空オブジェクトを返す
+    - 単一エントリーを正しく処理する
+    - 数値型の値を正しく処理する
+    - null および undefined の値を正しく処理する
+    - 重複キーが存在する場合、最後の値が使用される
+  ],
+)

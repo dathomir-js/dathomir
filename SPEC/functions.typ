@@ -25,8 +25,15 @@
   decisions,
   consequences,
   alternatives: none,
+  supersedes: none,
   references: none,
 ) = {
+  if supersedes != none {
+    assert(
+      type(supersedes) == array,
+      message: "supersedes must be an array, got: " + repr(type(supersedes)),
+    )
+  }
   if references != none {
     assert(
       type(references) == array,
@@ -48,6 +55,13 @@
     #if alternatives != none [
       ==== Alternatives Considered
       #alternatives
+    ]
+
+    #if supersedes != none [
+      ==== Supersedes
+      #for item in supersedes [
+        - #item
+      ]
     ]
 
     #if references != none [

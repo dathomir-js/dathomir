@@ -500,6 +500,13 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 
 == ADR
 
+=== ADR 運用ルール
+
+- ADR は設計判断の履歴として記録する
+- `Status.Accepted` になった ADR は、採用済み判断として扱い、意味内容を直接書き換えない
+- `Status.Accepted` の ADR に判断変更が必要な場合は、新しい ADR を追加し、既存 ADR を supersede する関係を明示する
+- 既存 ADR に直接加えてよい修正は、誤字脱字、リンク修正、表現明確化など、判断内容を変えない変更に限る
+
 #adr(
   header("SSR Hydration マーカー設計", Status.Accepted, "2026-01-19"),
   [

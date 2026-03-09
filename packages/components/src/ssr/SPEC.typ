@@ -1,3 +1,4 @@
+#import "/SPEC/functions.typ": *
 #import "/SPEC/settings.typ": *
 #show: apply-settings
 
@@ -7,298 +8,177 @@
 
 Declarative Shadow DOM を使った Web Components の SSR レンダリングを提供する。React、Vue、Next.js など、任意のフレームワークから利用可能なクロスフレームワーク API として機能する。
 
-== API
-
-=== renderDSD
-
-```typescript
-function renderDSD(
-  target: string | ComponentClass,
-  attrs?: Record<string, string>,
-): string
-```
-
-カスタム要素の完全な HTML（DSD テンプレート付き）を生成する。
-
-*パラメータ:*
-- `target`: カスタム要素のタグ名（文字列）または Component Class
-- `attrs`: コンポーネントに渡す属性（オプション）
-
-*返り値:*
-- `<custom-el attrs><template shadowrootmode="open">...</template></custom-el>` 形式の HTML 文字列
-
-*例外:*
-- コンポーネントが未登録の場合、`Error` を throw
-
-*使用例:*
-```typescript
-const Counter = defineComponent("my-counter", ...);
-const html = renderDSD(Counter, { initial: "10" });
-// → '<my-counter initial="10"><template shadowrootmode="open">...</template></my-counter>'
-```
-
-=== renderDSDContent
-
-```typescript
-function renderDSDContent(
-  target: string | ComponentClass,
-  attrs?: Record<string, string>,
-): string
-```
-
-DSD テンプレート（`<template shadowrootmode="open">...</template>`）のみを生成する。
-
-*パラメータ:*
-- `target`: カスタム要素のタグ名（文字列）または Component Class
-- `attrs`: コンポーネントに渡す属性（オプション）
-
-*返り値:*
-- `<template shadowrootmode="open">...</template>` 形式の HTML 文字列
-
-*例外:*
-- コンポーネントが未登録の場合、`Error` を throw
-
-*使用例:*
-```typescript
-// React で dangerouslySetInnerHTML と併用
-const Counter = defineComponent("my-counter", ...);
-const dsdContent = renderDSDContent(Counter, { initial: "10" });
-
-<my-counter initial="10" dangerouslySetInnerHTML={{ __html: dsdContent }} />
-```
-
-=== ensureComponentRenderer
-
-```typescript
-function ensureComponentRenderer(): void
-```
-
-Dathomir SSR 用のグローバル ComponentRenderer をセットアップする。
-
-*振る舞い:*
-- 初回呼び出しで `setComponentRenderer(renderComponentContent)` を実行
-- 2回目以降は何もしない（冪等性）
-- `defineComponent` が SSR で呼ばれた際に自動実行される
-
-*使用例:*
-```typescript
-// defineComponent 内部で自動呼び出し（ユーザーは意識しない）
-ensureComponentRenderer();
-```
-
-=== renderComponentContent (internal)
-
-```typescript
-function renderComponentContent(
-  tagName: string,
-  attrs: Record<string, unknown>,
-): string | null
-```
-
-DSD の内部コンテンツ（`<style>` + コンポーネント HTML）を生成する。
-
-*パラメータ:*
-- `tagName`: カスタム要素のタグ名
-- `attrs`: コンポーネントに渡す属性
-
-*返り値:*
-- 登録済みの場合: `<style>...</style>` + component HTML
-- 未登録の場合: `null`
-
-*内部実装:*
-1. registry から ComponentRegistration を取得
-2. attrs から signal を生成し、ComponentContext を構築
-3. setup 関数を呼び出し（SSR では HTML 文字列を返す）
-4. CSS を `<style>` タグとして先頭に追加
-5. 完全な DSD コンテンツを返す
-
-=== escapeAttr (internal)
-
-```typescript
-function escapeAttr(value: string): string
-```
-
-属性値を HTML エスケープする（XSS 防止）。
-
-*エスケープ対象:*
-- `&` → `&amp;`
-- `"` → `&quot;`
-- `<` → `&lt;`
-- `>` → `&gt;`
-
-== データ構造
-
-=== ComponentClass
-
-```typescript
-interface ComponentClass extends Function {
-  readonly __tagName__: string;
-}
-```
-
-`defineComponent` が返す Component Class。`__tagName__` プロパティからタグ名を自動取得できる。
-
-== 設計決定
-
-=== ADR-001: クロスフレームワーク対応
-
-*決定:* `renderDSD` と `renderDSDContent` を独立した関数として提供し、Dathomir 以外のフレームワークでも使えるようにする。
-
-*理由:*
-1. React、Vue、Next.js など、任意の SSR 環境で Web Components を利用可能にする
-2. Dathomir の `renderToString` に依存しない設計
-3. 段階的な移行を可能にする（既存プロジェクトに Web Components のみ導入）
-
-*影響:*
-- Dathomir SSR と外部フレームワークの両方で Web Components が使える
-- `renderDSD` は完全に独立した HTML 文字列を返す（Dathomir のマーカーなし）
-
-=== ADR-002: Component Class サポート
-
-*決定:* `renderDSD` / `renderDSDContent` の第一引数に Component Class を受け入れる。
-
-*理由:*
-1. 型安全性: タグ名の typo を防ぐ
-2. リファクタリング: タグ名変更時、`defineComponent` の箇所のみ修正すれば良い
-3. 開発体験: IDE が自動補完できる
-
-*影響:*
-- `defineComponent` の返り値に `__tagName__` プロパティを追加
-- 文字列（タグ名）も引き続きサポート（下位互換性）
-
-=== ADR-003: 属性の自動エスケープ
-
-*決定:* `renderDSD` が生成する属性値を自動的に HTML エスケープする。
-
-*理由:*
-1. XSS 脆弱性の防止
-2. 特殊文字（`"`, `<`, `>`, `&`）を含む属性値を安全に扱う
-3. ユーザーがエスケープを意識しなくて良い
-
-*影響:*
-- `escapeAttr()` 関数で `&`, `"`, `<`, `>` をエンティティに変換
-- パフォーマンスへの影響は最小限（単純な文字列置換）
-
-=== ADR-004: ComponentRenderer の自動セットアップ
-
-*決定:* `defineComponent` が SSR で初めて呼ばれた際、`ensureComponentRenderer()` を自動実行する。
-
-*理由:*
-1. ユーザーが `import "@dathomir/components/ssr"` を書く必要をなくす
-2. ボイラープレートの削減
-3. 初期化を忘れるミスを防ぐ
-
-*影響:*
-- `ensureComponentRenderer()` は冪等（複数回呼んでも安全）
-- モジュールレベルの `_rendererInitialized` フラグで管理
-- テスト時は `_resetRendererState()` でリセット可能
-
-=== ADR-005: Declarative Shadow DOM の採用
-
-*決定:* SSR HTML に `<template shadowrootmode="open">` を使用する。
-
-*理由:*
-1. Web 標準（Chrome 90+, Safari 16.4+, Firefox 123+）
-2. ブラウザが自動的に Shadow DOM を構築（JavaScript 不要）
-3. Hydration が高速（既存 DOM を再利用）
-
-*影響:*
-- 古いブラウザ（IE、古い Safari）は非対応
-- `defineComponent` がフォールバック処理を実装（DSD 非対応時は手動で ShadowRoot 構築）
-
-=== ADR-006: SSR における属性→プロップ型変換（coerceForSSR）
-
-*決定:* SSR の `coerceForSSR` は CSR の `coerceValue` と同じ型変換ルールに従う。
-
-*ルール:*
-- `Boolean` 型: 属性が存在する（`!== null`）→ `true`、存在しない（`null`）→ `false`
-- `Number` 型: `null` → `getDefaultValue(def)`（CSR と同様）。`Number(null) = 0` を返さない
-- `String` 型: `null` → `getDefaultValue(def)`（CSR と同様）。`null` のまま返さない
-- カスタム関数: `null` を含む任意の値をそのまま渡す（CSR と同様）
-
-*理由:*
-1. CSR と SSR でプロップの初期値が一致しないと Hydration Mismatch が発生する
-2. `Number(null) = 0` は `default: 5` のような設定を無視するバグになる
-3. `String` で `null` を返すと型安全性が破れる
-
-=== ADR-007: createComponentRenderer と _resetRendererState
-
-*決定:* `createComponentRenderer` と `_resetRendererState` をエクスポートする。
-
-*振る舞い:*
-- `createComponentRenderer()`: `renderComponentContent` を返すファクトリ関数（`@internal`）
-- `_resetRendererState()`: テスト用に `_rendererInitialized` フラグをリセットする（`@internal`）
-
-*理由:*
-1. `createComponentRenderer` は将来的にカスタムレンダラーを注入するフックポイントとして機能する
-2. `_resetRendererState` はテスト間の状態分離に必要
-
-== テストケース
-
-1. `renderDSD()` が完全な要素 HTML を生成する
-2. `renderDSD()` に Component Class を渡せる
-3. `renderDSD()` に tagName 文字列を渡せる（下位互換）
-4. `renderDSD()` が未登録コンポーネントで例外を投げる
-5. `renderDSDContent()` が DSD template のみ生成する
-6. `renderDSDContent()` に Component Class を渡せる
-7. `renderDSDContent()` が未登録コンポーネントで例外を投げる
-8. 属性値が正しく HTML エスケープされる（`"`, `<`, `>`, `&` 単体も含む）
-9. CSS が `<style>` タグとして DSD に含まれる
-10. 複数の `<style>` タグ（複数の cssTexts）が正しく出力される
-11. `ensureComponentRenderer()` が複数回呼ばれても安全（冪等性）
-12. `renderComponentContent()` が未登録コンポーネントで `null` を返す
-13. `Number` 型プロップ: `null` 属性はデフォルト値を使用する（`Number(null) = 0` にならない）
-14. `String` 型プロップ: `null` 属性はデフォルト値を使用する（`null` のまま返らない）
-
-== 使用例
-
-=== React SSR
-
-```typescript
-import { renderDSD } from "@dathomir/components/ssr";
-import { Counter } from "./components/Counter";
-
-export function App() {
-  return (
-    <div>
-      <h1>My App</h1>
-      <div dangerouslySetInnerHTML={{ __html: renderDSD(Counter, { initial: "0" }) }} />
-    </div>
-  );
-}
-```
-
-=== Next.js App Router
-
-```tsx
-import { renderDSD } from "@dathomir/components/ssr";
-import { Counter } from "@/components/Counter";
-
-export default function Page() {
-  const counterHtml = renderDSD(Counter, { initial: "5" });
-  return (
-    <div>
-      <h1>My Page</h1>
-      <div dangerouslySetInnerHTML={{ __html: counterHtml }} />
-    </div>
-  );
-}
-```
-
-=== Vue/Nuxt SSR
-
-```vue
-<script setup lang="ts">
-import { renderDSD } from "@dathomir/components/ssr";
-import { Counter } from "@/components/Counter";
-
-const counterHtml = renderDSD(Counter, { initial: "3" });
-</script>
-
-<template>
-  <div>
-    <h1>My Page</h1>
-    <div v-html="counterHtml" />
-  </div>
-</template>
-```
+== インターフェース仕様
+
+#interface_spec(
+  name: "SSR renderer API",
+  summary: [
+    Web Component を Declarative Shadow DOM 付きの HTML 文字列として SSR 出力する API 群。
+  ],
+  format: [
+    ```typescript
+    function renderDSD(
+      target: string | ComponentClass,
+      attrs?: Record<string, string>,
+    ): string
+
+    function renderDSDContent(
+      target: string | ComponentClass,
+      attrs?: Record<string, string>,
+    ): string
+
+    function ensureComponentRenderer(): void
+
+    function renderComponentContent(
+      tagName: string,
+      attrs: Record<string, unknown>,
+    ): string | null
+
+    function escapeAttr(value: string): string
+
+    interface ComponentClass extends Function {
+      readonly __tagName__: string;
+    }
+    ```
+  ],
+  constraints: [
+    - `renderDSD()` は `<custom-el><template shadowrootmode="open">...</template></custom-el>` を返す
+    - `renderDSDContent()` は template 部分のみ返す
+    - 未登録コンポーネントでは `renderDSD()` と `renderDSDContent()` は例外を投げる
+    - `ensureComponentRenderer()` は冪等である
+    - `renderComponentContent()` は未登録時に `null` を返す
+    - `escapeAttr()` は `&`, `"`, `<`, `>` を HTML エスケープする
+  ],
+)
+
+== 機能仕様
+
+#feature_spec(
+  name: "DSD rendering",
+  summary: [
+    registry 上の ComponentRegistration を参照し、属性値の型変換と CSS 付与を行ったうえで DSD HTML を生成する。
+  ],
+  test_cases: [
+    1. `renderDSD()` が完全な要素 HTML を生成する
+    2. `renderDSD()` に Component Class を渡せる
+    3. `renderDSD()` に tagName 文字列を渡せる
+    4. `renderDSD()` が未登録コンポーネントで例外を投げる
+    5. `renderDSDContent()` が DSD template のみ生成する
+    6. `renderDSDContent()` に Component Class を渡せる
+    7. `renderDSDContent()` が未登録コンポーネントで例外を投げる
+    8. 属性値が正しく HTML エスケープされる
+    9. CSS が `<style>` タグとして DSD に含まれる
+    10. 複数の `<style>` タグが正しく出力される
+    11. `ensureComponentRenderer()` が複数回呼ばれても安全である
+    12. `renderComponentContent()` が未登録コンポーネントで `null` を返す
+    13. `Number` 型プロップで `null` 属性はデフォルト値を使う
+    14. `String` 型プロップで `null` 属性はデフォルト値を使う
+  ],
+  impl_notes: [
+    *使用例*:
+    - React/Next.js/Vue などから `renderDSD()` または `renderDSDContent()` を直接呼び出せる
+    - `defineComponent` が SSR で初回評価された際に `ensureComponentRenderer()` を自動実行する
+  ],
+)
+
+== 設計判断
+
+#adr(
+  header("クロスフレームワーク対応", Status.Accepted, "2026-03-09"),
+  [
+    Dathomir 以外の SSR 環境でも Web Components を利用できるようにする必要がある。
+  ],
+  [
+    `renderDSD` と `renderDSDContent` を独立した API として提供する。
+  ],
+  [
+    - React、Vue、Next.js などでも利用できる
+    - Dathomir の `renderToString` に依存しない
+  ],
+)
+
+#adr(
+  header("Component Class サポート", Status.Accepted, "2026-03-09"),
+  [
+    タグ名文字列だけだと typo が起きやすく、リファクタリングも弱い。
+  ],
+  [
+    `renderDSD` / `renderDSDContent` の第一引数に Component Class を受け入れる。
+  ],
+  [
+    - `__tagName__` からタグ名を安全に取得できる
+    - 文字列指定も下位互換として残す
+  ],
+)
+
+#adr(
+  header("属性の自動エスケープ", Status.Accepted, "2026-03-09"),
+  [
+    SSR で文字列連結により HTML を生成するため、属性値の XSS 対策が必要である。
+  ],
+  [
+    `renderDSD` が生成する属性値を自動的に HTML エスケープする。
+  ],
+  [
+    - `escapeAttr()` で `&`, `"`, `<`, `>` を変換する
+    - 利用者が個別にエスケープを意識しなくてよい
+  ],
+)
+
+#adr(
+  header("ComponentRenderer の自動セットアップ", Status.Accepted, "2026-03-09"),
+  [
+    SSR 初期化を利用者に委ねると、セットアップ忘れが起きやすい。
+  ],
+  [
+    `defineComponent` が SSR で初めて呼ばれた際に `ensureComponentRenderer()` を自動実行する。
+  ],
+  [
+    - ボイラープレートが減る
+    - `_rendererInitialized` による冪等制御が必要になる
+  ],
+)
+
+#adr(
+  header("Declarative Shadow DOM の採用", Status.Accepted, "2026-03-09"),
+  [
+    SSR HTML からブラウザが直接 Shadow DOM を構築できる仕組みが必要である。
+  ],
+  [
+    SSR HTML に `<template shadowrootmode="open">` を使用する。
+  ],
+  [
+    - JavaScript なしで Shadow DOM を構築できる
+    - Hydration で既存 DOM を再利用しやすい
+    - 古いブラウザでは defineComponent 側のフォールバックが必要
+  ],
+)
+
+#adr(
+  header("SSR における属性→プロップ型変換", Status.Accepted, "2026-03-09"),
+  [
+    CSR と SSR で属性値の解釈が一致しないと Hydration Mismatch が発生する。
+  ],
+  [
+    SSR の `coerceForSSR` は CSR の `coerceValue` と同じ型変換ルールに従う。
+  ],
+  [
+    - `Boolean`: 属性存在で `true`、不在で `false`
+    - `Number` と `String`: `null` ならデフォルト値にフォールバック
+    - カスタム関数は `null` を含めてそのまま渡す
+  ],
+)
+
+#adr(
+  header("createComponentRenderer と _resetRendererState", Status.Accepted, "2026-03-09"),
+  [
+    テストや将来のレンダラー差し替えに向けて、内部初期化状態とレンダラー生成を個別に扱う必要がある。
+  ],
+  [
+    `createComponentRenderer` と `_resetRendererState` を内部向け API としてエクスポートする。
+  ],
+  [
+    - テスト間で状態を確実に分離できる
+    - 将来のカスタムレンダラー注入点になる
+  ],
+)

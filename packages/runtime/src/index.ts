@@ -24,7 +24,13 @@ export { reconcile } from "./reconcile/implementation";
 export { event } from "./events/implementation";
 
 // JSX types
-export type { JSX as RuntimeJSX } from "./types/JSX";
+export type {
+  JSX as RuntimeJSX,
+  dathomirElement,
+  dathomirJSX,
+  dathomirNode,
+  dathomirSpreadChildren,
+} from "./types/JSX";
 
 // Component types
 export type { FC, FCWithChildren } from "./types/FC";

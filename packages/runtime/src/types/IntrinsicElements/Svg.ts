@@ -1,21 +1,11 @@
-import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import { SvgSvgAttributes } from "@/types/IntrinsicElements/SVGElements";
 
 /**
- * Attributes for the `<svg>` element, which defines a container for SVG graphics.
+ * Attributes for the `<svg>` element, which defines an SVG document fragment.
  *
- * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/svg
+ * @see https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/svg
+ * @see https://www.w3.org/TR/SVG2/struct.html#SVGElement
  */
-interface SvgIntrinsicElements extends CommonIntrinsicElements {
-  /** Height of the SVG viewport */
-  height?: number | string;
-  /** Preserves the aspect ratio */
-  preserveAspectRatio?: string;
-  /** Defines the coordinate system and viewport */
-  viewBox?: string;
-  /** Width of the SVG viewport */
-  width?: number | string;
-  /** Namespace for SVG */
-  xmlns?: string;
-}
+interface SvgIntrinsicElements extends SvgSvgAttributes {}
 
 export { SvgIntrinsicElements };

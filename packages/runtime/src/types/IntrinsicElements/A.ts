@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import { SvgAAttributes } from "@/types/IntrinsicElements/SVGElements";
 
 type ATarget = "_self" | "_blank" | "_parent" | "_top" | (string & {});
 
@@ -17,7 +17,7 @@ type AReferrerPolicy =
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a
  */
-interface AIntrinsicElements extends CommonIntrinsicElements {
+interface AIntrinsicElements extends SvgAAttributes {
   /** URL of the hyperlinked resource */
   href?: string;
   /** Where to display the linked URL */
@@ -28,6 +28,8 @@ interface AIntrinsicElements extends CommonIntrinsicElements {
   download?: string | boolean;
   /** Language of the linked resource */
   hrefLang?: string;
+  /** SVG attribute name alias for the linked resource language */
+  hreflang?: string;
   /** Media query for the linked resource */
   media?: string;
   /** MIME type of the linked resource */

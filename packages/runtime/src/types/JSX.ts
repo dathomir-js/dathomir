@@ -81,6 +81,67 @@ import { RpIntrinsicElements } from "@/types/IntrinsicElements/Rp";
 import { RtIntrinsicElements } from "@/types/IntrinsicElements/Rt";
 import { RubyIntrinsicElements } from "@/types/IntrinsicElements/Ruby";
 import { SIntrinsicElements } from "@/types/IntrinsicElements/S";
+import {
+  AnimateIntrinsicElements,
+  AnimateMotionIntrinsicElements,
+  AnimateTransformIntrinsicElements,
+  CircleIntrinsicElements,
+  ClipPathIntrinsicElements,
+  DefsIntrinsicElements,
+  DescIntrinsicElements,
+  DiscardIntrinsicElements,
+  EllipseIntrinsicElements,
+  FeBlendIntrinsicElements,
+  FeColorMatrixIntrinsicElements,
+  FeComponentTransferIntrinsicElements,
+  FeCompositeIntrinsicElements,
+  FeConvolveMatrixIntrinsicElements,
+  FeDiffuseLightingIntrinsicElements,
+  FeDisplacementMapIntrinsicElements,
+  FeDistantLightIntrinsicElements,
+  FeDropShadowIntrinsicElements,
+  FeFloodIntrinsicElements,
+  FeFuncAIntrinsicElements,
+  FeFuncBIntrinsicElements,
+  FeFuncGIntrinsicElements,
+  FeFuncRIntrinsicElements,
+  FeGaussianBlurIntrinsicElements,
+  FeImageIntrinsicElements,
+  FeMergeIntrinsicElements,
+  FeMergeNodeIntrinsicElements,
+  FeMorphologyIntrinsicElements,
+  FeOffsetIntrinsicElements,
+  FePointLightIntrinsicElements,
+  FeSpecularLightingIntrinsicElements,
+  FeSpotLightIntrinsicElements,
+  FeTileIntrinsicElements,
+  FeTurbulenceIntrinsicElements,
+  FilterIntrinsicElements,
+  ForeignObjectIntrinsicElements,
+  GIntrinsicElements,
+  ImageIntrinsicElements,
+  LineIntrinsicElements,
+  LinearGradientIntrinsicElements,
+  MarkerIntrinsicElements,
+  MaskIntrinsicElements,
+  MetadataIntrinsicElements,
+  MpathIntrinsicElements,
+  PathIntrinsicElements,
+  PatternIntrinsicElements,
+  PolygonIntrinsicElements,
+  PolylineIntrinsicElements,
+  RadialGradientIntrinsicElements,
+  RectIntrinsicElements,
+  SetIntrinsicElements,
+  StopIntrinsicElements,
+  SwitchIntrinsicElements,
+  SymbolIntrinsicElements,
+  TextIntrinsicElements,
+  TextPathIntrinsicElements,
+  TspanIntrinsicElements,
+  UseIntrinsicElements,
+  ViewIntrinsicElements,
+} from "@/types/IntrinsicElements/SVGElements";
 import { SampIntrinsicElements } from "@/types/IntrinsicElements/Samp";
 import { ScriptIntrinsicElements } from "@/types/IntrinsicElements/Script";
 import { SearchIntrinsicElements } from "@/types/IntrinsicElements/Search";
@@ -115,17 +176,27 @@ import { VarIntrinsicElements } from "@/types/IntrinsicElements/Var";
 import { VideoIntrinsicElements } from "@/types/IntrinsicElements/Video";
 import { WbrIntrinsicElements } from "@/types/IntrinsicElements/Wbr";
 
-type dathomirJSX = unknown;
+type dathomirElement = Node;
 
-type dathomirNode = unknown;
+type dathomirPrimitive = string | number | boolean | null | undefined;
 
-type dathomirElement = unknown;
+type dathomirNode =
+  | dathomirElement
+  | dathomirPrimitive
+  | readonly dathomirNode[];
+
+type dathomirSpreadChildren = dathomirNode[];
+
+type dathomirJSX = dathomirElement;
 
 export namespace JSX {
   export interface IntrinsicElements {
     a: AIntrinsicElements;
     abbr: AbbrIntrinsicElements;
     address: AddressIntrinsicElements;
+    animate: AnimateIntrinsicElements;
+    animateMotion: AnimateMotionIntrinsicElements;
+    animateTransform: AnimateTransformIntrinsicElements;
     area: AreaIntrinsicElements;
     article: ArticleIntrinsicElements;
     aside: AsideIntrinsicElements;
@@ -140,28 +211,62 @@ export namespace JSX {
     button: ButtonIntrinsicElements;
     canvas: CanvasIntrinsicElements;
     caption: CaptionIntrinsicElements;
+    circle: CircleIntrinsicElements;
     cite: CiteIntrinsicElements;
+    clipPath: ClipPathIntrinsicElements;
     code: CodeIntrinsicElements;
     col: ColIntrinsicElements;
     colgroup: ColgroupIntrinsicElements;
     data: DataIntrinsicElements;
     datalist: DatalistIntrinsicElements;
     dd: DdIntrinsicElements;
+    defs: DefsIntrinsicElements;
     del: DelIntrinsicElements;
+    desc: DescIntrinsicElements;
     details: DetailsIntrinsicElements;
     dfn: DfnIntrinsicElements;
+    discard: DiscardIntrinsicElements;
     dialog: DialogIntrinsicElements;
     div: DivIntrinsicElements;
     dl: DlIntrinsicElements;
     dt: DtIntrinsicElements;
     em: EmIntrinsicElements;
+    ellipse: EllipseIntrinsicElements;
     embed: EmbedIntrinsicElements;
     fencedframe: FencedframeIntrinsicElements;
+    feBlend: FeBlendIntrinsicElements;
+    feColorMatrix: FeColorMatrixIntrinsicElements;
+    feComponentTransfer: FeComponentTransferIntrinsicElements;
+    feComposite: FeCompositeIntrinsicElements;
+    feConvolveMatrix: FeConvolveMatrixIntrinsicElements;
+    feDiffuseLighting: FeDiffuseLightingIntrinsicElements;
+    feDisplacementMap: FeDisplacementMapIntrinsicElements;
+    feDistantLight: FeDistantLightIntrinsicElements;
+    feDropShadow: FeDropShadowIntrinsicElements;
+    feFlood: FeFloodIntrinsicElements;
+    feFuncA: FeFuncAIntrinsicElements;
+    feFuncB: FeFuncBIntrinsicElements;
+    feFuncG: FeFuncGIntrinsicElements;
+    feFuncR: FeFuncRIntrinsicElements;
+    feGaussianBlur: FeGaussianBlurIntrinsicElements;
+    feImage: FeImageIntrinsicElements;
+    feMerge: FeMergeIntrinsicElements;
+    feMergeNode: FeMergeNodeIntrinsicElements;
+    feMorphology: FeMorphologyIntrinsicElements;
+    feOffset: FeOffsetIntrinsicElements;
+    fePointLight: FePointLightIntrinsicElements;
+    feSpecularLighting: FeSpecularLightingIntrinsicElements;
+    feSpotLight: FeSpotLightIntrinsicElements;
+    feTile: FeTileIntrinsicElements;
+    feTurbulence: FeTurbulenceIntrinsicElements;
     fieldset: FieldsetIntrinsicElements;
     figcaption: FigcaptionIntrinsicElements;
     figure: FigureIntrinsicElements;
+    filter: FilterIntrinsicElements;
     footer: FooterIntrinsicElements;
     form: FormIntrinsicElements;
+    foreignObject: ForeignObjectIntrinsicElements;
+    g: GIntrinsicElements;
     h1: H1IntrinsicElements;
     h2: H2IntrinsicElements;
     h3: H3IntrinsicElements;
@@ -175,21 +280,28 @@ export namespace JSX {
     html: HtmlIntrinsicElements;
     i: IIntrinsicElements;
     iframe: IframeIntrinsicElements;
+    image: ImageIntrinsicElements;
     img: ImgIntrinsicElements;
     input: InputIntrinsicElements;
     ins: InsIntrinsicElements;
     kbd: KbdIntrinsicElements;
     label: LabelIntrinsicElements;
     legend: LegendIntrinsicElements;
+    line: LineIntrinsicElements;
     li: LiIntrinsicElements;
+    linearGradient: LinearGradientIntrinsicElements;
     link: LinkIntrinsicElements;
     main: MainIntrinsicElements;
     map: MapIntrinsicElements;
     mark: MarkIntrinsicElements;
+    marker: MarkerIntrinsicElements;
+    mask: MaskIntrinsicElements;
     math: MathIntrinsicElements;
+    metadata: MetadataIntrinsicElements;
     menu: MenuIntrinsicElements;
     meta: MetaIntrinsicElements;
     meter: MeterIntrinsicElements;
+    mpath: MpathIntrinsicElements;
     nav: NavIntrinsicElements;
     noscript: NoscriptIntrinsicElements;
     object: ObjectIntrinsicElements;
@@ -198,10 +310,16 @@ export namespace JSX {
     option: OptionIntrinsicElements;
     output: OutputIntrinsicElements;
     p: PIntrinsicElements;
+    path: PathIntrinsicElements;
+    pattern: PatternIntrinsicElements;
     picture: PictureIntrinsicElements;
+    polygon: PolygonIntrinsicElements;
+    polyline: PolylineIntrinsicElements;
     pre: PreIntrinsicElements;
     progress: ProgressIntrinsicElements;
     q: QIntrinsicElements;
+    radialGradient: RadialGradientIntrinsicElements;
+    rect: RectIntrinsicElements;
     rp: RpIntrinsicElements;
     rt: RtIntrinsicElements;
     ruby: RubyIntrinsicElements;
@@ -212,16 +330,20 @@ export namespace JSX {
     section: SectionIntrinsicElements;
     select: SelectIntrinsicElements;
     selectedcontent: SelectedcontentIntrinsicElements;
+    set: SetIntrinsicElements;
     slot: SlotIntrinsicElements;
     small: SmallIntrinsicElements;
     source: SourceIntrinsicElements;
     span: SpanIntrinsicElements;
     strong: StrongIntrinsicElements;
+    stop: StopIntrinsicElements;
     style: StyleIntrinsicElements;
     sub: SubIntrinsicElements;
     summary: SummaryIntrinsicElements;
     sup: SupIntrinsicElements;
+    switch: SwitchIntrinsicElements;
     svg: SvgIntrinsicElements;
+    symbol: SymbolIntrinsicElements;
     table: TableIntrinsicElements;
     tbody: TbodyIntrinsicElements;
     td: TdIntrinsicElements;
@@ -230,14 +352,19 @@ export namespace JSX {
     tfoot: TfootIntrinsicElements;
     th: ThIntrinsicElements;
     thead: TheadIntrinsicElements;
+    text: TextIntrinsicElements;
+    textPath: TextPathIntrinsicElements;
     time: TimeIntrinsicElements;
     title: TitleIntrinsicElements;
     tr: TrIntrinsicElements;
     track: TrackIntrinsicElements;
+    tspan: TspanIntrinsicElements;
     u: UIntrinsicElements;
     ul: UlIntrinsicElements;
+    use: UseIntrinsicElements;
     var: VarIntrinsicElements;
     video: VideoIntrinsicElements;
+    view: ViewIntrinsicElements;
     wbr: WbrIntrinsicElements;
   }
 
@@ -249,4 +376,4 @@ export namespace JSX {
   }
 }
 
-export { dathomirElement, dathomirJSX, dathomirNode };
+export { dathomirElement, dathomirJSX, dathomirNode, dathomirSpreadChildren };

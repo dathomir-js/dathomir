@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import { SvgScriptAttributes } from "@/types/IntrinsicElements/SVGElements";
 
 type ScriptReferrerPolicy =
   | "no-referrer"
@@ -17,7 +17,7 @@ type ScriptBlocking = "render";
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script
  */
-interface ScriptIntrinsicElements extends CommonIntrinsicElements {
+interface ScriptIntrinsicElements extends SvgScriptAttributes {
   /** Execute the script asynchronously */
   async?: boolean;
   /** Blocks rendering until the script loads */
@@ -40,4 +40,4 @@ interface ScriptIntrinsicElements extends CommonIntrinsicElements {
   type?: string;
 }
 
-export { ScriptIntrinsicElements, ScriptReferrerPolicy, ScriptBlocking };
+export { ScriptBlocking, ScriptIntrinsicElements, ScriptReferrerPolicy };

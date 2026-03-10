@@ -3,18 +3,19 @@
  */
 
 import { signal } from "@dathomir/core";
+import type { dathomirNode } from "@dathomir/runtime";
 import { Counter } from "./Counter";
 import "./WebComponentSSR";
 
-function createSpreadChildContent(label: string): DocumentFragment | string {
+function createSpreadChildContent(label: string): dathomirNode[] {
   if (typeof document === "undefined") {
-    return `<span data-case=\"spread-child\">${label} (server)</span>`;
+    return [`<span data-case="spread-child">${label} (server)</span>`];
   }
 
   const fragment = document.createDocumentFragment();
   const text = document.createTextNode(`${label} (client)`);
   fragment.appendChild(text);
-  return fragment;
+  return [fragment];
 }
 
 export function App() {

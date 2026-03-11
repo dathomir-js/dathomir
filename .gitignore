@@ -145,3 +145,6 @@ vite.config.ts.timestamp-*
 # Stryker files
 .stryker-tmp
 reports
+
+# Screenshot tests
+__screenshots__/

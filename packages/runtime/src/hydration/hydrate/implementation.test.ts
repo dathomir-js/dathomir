@@ -151,7 +151,9 @@ describe("hydrateRoot", () => {
     const schema = defineAtomStoreSnapshot({ count: atom("count", 0) });
 
     expect(() => {
-      hydrateRoot(shadowRoot, () => {}, { storeSnapshotSchema: schema } as never);
+      hydrateRoot(shadowRoot, () => {}, {
+        storeSnapshotSchema: schema,
+      } as never);
     }).toThrow("storeSnapshotSchema requires a store");
   });
 });

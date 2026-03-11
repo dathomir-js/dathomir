@@ -40,12 +40,17 @@ interface PropDefinition {
 type PropsSchema = Record<string, PropDefinition>;
 
 /** Infer the runtime type from a PropDefinition's type field. */
-type InferPropType<D extends PropDefinition> =
-  D extends { type: StringConstructor } ? string :
-  D extends { type: NumberConstructor } ? number :
-  D extends { type: BooleanConstructor } ? boolean :
-  D extends { type: (v: string | null) => infer R } ? R :
-  unknown;
+type InferPropType<D extends PropDefinition> = D extends {
+  type: StringConstructor;
+}
+  ? string
+  : D extends { type: NumberConstructor }
+    ? number
+    : D extends { type: BooleanConstructor }
+      ? boolean
+      : D extends { type: (v: string | null) => infer R }
+        ? R
+        : unknown;
 
 /** Map a PropsSchema to an object of reactive signals. */
 type InferProps<S extends PropsSchema> = {
@@ -91,7 +96,7 @@ interface ComponentClass<S extends PropsSchema = PropsSchema> extends Function {
 
 /** Constructor type returned by defineComponent. */
 type ComponentConstructor<S extends PropsSchema = PropsSchema> = {
-  new(): HTMLElement & { [K in keyof S]: InferPropType<S[K]> };
+  new (): HTMLElement & { [K in keyof S]: InferPropType<S[K]> };
   readonly prototype: HTMLElement;
 } & ComponentClass<S>;
 
@@ -193,7 +198,10 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
   const isSSR = typeof window === "undefined";
 
   // Wrap function component into SetupFunction
-  const resolvedSetup: SetupFunction<S> = wrapFunctionComponent(component, options.props);
+  const resolvedSetup: SetupFunction<S> = wrapFunctionComponent(
+    component,
+    options.props,
+  );
 
   if (isSSR) {
     const cssTexts: string[] = [];
@@ -253,7 +261,10 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
   }
 
   // WeakMap to store prop signals (accessible from property descriptors)
-  const propSignalMap = new WeakMap<HTMLElement, Record<string, Signal<unknown>>>();
+  const propSignalMap = new WeakMap<
+    HTMLElement,
+    Record<string, Signal<unknown>>
+  >();
 
   class Component extends HTMLElement {
     static observedAttributes = observedAttrNames;
@@ -287,10 +298,10 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
         for (const propName of Object.keys(propsSchema)) {
           const def = propsSchema[propName]!;
           const attrName = attrNameForProp(propName, def);
-          const rawAttr = attrName !== null ? this.getAttribute(attrName) : null;
-          const initialValue = rawAttr !== null
-            ? coerceValue(def, rawAttr)
-            : getDefaultValue(def);
+          const rawAttr =
+            attrName !== null ? this.getAttribute(attrName) : null;
+          const initialValue =
+            rawAttr !== null ? coerceValue(def, rawAttr) : getDefaultValue(def);
           signals[propName] = signal(initialValue);
         }
         propSignalMap.set(this, signals);
@@ -310,7 +321,10 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
       const hasDSD = shadowRoot.childNodes.length > 0;
 
       const retryIfStoreEventuallyBinds = (run: () => void): boolean => {
-        if (peekStoreFromHost(this) !== undefined || this.#storeRetryScheduled) {
+        if (
+          peekStoreFromHost(this) !== undefined ||
+          this.#storeRetryScheduled
+        ) {
           return false;
         }
 
@@ -327,7 +341,10 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
       };
 
       const isMissingStoreError = (error: unknown): boolean => {
-        return error instanceof Error && error.message === "[dathomir] No store bound to component host";
+        return (
+          error instanceof Error &&
+          error.message === "[dathomir] No store bound to component host"
+        );
       };
 
       const runHydrate = () => {
@@ -336,7 +353,10 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
             hydrateSetup!(ctx);
           });
         } catch (error) {
-          if (isMissingStoreError(error) && retryIfStoreEventuallyBinds(runHydrate)) {
+          if (
+            isMissingStoreError(error) &&
+            retryIfStoreEventuallyBinds(runHydrate)
+          ) {
             return;
           }
           console.error("[dathomir] Error in component hydrate:", error);
@@ -353,7 +373,10 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
             shadowRoot.append(content as string | Node);
           });
         } catch (error) {
-          if (isMissingStoreError(error) && retryIfStoreEventuallyBinds(runSetup)) {
+          if (
+            isMissingStoreError(error) &&
+            retryIfStoreEventuallyBinds(runSetup)
+          ) {
             return;
           }
           console.error("[dathomir] Error in component setup:", error);
@@ -435,5 +458,11 @@ export type {
   ComponentElement,
   ComponentOptions,
   FunctionComponent,
-  HydrateSetupFunction, InferProps, InferPropType, PropDefinition, PropsSchema, PropType, SetupFunction
+  HydrateSetupFunction,
+  InferProps,
+  InferPropType,
+  PropDefinition,
+  PropsSchema,
+  PropType,
+  SetupFunction,
 };

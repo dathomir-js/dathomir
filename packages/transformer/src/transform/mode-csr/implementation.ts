@@ -30,7 +30,9 @@ function transformJSXNode(
   const templateId = createTemplateId(state);
   state.runtimeImports.add("fromTree");
 
-  state.templates.push(nConst(templateId, nCall(nId("fromTree"), [tree, nLit(0)])));
+  state.templates.push(
+    nConst(templateId, nCall(nId("fromTree"), [tree, nLit(0)])),
+  );
 
   const setupStatements: ESTNode[] = [];
   const fragmentId = nId("_f");
@@ -46,7 +48,9 @@ function transformJSXNode(
 
     if (!declaredNodeIds.has(nodeName)) {
       declaredNodeIds.add(nodeName);
-      nodeDeclarations.push(nConst(nodeId, generateNavigation(fragmentId, path, state)));
+      nodeDeclarations.push(
+        nConst(nodeId, generateNavigation(fragmentId, path, state)),
+      );
     }
 
     return nodeId;
@@ -65,7 +69,9 @@ function transformJSXNode(
             nCall(nId("templateEffect"), [
               nArrowBlock(
                 [],
-                nBlock([nExprStmt(nCall(nId("setText"), [nodeId, part.expression]))]),
+                nBlock([
+                  nExprStmt(nCall(nId("setText"), [nodeId, part.expression])),
+                ]),
               ),
             ]),
           ),
@@ -84,7 +90,11 @@ function transformJSXNode(
                 [],
                 nBlock([
                   nExprStmt(
-                    nCall(nId("setAttr"), [nodeId, nLit(part.key ?? ""), part.expression]),
+                    nCall(nId("setAttr"), [
+                      nodeId,
+                      nLit(part.key ?? ""),
+                      part.expression,
+                    ]),
                   ),
                 ]),
               ),
@@ -98,7 +108,13 @@ function transformJSXNode(
         state.runtimeImports.add("event");
 
         updateStatements.push(
-          nExprStmt(nCall(nId("event"), [nLit(part.key ?? ""), nodeId, part.expression])),
+          nExprStmt(
+            nCall(nId("event"), [
+              nLit(part.key ?? ""),
+              nodeId,
+              part.expression,
+            ]),
+          ),
         );
         break;
       }
@@ -149,7 +165,9 @@ function transformJSXNode(
             nCall(nId("templateEffect"), [
               nArrowBlock(
                 [],
-                nBlock([nExprStmt(nCall(nId("spread"), [nodeId, part.expression]))]),
+                nBlock([
+                  nExprStmt(nCall(nId("spread"), [nodeId, part.expression])),
+                ]),
               ),
             ]),
           ),

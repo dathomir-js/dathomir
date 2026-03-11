@@ -363,7 +363,10 @@ describe("createAtomStore", () => {
   describe("Integration with atom()", () => {
     it("works with real atom definitions exported by the package", () => {
       const countAtom = defineAtom("count", 1);
-      const doubledAtom = defineAtom("doubled", (get: StoreGetter) => get(countAtom) * 2);
+      const doubledAtom = defineAtom(
+        "doubled",
+        (get: StoreGetter) => get(countAtom) * 2,
+      );
       const store = createAtomStore({ appId: "app-1" });
 
       expect(store.ref(countAtom).value).toBe(1);

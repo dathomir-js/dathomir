@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { batch, computed, createRoot, effect, onCleanup, signal } from "../index";
+import {
+  batch,
+  computed,
+  createRoot,
+  effect,
+  onCleanup,
+  signal,
+} from "../index";
 
 describe("effect", () => {
   it("reacts to changes and cleanup stops re-execution", () => {

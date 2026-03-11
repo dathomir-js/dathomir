@@ -55,7 +55,10 @@ class AtomStoreImpl implements AtomStore {
   #derivedEntries = new Map<DerivedAtom<unknown>, DerivedEntry<unknown>>();
   #disposed = false;
   #parent: AtomStoreImpl | undefined;
-  #primitiveEntries = new Map<PrimitiveAtom<unknown>, PrimitiveEntry<unknown>>();
+  #primitiveEntries = new Map<
+    PrimitiveAtom<unknown>,
+    PrimitiveEntry<unknown>
+  >();
 
   constructor(
     appId: AppId,
@@ -154,7 +157,9 @@ class AtomStoreImpl implements AtomStore {
   }
 
   #ensureDerivedEntry<T>(atom: DerivedAtom<T>): DerivedEntry<T> {
-    const existing = this.#derivedEntries.get(atom) as DerivedEntry<T> | undefined;
+    const existing = this.#derivedEntries.get(atom) as
+      | DerivedEntry<T>
+      | undefined;
     if (existing !== undefined) {
       return existing;
     }
@@ -187,7 +192,9 @@ class AtomStoreImpl implements AtomStore {
     initialValue: T = atom.init,
     hasLocalOverride = false,
   ): PrimitiveEntry<T> {
-    const existing = this.#primitiveEntries.get(atom) as PrimitiveEntry<T> | undefined;
+    const existing = this.#primitiveEntries.get(atom) as
+      | PrimitiveEntry<T>
+      | undefined;
     if (existing !== undefined) {
       if (hasLocalOverride) {
         existing.local.set(initialValue);

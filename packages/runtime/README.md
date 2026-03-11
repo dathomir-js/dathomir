@@ -10,19 +10,27 @@ npm install @dathomir/runtime
 
 ## Entry Points
 
-| Import | Description |
-|---|---|
-| `@dathomir/runtime` | CSR — DOM generation, navigation, updates, events, reconciliation |
-| `@dathomir/runtime/ssr` | SSR — Render structured arrays to HTML strings |
-| `@dathomir/runtime/hydration` | Hydration — Attach reactivity to SSR-rendered DOM |
+| Import                        | Description                                                       |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `@dathomir/runtime`           | CSR — DOM generation, navigation, updates, events, reconciliation |
+| `@dathomir/runtime/ssr`       | SSR — Render structured arrays to HTML strings                    |
+| `@dathomir/runtime/hydration` | Hydration — Attach reactivity to SSR-rendered DOM                 |
 
 ## CSR API
 
 ```ts
 import {
-  fromTree, firstChild, nextSibling,
-  setText, setAttr, setProp, spread,
-  append, insert, event, reconcile,
+  fromTree,
+  firstChild,
+  nextSibling,
+  setText,
+  setAttr,
+  setProp,
+  spread,
+  append,
+  insert,
+  event,
+  reconcile,
 } from "@dathomir/runtime";
 import { templateEffect, createRoot, onCleanup } from "@dathomir/reactivity";
 ```
@@ -85,7 +93,7 @@ insert(container, newNode, referenceNode);
 Attach a DOM event listener.
 
 ```ts
-event("click", button, () => count.update(n => n + 1));
+event("click", button, () => count.update((n) => n + 1));
 ```
 
 ### `reconcile(parent, items, keyFn, createFn, updateFn?)`
@@ -94,18 +102,29 @@ Keyed list reconciliation for efficient list rendering.
 
 ```ts
 templateEffect(() => {
-  reconcile(listEl, items.value, item => item.id, (item) => {
-    const el = document.createElement("li");
-    el.textContent = item.name;
-    return el;
-  });
+  reconcile(
+    listEl,
+    items.value,
+    (item) => item.id,
+    (item) => {
+      const el = document.createElement("li");
+      el.textContent = item.name;
+      return el;
+    },
+  );
 });
 ```
 
 ## SSR API
 
 ```ts
-import { renderToString, renderTree, serializeState, createMarker, MarkerType } from "@dathomir/runtime/ssr";
+import {
+  renderToString,
+  renderTree,
+  serializeState,
+  createMarker,
+  MarkerType,
+} from "@dathomir/runtime/ssr";
 ```
 
 ### `renderToString(tree, state, dynamicValues)`
@@ -127,7 +146,12 @@ Create SSR marker comments for hydration boundaries.
 ## Hydration API
 
 ```ts
-import { hydrate, hydrateRoot, createHydrationContext, isHydrated } from "@dathomir/runtime/hydration";
+import {
+  hydrate,
+  hydrateRoot,
+  createHydrationContext,
+  isHydrated,
+} from "@dathomir/runtime/hydration";
 ```
 
 ### `hydrate(shadowRoot, setup)`

@@ -170,7 +170,14 @@ describe("isSSRImport", () => {
   });
 
   it("returns false for non-SSR import names", () => {
-    const nonSsrImports = ["fromTree", "setText", "setAttr", "event", "insert", "templateEffect"];
+    const nonSsrImports = [
+      "fromTree",
+      "setText",
+      "setAttr",
+      "event",
+      "insert",
+      "templateEffect",
+    ];
     for (const name of nonSsrImports) {
       expect(isSSRImport(name)).toBe(false);
     }

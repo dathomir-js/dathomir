@@ -359,9 +359,7 @@ function renderTree(tree: Tree[], options: RenderOptions = {}): string {
       const snapshot = ctx.storeSnapshotSchema.serialize(
         ctx.store,
       ) as SerializableStoreSnapshot;
-      html += createStoreScript(
-        serializeState(snapshot),
-      );
+      html += createStoreScript(serializeState(snapshot));
     }
 
     for (const node of tree) {

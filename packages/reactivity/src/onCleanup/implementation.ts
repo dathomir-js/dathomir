@@ -3,10 +3,7 @@
  * Supports both createRoot scopes and effect scopes.
  * @module
  */
-import {
-  getCurrentEffectCleanups,
-  getCurrentOwner,
-} from "../internal/state";
+import { getCurrentEffectCleanups, getCurrentOwner } from "../internal/state";
 
 /**
  * Register a cleanup function to be called when the current scope is disposed.

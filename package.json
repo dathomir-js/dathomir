@@ -19,7 +19,8 @@
     "release:all": "nr p:shared release && nr p:reactivity release && nr p:components release && nr p:runtime release && nr p:core release && nr p:transformer release && nr p:plugin release",
     "test": "pnpm -r --filter \"./packages/**\" --parallel run test",
     "dev": "pnpm -r --filter \"./packages/**\" --parallel run dev",
-    "lint": "pnpm -r --filter \"./packages/**\" --parallel run lint"
+    "lint": "pnpm -r --filter \"./packages/**\" --parallel run lint",
+    "fmt": "pnpm -r --filter \"./packages/**\" --parallel run fmt"
   },
   "license": "MPL-2.0",
   "packageManager": "pnpm@10.17.1",

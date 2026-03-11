@@ -3,9 +3,7 @@
  * @module
  */
 import { createEffectNode } from "../internal/helpers";
-import {
-  setCurrentEffectCleanups,
-} from "../internal/state";
+import { setCurrentEffectCleanups } from "../internal/state";
 import {
   effectCleanup,
   link,

@@ -15,7 +15,10 @@ interface ButtonIntrinsicElements extends CommonIntrinsicElements {
   /** URL to use for form submission */
   formAction?: string;
   /** Encoding type for form submission */
-  formEnctype?: "application/x-www-form-urlencoded" | "multipart/form-data" | "text/plain";
+  formEnctype?:
+    | "application/x-www-form-urlencoded"
+    | "multipart/form-data"
+    | "text/plain";
   /** HTTP method for form submission */
   formMethod?: "get" | "post" | "dialog";
   /** Whether to bypass form validation */

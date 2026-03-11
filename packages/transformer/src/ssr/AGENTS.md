@@ -3,6 +3,7 @@
 ## Before Implementation
 
 **MUST READ:**
+
 1. [SPEC.typ](./SPEC.typ) - Contains the specification and design decisions
 2. [implementation.test.ts](./implementation.test.ts) - Contains the correctness criteria for implementation
 

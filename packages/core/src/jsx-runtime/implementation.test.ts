@@ -14,7 +14,6 @@ function uniqueTag(): string {
   return `core-test-el-${++tagCounter}-${Date.now()}`;
 }
 
-
 describe("jsx / createElement", () => {
   describe("basic element creation", () => {
     it("should create a DOM element with the given tag", () => {

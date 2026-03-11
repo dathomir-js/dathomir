@@ -7,10 +7,10 @@
  */
 
 import type {
-    ComponentClass,
-    ComponentContext,
-    PropDefinition,
-    PropsSchema,
+  ComponentClass,
+  ComponentContext,
+  PropDefinition,
+  PropsSchema,
 } from "@/defineComponent/implementation";
 import { getComponent } from "@/registry/implementation";
 import { signal } from "@dathomir/reactivity";
@@ -20,19 +20,28 @@ import {
   setComponentRenderer,
 } from "@dathomir/runtime/ssr";
 import { serializeState } from "@dathomir/runtime/ssr";
-import type { AtomStore, AtomStoreSnapshot, PrimitiveAtom } from "@dathomir/store";
+import type {
+  AtomStore,
+  AtomStoreSnapshot,
+  PrimitiveAtom,
+} from "@dathomir/store";
 import { withStore } from "@dathomir/store";
 import { getCurrentStore } from "@dathomir/store/internal";
 
 interface SSRStoreOptions {
   store?: AtomStore;
-  storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
+  storeSnapshotSchema?: AtomStoreSnapshot<
+    Record<string, PrimitiveAtom<unknown>>
+  >;
 }
 
 type SerializableStoreSnapshot = Record<string, SerializableValue>;
 
 function assertStoreSnapshotOptions(options: SSRStoreOptions): void {
-  if (options.storeSnapshotSchema !== undefined && options.store === undefined) {
+  if (
+    options.storeSnapshotSchema !== undefined &&
+    options.store === undefined
+  ) {
     throw new Error("[dathomir] storeSnapshotSchema requires a store");
   }
 }
@@ -100,17 +109,17 @@ function renderComponentContent(
   if (propsSchema) {
     for (const propName of Object.keys(propsSchema)) {
       const def = propsSchema[propName]!;
-      const attrName = def.attribute === false
-        ? null
-        : typeof def.attribute === "string"
-          ? def.attribute
-          : propName;
-      const rawValue = attrName !== null && attrs[attrName] != null
-        ? String(attrs[attrName])
-        : null;
-      propSignals[propName] = signal(
-        coerceForSSR(def, rawValue),
-      );
+      const attrName =
+        def.attribute === false
+          ? null
+          : typeof def.attribute === "string"
+            ? def.attribute
+            : propName;
+      const rawValue =
+        attrName !== null && attrs[attrName] != null
+          ? String(attrs[attrName])
+          : null;
+      propSignals[propName] = signal(coerceForSSR(def, rawValue));
     }
   }
   const ctx = {
@@ -118,16 +127,19 @@ function renderComponentContent(
     props: propSignals,
     get store() {
       if (resolvedStore === undefined) {
-        throw new Error("[dathomir] SSR component context does not provide a store yet");
+        throw new Error(
+          "[dathomir] SSR component context does not provide a store yet",
+        );
       }
       return resolvedStore;
     },
   } as ComponentContext<PropsSchema>;
 
   // Call setup function (in SSR mode, returns HTML string)
-  const result = resolvedStore === undefined
-    ? registration.setup(ctx.host, ctx)
-    : withStore(resolvedStore, () => registration.setup(ctx.host, ctx));
+  const result =
+    resolvedStore === undefined
+      ? registration.setup(ctx.host, ctx)
+      : withStore(resolvedStore, () => registration.setup(ctx.host, ctx));
 
   // In SSR mode, the setup function returns an HTML string
   const contentHtml = typeof result === "string" ? result : "";
@@ -135,13 +147,14 @@ function renderComponentContent(
   // Build DSD content: <style> tags + component HTML
   let dsdContent = "";
 
-  if (options.storeSnapshotSchema !== undefined && resolvedStore !== undefined) {
+  if (
+    options.storeSnapshotSchema !== undefined &&
+    resolvedStore !== undefined
+  ) {
     const snapshot = options.storeSnapshotSchema.serialize(
       resolvedStore,
     ) as SerializableStoreSnapshot;
-    dsdContent += createStoreScript(
-      serializeState(snapshot),
-    );
+    dsdContent += createStoreScript(serializeState(snapshot));
   }
 
   // Add CSS as <style> tags inside DSD
@@ -284,8 +297,9 @@ function _resetRendererState(): void {
 }
 
 export {
-    _resetRendererState, createComponentRenderer,
-    ensureComponentRenderer,
-    renderDSD,
-    renderDSDContent
+  _resetRendererState,
+  createComponentRenderer,
+  ensureComponentRenderer,
+  renderDSD,
+  renderDSDContent,
 };

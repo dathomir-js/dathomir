@@ -3,17 +3,9 @@ import { print } from "esrap";
 import ts from "esrap/languages/ts";
 import { walk } from "zimmerframe";
 
-import type {
-  ESTNode,
-  Program,
-} from "@/transform/ast/implementation";
-import {
-  isComponentTag,
-} from "@/transform/jsx/implementation";
-import type {
-  JSXElement,
-  JSXFragment,
-} from "@/transform/jsx/implementation";
+import type { ESTNode, Program } from "@/transform/ast/implementation";
+import { isComponentTag } from "@/transform/jsx/implementation";
+import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
 import { transformJSXNode } from "@/transform/mode-csr/implementation";
 import { transformJSXForSSRNode } from "@/transform/mode-ssr/implementation";
 import { addRuntimeImports } from "@/transform/runtimeImports/implementation";
@@ -61,7 +53,10 @@ function transform(
         {
           state: walkState,
           next,
-        }: { state: { inJSX: boolean }; next: (s?: { inJSX: boolean }) => void },
+        }: {
+          state: { inJSX: boolean };
+          next: (s?: { inJSX: boolean }) => void;
+        },
       ) {
         if (walkState.inJSX) {
           next({ inJSX: true });
@@ -85,7 +80,10 @@ function transform(
         {
           state: walkState,
           next,
-        }: { state: { inJSX: boolean }; next: (s?: { inJSX: boolean }) => void },
+        }: {
+          state: { inJSX: boolean };
+          next: (s?: { inJSX: boolean }) => void;
+        },
       ) {
         if (walkState.inJSX) {
           next({ inJSX: true });

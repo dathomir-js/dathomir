@@ -9,13 +9,17 @@ export type {
   ComponentElement,
   ComponentOptions,
   FunctionComponent,
-  HydrateSetupFunction, InferProps, InferPropType, PropDefinition, PropsSchema, PropType
+  HydrateSetupFunction,
+  InferProps,
+  InferPropType,
+  PropDefinition,
+  PropsSchema,
+  PropType,
 } from "@/defineComponent/implementation";
 export {
   clearRegistry,
   getComponent,
   hasComponent,
-  registerComponent
+  registerComponent,
 } from "@/registry/implementation";
 export type { ComponentRegistration } from "@/registry/implementation";
-

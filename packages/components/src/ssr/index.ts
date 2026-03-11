@@ -19,8 +19,7 @@
  * @module
  */
 export {
-    createComponentRenderer,
-    renderDSD,
-    renderDSDContent
+  createComponentRenderer,
+  renderDSD,
+  renderDSDContent,
 } from "./implementation";
-

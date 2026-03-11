@@ -23,7 +23,11 @@ import {
 
 type RollupLikePlugin = {
   transformInclude: (id: string) => boolean;
-  transform: (this: { environment?: { name: string } }, code: string, id: string) => unknown;
+  transform: (
+    this: { environment?: { name: string } },
+    code: string,
+    id: string,
+  ) => unknown;
 };
 
 describe("plugin", () => {

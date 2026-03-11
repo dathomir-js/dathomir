@@ -44,7 +44,9 @@ function defineAtomStoreSnapshot<const S extends AtomStoreSnapshotSchema>(
       const snapshot: Partial<AtomStoreSnapshotValue<S>> = {};
 
       for (const [stableId, atom] of entries) {
-        snapshot[stableId] = store.get(atom) as AtomStoreSnapshotValue<S>[keyof S];
+        snapshot[stableId] = store.get(
+          atom,
+        ) as AtomStoreSnapshotValue<S>[keyof S];
       }
 
       return Object.freeze(snapshot) as AtomStoreSnapshotValue<S>;

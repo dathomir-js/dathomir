@@ -113,11 +113,17 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function normalizePathMappingValue(value: string, configDirectory: string): string {
+function normalizePathMappingValue(
+  value: string,
+  configDirectory: string,
+): string {
   return value.replaceAll("${configDir}", configDirectory);
 }
 
-function resolveExtendsPath(configDirectory: string, extendsValue: string): string | null {
+function resolveExtendsPath(
+  configDirectory: string,
+  extendsValue: string,
+): string | null {
   if (extendsValue.startsWith(".") || extendsValue.startsWith("/")) {
     const directPath = path.resolve(configDirectory, extendsValue);
     if (fs.existsSync(directPath)) {
@@ -136,7 +142,9 @@ function resolveExtendsPath(configDirectory: string, extendsValue: string): stri
 }
 
 function findNearestTsconfigPath(importer: string): string | null {
-  let currentDirectory = path.dirname(path.normalize(stripQueryAndHash(importer)));
+  let currentDirectory = path.dirname(
+    path.normalize(stripQueryAndHash(importer)),
+  );
 
   while (true) {
     const tsconfigPath = path.join(currentDirectory, "tsconfig.json");
@@ -152,7 +160,10 @@ function findNearestTsconfigPath(importer: string): string | null {
   }
 }
 
-function readTsconfigPaths(tsconfigPath: string, sourceDirectory = path.dirname(tsconfigPath)): TsconfigPaths | null {
+function readTsconfigPaths(
+  tsconfigPath: string,
+  sourceDirectory = path.dirname(tsconfigPath),
+): TsconfigPaths | null {
   const cacheKey = `${tsconfigPath}::${sourceDirectory}`;
   const cachedPaths = tsconfigPathCache.get(cacheKey);
   if (cachedPaths !== undefined) {
@@ -172,9 +183,15 @@ function readTsconfigPaths(tsconfigPath: string, sourceDirectory = path.dirname(
     const extendsValue = parsed.extends;
 
     if (typeof extendsValue === "string") {
-      const extendedTsconfigPath = resolveExtendsPath(configDirectory, extendsValue);
+      const extendedTsconfigPath = resolveExtendsPath(
+        configDirectory,
+        extendsValue,
+      );
       if (extendedTsconfigPath !== null) {
-        Object.assign(inheritedPaths, readTsconfigPaths(extendedTsconfigPath, sourceDirectory) ?? {});
+        Object.assign(
+          inheritedPaths,
+          readTsconfigPaths(extendedTsconfigPath, sourceDirectory) ?? {},
+        );
       }
     }
 
@@ -192,8 +209,13 @@ function readTsconfigPaths(tsconfigPath: string, sourceDirectory = path.dirname(
 
     const normalizedPaths: TsconfigPaths = { ...inheritedPaths };
     for (const [key, value] of Object.entries(paths)) {
-      if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
-        normalizedPaths[key] = value.map((item) => normalizePathMappingValue(item, sourceDirectory));
+      if (
+        Array.isArray(value) &&
+        value.every((item) => typeof item === "string")
+      ) {
+        normalizedPaths[key] = value.map((item) =>
+          normalizePathMappingValue(item, sourceDirectory),
+        );
       }
     }
 
@@ -231,10 +253,15 @@ function resolveCandidateFilePath(basePath: string): string | null {
     basePath,
   ];
 
-  return candidatePaths.find((candidatePath) => fs.existsSync(candidatePath)) ?? null;
+  return (
+    candidatePaths.find((candidatePath) => fs.existsSync(candidatePath)) ?? null
+  );
 }
 
-function resolveLocalSourceAlias(importer: string, source: string): string | null {
+function resolveLocalSourceAlias(
+  importer: string,
+  source: string,
+): string | null {
   const tsconfigPath = findNearestTsconfigPath(importer);
   if (tsconfigPath === null) {
     return null;

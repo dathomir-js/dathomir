@@ -1,5 +1,8 @@
 import { nId } from "@/transform/ast/implementation";
-import type { Identifier, VariableDeclaration } from "@/transform/ast/implementation";
+import type {
+  Identifier,
+  VariableDeclaration,
+} from "@/transform/ast/implementation";
 import type { RuntimeImportName } from "@/transform/runtimeImports/implementation";
 
 interface TransformState {

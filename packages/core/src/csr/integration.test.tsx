@@ -230,9 +230,7 @@ describe("CSR integration", () => {
       createRoot(() => {
         const theme = signal("light");
 
-        const div = (
-          <div data-theme={theme}>content</div>
-        ) as HTMLDivElement;
+        const div = (<div data-theme={theme}>content</div>) as HTMLDivElement;
         container.appendChild(div);
 
         expect(div.getAttribute("data-theme")).toBe("light");
@@ -438,9 +436,8 @@ describe("CSR integration", () => {
     });
 
     it("should receive and render props", () => {
-      const Greeting = ({ name }: { name: string }) => (
-        <p>Hello, {name}!</p>
-      ) as Node;
+      const Greeting = ({ name }: { name: string }) =>
+        (<p>Hello, {name}!</p>) as Node;
 
       createRoot(() => {
         const el = (<Greeting name="World" />) as HTMLElement;
@@ -451,21 +448,23 @@ describe("CSR integration", () => {
     });
 
     it("should compose multiple components", () => {
-      const Badge = ({ label }: { label: string }) => (
-        <span class="badge">{label}</span>
-      ) as Node;
+      const Badge = ({ label }: { label: string }) =>
+        (<span class="badge">{label}</span>) as Node;
 
-      const Card = ({ title }: { title: string }) => (
-        <div class="card">
-          <Badge label={title} />
-        </div>
-      ) as Node;
+      const Card = ({ title }: { title: string }) =>
+        (
+          <div class="card">
+            <Badge label={title} />
+          </div>
+        ) as Node;
 
       createRoot(() => {
         const el = (<Card title="Featured" />) as HTMLElement;
         container.appendChild(el);
 
-        expect(requireQuery<HTMLElement>(el, ".badge").textContent).toBe("Featured");
+        expect(requireQuery<HTMLElement>(el, ".badge").textContent).toBe(
+          "Featured",
+        );
       });
     });
   });

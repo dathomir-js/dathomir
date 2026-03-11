@@ -10,7 +10,7 @@ interface TextareaIntrinsicElements
   // Override event handlers with more specific types for textarea elements
   /** Input event handler with HTMLTextAreaElement target */
   onInput?: (
-    event: InputEvent & { target: HTMLTextAreaElement | null }
+    event: InputEvent & { target: HTMLTextAreaElement | null },
   ) => void;
   /** Change event handler with HTMLTextAreaElement target */
   onChange?: (event: Event & { target: HTMLTextAreaElement | null }) => void;

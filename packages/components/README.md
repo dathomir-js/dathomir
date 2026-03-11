@@ -81,8 +81,8 @@ To enable SSR with Declarative Shadow DOM, simply import the auto-setup module:
 
 ```typescript
 // entry-server.tsx
-import '@dathomir/components/ssr'; // Auto-enables DSD rendering
-import { App } from './App';
+import "@dathomir/components/ssr"; // Auto-enables DSD rendering
+import { App } from "./App";
 
 export function render(): string {
   return App() as unknown as string;

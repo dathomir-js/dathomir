@@ -1,8 +1,4 @@
-import {
-  onCleanup,
-  signal,
-  templateEffect
-} from "@dathomir/reactivity";
+import { onCleanup, signal, templateEffect } from "@dathomir/reactivity";
 import { atom, createAtomStore, withStore } from "@dathomir/store";
 
 import { bindStoreToHost } from "./internal";
@@ -109,13 +105,15 @@ describe("defineComponent", () => {
 
   it("should apply adoptedStyleSheets from options.styles", async () => {
     const tag = uniqueTag();
-    const sheet = css`:host { display: block; }`;
+    const sheet = css`
+      :host {
+        display: block;
+      }
+    `;
 
-    defineComponent(
-      tag,
-      () => document.createTextNode("styled"),
-      { styles: [sheet] },
-    );
+    defineComponent(tag, () => document.createTextNode("styled"), {
+      styles: [sheet],
+    });
 
     const el = document.createElement(tag);
     document.body.appendChild(el);
@@ -129,11 +127,9 @@ describe("defineComponent", () => {
   it("should apply styles from string values", async () => {
     const tag = uniqueTag();
 
-    defineComponent(
-      tag,
-      () => document.createTextNode("styled"),
-      { styles: [":host { color: red; }"] },
-    );
+    defineComponent(tag, () => document.createTextNode("styled"), {
+      styles: [":host { color: red; }"],
+    });
 
     const el = document.createElement(tag);
     document.body.appendChild(el);
@@ -276,11 +272,13 @@ describe("defineComponent", () => {
   // Test case #5: observedAttributes is auto-generated from props schema
   it("should generate observedAttributes from props schema", () => {
     const tag = uniqueTag();
-    const Comp = defineComponent(
-      tag,
-      () => document.createTextNode("test"),
-      { props: { count: { type: Number }, label: { type: String }, active: { type: Boolean } } },
-    ) as any;
+    const Comp = defineComponent(tag, () => document.createTextNode("test"), {
+      props: {
+        count: { type: Number },
+        label: { type: String },
+        active: { type: Boolean },
+      },
+    }) as any;
     const observed = Comp.observedAttributes as string[];
     expect(observed).toContain("count");
     expect(observed).toContain("label");
@@ -502,15 +500,19 @@ describe("defineComponent", () => {
     const store = createAtomStore({ appId: `late-store-${tag}` });
     let capturedStore: ReturnType<typeof createAtomStore> | undefined;
 
-    defineComponent(tag, ({ store: ctxStore }) => {
-      capturedStore = ctxStore;
-      return document.createTextNode(String(ctxStore.ref(countAtom).value));
-    }, {
-      hydrate: ({ host, store: ctxStore }) => {
+    defineComponent(
+      tag,
+      ({ store: ctxStore }) => {
         capturedStore = ctxStore;
-        host.setAttribute("data-hydrated", "true");
+        return document.createTextNode(String(ctxStore.ref(countAtom).value));
       },
-    });
+      {
+        hydrate: ({ host, store: ctxStore }) => {
+          capturedStore = ctxStore;
+          host.setAttribute("data-hydrated", "true");
+        },
+      },
+    );
 
     const host = document.createElement(tag);
     const template = document.createElement("template");
@@ -531,7 +533,9 @@ describe("defineComponent", () => {
   it("should handle setup error gracefully so reconnect still works", async () => {
     const tag = uniqueTag();
     let shouldThrow = true;
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     defineComponent(tag, () => {
       if (shouldThrow) throw new Error("setup error");

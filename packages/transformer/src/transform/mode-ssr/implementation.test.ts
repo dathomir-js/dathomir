@@ -16,7 +16,9 @@ const nested: NestedTransformers = {
   transformJSXForSSRNode,
 };
 
-function makeElement(children: JSXElement["children"] = [{ type: "JSXText", value: "Hello" }]): JSXElement {
+function makeElement(
+  children: JSXElement["children"] = [{ type: "JSXText", value: "Hello" }],
+): JSXElement {
   return {
     type: "JSXElement",
     openingElement: {
@@ -55,7 +57,10 @@ describe("transform/mode-ssr", () => {
     };
 
     expect(output.arguments[2]?.type).toBe("NewExpression");
-    const mapArg = output.arguments[2]?.arguments?.[0] as { type: string; elements: unknown[] };
+    const mapArg = output.arguments[2]?.arguments?.[0] as {
+      type: string;
+      elements: unknown[];
+    };
     expect(mapArg.type).toBe("ArrayExpression");
     expect(mapArg.elements.length).toBeGreaterThan(0);
   });

@@ -1,6 +1,9 @@
 import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
-type FormEnctype = "application/x-www-form-urlencoded" | "multipart/form-data" | "text/plain";
+type FormEnctype =
+  | "application/x-www-form-urlencoded"
+  | "multipart/form-data"
+  | "text/plain";
 type FormMethod = "get" | "post" | "dialog";
 type FormTarget = "_self" | "_blank" | "_parent" | "_top" | (string & {});
 

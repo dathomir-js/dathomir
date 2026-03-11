@@ -56,19 +56,19 @@ require("esbuild").build({
 
 ```ts
 dathomir.vite({
-  include: [".tsx", ".jsx"],  // file extensions to transform (default)
-  exclude: [],                // patterns to exclude
+  include: [".tsx", ".jsx"], // file extensions to transform (default)
+  exclude: [], // patterns to exclude
   runtimeModule: "@dathomir/core", // runtime import module (default)
-  mode: "csr",                // "csr" | "ssr" — overrides auto-detection
+  mode: "csr", // "csr" | "ssr" — overrides auto-detection
 });
 ```
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `include` | `string[]` | `[".tsx", ".jsx"]` | File extensions to transform |
-| `exclude` | `string[]` | `[]` | Patterns to exclude |
-| `runtimeModule` | `string` | `"@dathomir/core"` | Module for runtime imports |
-| `mode` | `"csr" \| "ssr"` | auto | Force rendering mode |
+| Option          | Type             | Default            | Description                  |
+| --------------- | ---------------- | ------------------ | ---------------------------- |
+| `include`       | `string[]`       | `[".tsx", ".jsx"]` | File extensions to transform |
+| `exclude`       | `string[]`       | `[]`               | Patterns to exclude          |
+| `runtimeModule` | `string`         | `"@dathomir/core"` | Module for runtime imports   |
+| `mode`          | `"csr" \| "ssr"` | auto               | Force rendering mode         |
 
 ### SSR Mode Detection
 

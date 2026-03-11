@@ -6,9 +6,7 @@
  */
 import { templateEffect } from "@dathomir/reactivity";
 import type { RuntimeJSX } from "@dathomir/runtime";
-import {
-  bindCurrentStoreToSubtree,
-} from "@dathomir/components/internal";
+import { bindCurrentStoreToSubtree } from "@dathomir/components/internal";
 import {
   event,
   firstChild,
@@ -55,10 +53,11 @@ type JSXChild =
 type JSXChildren = JSXChild | JSXChild[];
 type JSXAttributeValue = JSXChildren | ReactiveValue;
 
-type AdaptIntrinsicPropValue<T> =
-  T extends (...args: never[]) => unknown ? T :
-  T extends never ? never :
-  T | ReactiveValue;
+type AdaptIntrinsicPropValue<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends never
+    ? never
+    : T | ReactiveValue;
 
 type AdaptIntrinsicProps<T> = {
   [K in keyof T]: K extends "children"
@@ -272,6 +271,8 @@ export const jsxDEV = jsx;
 export namespace JSX {
   export interface IntrinsicElements extends AdaptedIntrinsicElements {}
   export interface Element extends globalThis.JSX.Element {}
-  export interface ElementAttributesProperty extends globalThis.JSX.ElementAttributesProperty {}
-  export interface ElementChildrenAttribute extends globalThis.JSX.ElementChildrenAttribute {}
+  export interface ElementAttributesProperty
+    extends globalThis.JSX.ElementAttributesProperty {}
+  export interface ElementChildrenAttribute
+    extends globalThis.JSX.ElementChildrenAttribute {}
 }

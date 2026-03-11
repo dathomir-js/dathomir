@@ -53,13 +53,10 @@ function css(
  * Extract raw CSS text from a CSSStyleSheet or DathomirStyleSheet.
  * Returns undefined if the sheet has no attached text.
  */
-function getCssText(
-  sheet: CSSStyleSheet | string,
-): string | undefined {
+function getCssText(sheet: CSSStyleSheet | string): string | undefined {
   if (typeof sheet === "string") return sheet;
   return (sheet as DathomirStyleSheet).__cssText;
 }
 
 export { css, getCssText };
 export type { DathomirStyleSheet };
-

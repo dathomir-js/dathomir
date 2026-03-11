@@ -12,10 +12,7 @@ import {
   nProp,
   nSpread,
 } from "@/transform/ast/implementation";
-import type {
-  CallExpression,
-  ESTNode,
-} from "@/transform/ast/implementation";
+import type { CallExpression, ESTNode } from "@/transform/ast/implementation";
 import {
   getTagName,
   isComponentTag,
@@ -137,7 +134,8 @@ function buildComponentCall(
 
   const significantChildren = node.children.filter((child) => {
     if (child.type === "JSXText") return child.value.trim() !== "";
-    if (isJSXExpressionContainer(child)) return !isJSXEmptyExpression(child.expression);
+    if (isJSXExpressionContainer(child))
+      return !isJSXEmptyExpression(child.expression);
     return true;
   });
 
@@ -200,7 +198,9 @@ function buildComponentCall(
           }
 
           if (isJSXSpreadChild(fragChild)) {
-            childExprs.push(transformNestedJSX(fragChild.expression, state, nested));
+            childExprs.push(
+              transformNestedJSX(fragChild.expression, state, nested),
+            );
             continue;
           }
 
@@ -255,7 +255,11 @@ function transformNestedJSX(
     },
     JSXFragment(node: ESTNode) {
       if (state.mode === "ssr") {
-        return nested.transformJSXForSSRNode(node as JSXFragment, state, nested);
+        return nested.transformJSXForSSRNode(
+          node as JSXFragment,
+          state,
+          nested,
+        );
       }
       return nested.transformJSXNode(node as JSXFragment, state, nested);
     },
@@ -266,7 +270,9 @@ function transformNestedJSX(
  * Check if a key is an event handler.
  */
 function isEventHandlerKey(key: string): boolean {
-  return key.startsWith("on") && key.length > 2 && key[2] === key[2].toUpperCase();
+  return (
+    key.startsWith("on") && key.length > 2 && key[2] === key[2].toUpperCase()
+  );
 }
 
 /**
@@ -350,9 +356,19 @@ function jsxElementToTree(
     path,
   );
 
-  const children = processChildren(node.children, state, dynamicParts, path, nested);
+  const children = processChildren(
+    node.children,
+    state,
+    dynamicParts,
+    path,
+    nested,
+  );
 
-  const treeElements: ESTNode[] = [nLit(tagName), attrs, ...children.map((c) => c.tree)];
+  const treeElements: ESTNode[] = [
+    nLit(tagName),
+    attrs,
+    ...children.map((c) => c.tree),
+  ];
 
   for (const evt of events) {
     dynamicParts.push({
@@ -413,7 +429,9 @@ function processChildren(
       }
 
       const childPath = [...parentPath, childIndex];
-      results.push(jsxElementToTree(child, state, dynamicParts, childPath, nested));
+      results.push(
+        jsxElementToTree(child, state, dynamicParts, childPath, nested),
+      );
       childIndex++;
       continue;
     }
@@ -518,7 +536,13 @@ function jsxToTree(
   const dynamicParts: DynamicPart[] = [];
 
   if (node.type === "JSXFragment") {
-    const children = processChildren(node.children, state, dynamicParts, [], nested);
+    const children = processChildren(
+      node.children,
+      state,
+      dynamicParts,
+      [],
+      nested,
+    );
     return {
       tree: nArr(children.map((c) => c.tree)),
       dynamicParts,
@@ -574,7 +598,9 @@ function isJSXFragment(node: ESTNode): node is JSXFragment {
   return node.type === "JSXFragment";
 }
 
-function isJSXExpressionContainer(node: ESTNode): node is JSXExpressionContainer {
+function isJSXExpressionContainer(
+  node: ESTNode,
+): node is JSXExpressionContainer {
   return node.type === "JSXExpressionContainer";
 }
 
@@ -594,4 +620,9 @@ export {
   processAttributes,
   processChildren,
 };
-export type { DynamicPart, NestedTransformers, ProcessedAttributes, TreeResult };
+export type {
+  DynamicPart,
+  NestedTransformers,
+  ProcessedAttributes,
+  TreeResult,
+};

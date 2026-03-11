@@ -1,1 +1,3 @@
-export { default } from "@dathomir/config/prettier";
+import template from "@dathomir/config/templates/prettier.template.js";
+
+export default template;

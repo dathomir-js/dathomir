@@ -101,7 +101,10 @@ function insert(
   // Track new nodes for future cleanup
   const newNodes: Node[] = [];
 
-  function appendIterableChild(value: unknown, fragment: DocumentFragment): void {
+  function appendIterableChild(
+    value: unknown,
+    fragment: DocumentFragment,
+  ): void {
     if (value === null || value === undefined || typeof value === "boolean") {
       return;
     }

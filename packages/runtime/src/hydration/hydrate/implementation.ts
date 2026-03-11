@@ -29,7 +29,11 @@ import {
   type MarkerInfo,
 } from "@/hydration/walker/implementation";
 
-import type { AtomStore, AtomStoreSnapshot, PrimitiveAtom } from "@dathomir/store";
+import type {
+  AtomStore,
+  AtomStoreSnapshot,
+  PrimitiveAtom,
+} from "@dathomir/store";
 
 /**
  * WeakMap to track hydrated ShadowRoots (idempotency).
@@ -56,7 +60,9 @@ interface HydrationContext {
 
 interface HydrationOptions {
   store?: AtomStore;
-  storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
+  storeSnapshotSchema?: AtomStoreSnapshot<
+    Record<string, PrimitiveAtom<unknown>>
+  >;
 }
 
 /**
@@ -224,7 +230,10 @@ function hydrateRoot(
   setup: (ctx: HydrationContext) => void,
   options: HydrationOptions = {},
 ): RootDispose | null {
-  if (options.storeSnapshotSchema !== undefined && options.store === undefined) {
+  if (
+    options.storeSnapshotSchema !== undefined &&
+    options.store === undefined
+  ) {
     throw new Error("[dathomir] storeSnapshotSchema requires a store");
   }
 
@@ -244,7 +253,10 @@ function hydrateRoot(
   // Create hydration context
   const ctx = createHydrationContext(root, options);
 
-  if (options.storeSnapshotSchema !== undefined && options.store !== undefined) {
+  if (
+    options.storeSnapshotSchema !== undefined &&
+    options.store !== undefined
+  ) {
     const snapshot = parseStoreScript(root);
     if (snapshot !== null) {
       options.storeSnapshotSchema.hydrate(options.store, snapshot as never);
@@ -252,10 +264,14 @@ function hydrateRoot(
   }
 
   // Create cleanup scope and run setup
-  const runSetup = () => createRoot(() => {
-    setup(ctx);
-  });
-  const dispose = options.store === undefined ? runSetup() : withStore(options.store, runSetup);
+  const runSetup = () =>
+    createRoot(() => {
+      setup(ctx);
+    });
+  const dispose =
+    options.store === undefined
+      ? runSetup()
+      : withStore(options.store, runSetup);
 
   // Mark as hydrated
   markHydrated(root);
@@ -277,31 +293,35 @@ function hydrate(
   },
   options: HydrationOptions = {},
 ): RootDispose | null {
-  return hydrateRoot(root, (ctx) => {
-    // Process text bindings
-    if (bindings.texts) {
-      let marker = nextMarker(ctx);
-      while (marker !== null) {
-        if (marker.type === HydrationMarkerType.Text) {
-          const getValue = bindings.texts.get(marker.id);
-          if (getValue) {
-            hydrateTextMarker(marker, getValue);
+  return hydrateRoot(
+    root,
+    (ctx) => {
+      // Process text bindings
+      if (bindings.texts) {
+        let marker = nextMarker(ctx);
+        while (marker !== null) {
+          if (marker.type === HydrationMarkerType.Text) {
+            const getValue = bindings.texts.get(marker.id);
+            if (getValue) {
+              hydrateTextMarker(marker, getValue);
+            }
+          }
+
+          marker = nextMarker(ctx);
+        }
+      }
+
+      // Process event bindings
+      if (bindings.events) {
+        for (const [element, handlers] of bindings.events) {
+          for (const [eventType, handler] of handlers) {
+            event(eventType, element, handler);
           }
         }
-
-        marker = nextMarker(ctx);
       }
-    }
-
-    // Process event bindings
-    if (bindings.events) {
-      for (const [element, handlers] of bindings.events) {
-        for (const [eventType, handler] of handlers) {
-          event(eventType, element, handler);
-        }
-      }
-    }
-  }, options);
+    },
+    options,
+  );
 }
 
 export {

@@ -1,9 +1,11 @@
 # TODOs
 
 ## Main root
+
 - [x] html
 
 ## Document metadata
+
 - [x] base
 - [x] head
 - [x] link
@@ -12,9 +14,11 @@
 - [x] title
 
 ## Sectioning root
+
 - [x] body
 
 ## Content sectioning
+
 - [x] address
 - [x] article
 - [x] aside
@@ -33,6 +37,7 @@
 - [x] search
 
 ## Text content
+
 - [x] blockquote
 - [x] dd
 - [x] div
@@ -49,6 +54,7 @@
 - [x] ul
 
 ## Inline text semantics
+
 - [x] a
 - [x] abbr
 - [x] b
@@ -80,6 +86,7 @@
 - [x] wbr
 
 ## Image and multimedia
+
 - [x] area
 - [x] audio
 - [x] img
@@ -88,6 +95,7 @@
 - [x] video
 
 ## Embedded content
+
 - [x] embed
 - [x] fencedframe
 - [x] iframe
@@ -96,19 +104,23 @@
 - [x] source
 
 ## SVG and MathML
+
 - [x] svg
 - [x] math
 
 ## Scripting
+
 - [x] canvas
 - [x] noscript
 - [x] script
 
 ## Demarcating edits
+
 - [x] del
 - [x] ins
 
 ## Table content
+
 - [x] caption
 - [x] col
 - [x] colgroup
@@ -121,6 +133,7 @@
 - [x] tr
 
 ## Forms
+
 - [x] button
 - [x] datalist
 - [x] fieldset
@@ -138,10 +151,12 @@
 - [x] textarea
 
 ## Interactive elements
+
 - [x] details
 - [x] dialog
 - [x] summary
 
 ## Web Components
+
 - [x] slot
 - [x] template

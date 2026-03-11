@@ -37,7 +37,11 @@ describe("transform/runtimeImports", () => {
       ],
     };
 
-    addRuntimeImports(program, new Set(["fromTree", "setText"]), "@dathomir/runtime");
+    addRuntimeImports(
+      program,
+      new Set(["fromTree", "setText"]),
+      "@dathomir/runtime",
+    );
 
     expect(program.body[2]?.type).toBe("ImportDeclaration");
     const decl = program.body[2] as unknown as {

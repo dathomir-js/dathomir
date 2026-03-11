@@ -20,8 +20,8 @@ const stop = effect(() => {
   console.log(`count: ${count.value}, doubled: ${doubled.value}`);
 });
 
-count.set(5);    // logs: count: 5, doubled: 10
-count.set(10);   // logs: count: 10, doubled: 20
+count.set(5); // logs: count: 5, doubled: 10
+count.set(10); // logs: count: 10, doubled: 20
 
 batch(() => {
   count.set(100);
@@ -40,10 +40,10 @@ Create a mutable reactive signal.
 
 ```ts
 const name = signal("world");
-console.log(name.value);  // "world"
-name.set("dathomir");     // triggers dependents
-name.set(v => v + "!");   // updater function
-name.peek();              // read without tracking
+console.log(name.value); // "world"
+name.set("dathomir"); // triggers dependents
+name.set((v) => v + "!"); // updater function
+name.peek(); // read without tracking
 ```
 
 ### `computed(fn)`
@@ -70,7 +70,7 @@ const stop = effect(() => {
   console.log(count.value);
 });
 count.set(1); // triggers re-run (previous onCleanup fires first)
-stop();       // dispose effect (onCleanup fires)
+stop(); // dispose effect (onCleanup fires)
 ```
 
 ### `batch(fn)`

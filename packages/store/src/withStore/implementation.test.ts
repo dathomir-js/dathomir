@@ -124,7 +124,9 @@ describe("withStore", () => {
 
     const seen = withStore(rootStore, () => {
       const outer = readFromCurrentStore(themeAtom);
-      const inner = withStore(childStore, () => readFromCurrentStore(themeAtom));
+      const inner = withStore(childStore, () =>
+        readFromCurrentStore(themeAtom),
+      );
       const restored = readFromCurrentStore(themeAtom);
 
       return [outer, inner, restored];

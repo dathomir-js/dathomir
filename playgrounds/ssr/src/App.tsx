@@ -1,6 +1,9 @@
 import { withStore } from "@dathomir/core";
 
-import { createDemoStore } from "./demoStore";
+import {
+    countAtom,
+    createDemoStore
+} from "./demoStore";
 import "./WebComponentSSR";
 
 export function App() {
@@ -12,6 +15,9 @@ export function App() {
       <p>Minimal demo for SSR, Web Components, and a scoped atom store.</p>
       <p data-render-mode={typeof document === "undefined" ? "SSR" : "CSR"}>
         Current render mode: {typeof document === "undefined" ? "SSR" : "CSR"}
+      </p>
+      <p>
+        Store value : <strong>{store.get(countAtom)}</strong>
       </p>
       {withStore(store, () => <dathomir-ssr-store-counter></dathomir-ssr-store-counter>)}
     </main>

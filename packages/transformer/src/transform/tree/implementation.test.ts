@@ -127,7 +127,9 @@ describe("transform/tree", () => {
     ]);
 
     const result = jsxToTree(tree, state, nested);
-    const insertPart = result.dynamicParts.find((part) => part.type === "insert");
+    const insertPart = result.dynamicParts.find(
+      (part) => part.type === "insert",
+    );
 
     expect(insertPart).toBeDefined();
     expect(insertPart?.isComponent).toBe(true);
@@ -182,7 +184,9 @@ describe("transform/tree", () => {
 
     const result = jsxToTree(tree, state, nested);
 
-    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(true);
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(
+      true,
+    );
   });
 
   it("jsxToTree treats expressions that contain nested JSX as insert dynamic parts", () => {
@@ -208,7 +212,9 @@ describe("transform/tree", () => {
 
     const result = jsxToTree(tree, state, nested);
 
-    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(true);
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(
+      true,
+    );
   });
 
   it("jsxToTree treats JSXSpreadChild as insert dynamic parts", () => {
@@ -222,7 +228,9 @@ describe("transform/tree", () => {
 
     const result = jsxToTree(tree, state, nested);
 
-    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(true);
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(
+      true,
+    );
   });
 
   it("keeps local expression identifiers intact in dynamic text parts", () => {

@@ -16,7 +16,7 @@ npm install @dathomir/transformer
 import { transform } from "@dathomir/transformer";
 
 const result = transform(code, {
-  mode: "csr",       // "csr" | "ssr"
+  mode: "csr", // "csr" | "ssr"
   sourceMap: true,
   filename: "App.tsx",
 });
@@ -30,15 +30,27 @@ console.log(result.map);
 **Input (JSX):**
 
 ```jsx
-<button class="btn" onClick={handler}>Count: {count.value}</button>
+<button class="btn" onClick={handler}>
+  Count: {count.value}
+</button>
 ```
 
 **Output (CSR):**
 
 ```js
-import { fromTree, firstChild, nextSibling, setText, event, templateEffect } from "@dathomir/runtime";
+import {
+  fromTree,
+  firstChild,
+  nextSibling,
+  setText,
+  event,
+  templateEffect,
+} from "@dathomir/runtime";
 
-const _t1 = fromTree([["button", { class: "btn" }, "Count: ", ["{text}", null]]], 0);
+const _t1 = fromTree(
+  [["button", { class: "btn" }, "Count: ", ["{text}", null]]],
+  0,
+);
 const _el = _t1();
 const _button = firstChild(_el);
 const _text = nextSibling(firstChild(_button, true));
@@ -54,18 +66,18 @@ import { renderToString } from "@dathomir/runtime";
 renderToString(
   [["button", { class: "btn" }, "Count:", ["{text}", null]]],
   {},
-  new Map([[1, count.value]])
+  new Map([[1, count.value]]),
 );
 ```
 
 ## Options
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `mode` | `"csr" \| "ssr"` | `"csr"` | Rendering mode |
-| `sourceMap` | `boolean` | `false` | Generate source map |
-| `filename` | `string` | — | File name for source maps |
-| `runtimeModule` | `string` | `"@dathomir/runtime"` | Module to import runtime functions from |
+| Option          | Type             | Default               | Description                             |
+| --------------- | ---------------- | --------------------- | --------------------------------------- |
+| `mode`          | `"csr" \| "ssr"` | `"csr"`               | Rendering mode                          |
+| `sourceMap`     | `boolean`        | `false`               | Generate source map                     |
+| `filename`      | `string`         | —                     | File name for source maps               |
+| `runtimeModule` | `string`         | `"@dathomir/runtime"` | Module to import runtime functions from |
 
 ## License
 

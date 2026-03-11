@@ -225,7 +225,11 @@ function isVariableDeclaration(node: ESTNode): node is VariableDeclaration {
 
 /** Type guard for string Literal nodes. */
 function isStringLiteral(node: ESTNode | null): node is Literal {
-  return node !== null && node.type === "Literal" && typeof node["value"] === "string";
+  return (
+    node !== null &&
+    node.type === "Literal" &&
+    typeof node["value"] === "string"
+  );
 }
 
 export {

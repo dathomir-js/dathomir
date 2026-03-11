@@ -10,10 +10,7 @@ import type {
   ComponentClass,
   ComponentContext,
 } from "@/defineComponent/implementation";
-import {
-  clearRegistry,
-  registerComponent,
-} from "@/registry/implementation";
+import { clearRegistry, registerComponent } from "@/registry/implementation";
 import {
   _resetRendererState,
   ensureComponentRenderer,
@@ -35,7 +32,7 @@ describe("ssr", () => {
       const html = renderDSD("test-element", {});
 
       expect(html).toContain("<test-element");
-      expect(html).toContain("<template shadowrootmode=\"open\">");
+      expect(html).toContain('<template shadowrootmode="open">');
       expect(html).toContain("<div>Hello World</div>");
       expect(html).toContain("</template>");
       expect(html).toContain("</test-element>");
@@ -74,8 +71,10 @@ describe("ssr", () => {
         quote: 'test"value"here',
       });
 
-      expect(html).toContain("value=\"&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;\"");
-      expect(html).toContain("quote=\"test&quot;value&quot;here\"");
+      expect(html).toContain(
+        'value="&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;"',
+      );
+      expect(html).toContain('quote="test&quot;value&quot;here"');
     });
 
     // Test case #8 (補完): & alone is also escaped
@@ -90,10 +89,7 @@ describe("ssr", () => {
 
     it("should include CSS as <style> tags", () => {
       const setup = () => "<div>Styled</div>";
-      const cssTexts = [
-        ":host { display: block; }",
-        "div { color: red; }",
-      ];
+      const cssTexts = [":host { display: block; }", "div { color: red; }"];
       registerComponent("styled-element", setup, cssTexts);
 
       const html = renderDSD("styled-element", {});
@@ -115,7 +111,7 @@ describe("ssr", () => {
       const html = renderDSD("no-attrs", {});
 
       expect(html).toBe(
-        "<no-attrs><template shadowrootmode=\"open\"><div>No Attrs</div></template></no-attrs>"
+        '<no-attrs><template shadowrootmode="open"><div>No Attrs</div></template></no-attrs>',
       );
     });
 
@@ -161,7 +157,9 @@ describe("ssr", () => {
       registerComponent("snapshot-error-element", () => "<div>Error</div>", []);
 
       expect(() => {
-        renderDSD("snapshot-error-element", {}, { storeSnapshotSchema: schema } as never);
+        renderDSD("snapshot-error-element", {}, {
+          storeSnapshotSchema: schema,
+        } as never);
       }).toThrow("storeSnapshotSchema requires a store");
     });
   });
@@ -174,7 +172,7 @@ describe("ssr", () => {
       const html = renderDSDContent("template-test", {});
 
       expect(html).toBe(
-        "<template shadowrootmode=\"open\"><div>Template Only</div></template>"
+        '<template shadowrootmode="open"><div>Template Only</div></template>',
       );
       expect(html).not.toContain("<template-test");
     });
@@ -189,7 +187,7 @@ describe("ssr", () => {
 
       const html = renderDSDContent(ComponentClass, {});
 
-      expect(html).toContain("<template shadowrootmode=\"open\">");
+      expect(html).toContain('<template shadowrootmode="open">');
       expect(html).toContain("<div>Class Template</div>");
     });
 
@@ -229,7 +227,9 @@ describe("ssr", () => {
         [],
       );
 
-      const html = withStore(store, () => renderDSDContent("active-store-test", {}));
+      const html = withStore(store, () =>
+        renderDSDContent("active-store-test", {}),
+      );
 
       expect(html).toContain("<div>6</div>");
     });
@@ -240,14 +240,18 @@ describe("ssr", () => {
       const schema = defineAtomStoreSnapshot({ count: countAtom });
 
       store.set(countAtom, 10);
-      registerComponent("template-snapshot-test", () => "<div>Template Snapshot</div>", []);
+      registerComponent(
+        "template-snapshot-test",
+        () => "<div>Template Snapshot</div>",
+        [],
+      );
 
       const html = renderDSDContent("template-snapshot-test", {}, {
         store,
         storeSnapshotSchema: schema,
       } as never);
 
-      expect(html).toContain("<script type=\"application/json\" data-dh-store>");
+      expect(html).toContain('<script type="application/json" data-dh-store>');
       expect(html).toContain("count");
       expect(html).toContain("10");
       expect(html).toContain("<div>Template Snapshot</div>");
@@ -255,14 +259,16 @@ describe("ssr", () => {
 
     it("should throw when renderDSDContent uses storeSnapshotSchema without store", () => {
       const schema = defineAtomStoreSnapshot({ count: atom("count", 0) });
-      registerComponent("template-snapshot-error", () => "<div>Error</div>", []);
+      registerComponent(
+        "template-snapshot-error",
+        () => "<div>Error</div>",
+        [],
+      );
 
       expect(() => {
-        renderDSDContent(
-          "template-snapshot-error",
-          {},
-          { storeSnapshotSchema: schema } as never,
-        );
+        renderDSDContent("template-snapshot-error", {}, {
+          storeSnapshotSchema: schema,
+        } as never);
       }).toThrow("storeSnapshotSchema requires a store");
     });
 
@@ -437,7 +443,7 @@ describe("ssr", () => {
       const html = renderDSD("empty-setup", {});
 
       expect(html).toBe(
-        "<empty-setup><template shadowrootmode=\"open\"></template></empty-setup>"
+        '<empty-setup><template shadowrootmode="open"></template></empty-setup>',
       );
     });
 

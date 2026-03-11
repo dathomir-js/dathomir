@@ -45,7 +45,11 @@ describe("css", () => {
 
   // Test case #5: getCssText() returns __cssText from a CSSStyleSheet
   it("getCssText() should return __cssText from a css sheet", () => {
-    const sheet = css`:host { color: blue; }`;
+    const sheet = css`
+      :host {
+        color: blue;
+      }
+    `;
     const text = getCssText(sheet);
     expect(text).toBe(":host { color: blue; }");
   });

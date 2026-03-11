@@ -114,7 +114,9 @@ describe("defineAtomStoreSnapshot", () => {
         defineAtomStoreSnapshot({
           doubled: doubledAtom as never,
         });
-      }).toThrow('Snapshot schema entry "doubled" must reference a primitive atom');
+      }).toThrow(
+        'Snapshot schema entry "doubled" must reference a primitive atom',
+      );
     });
   });
 });

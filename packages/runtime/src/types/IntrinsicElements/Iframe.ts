@@ -52,4 +52,9 @@ interface IframeIntrinsicElements extends CommonIntrinsicElements {
   width?: number | string;
 }
 
-export { IframeIntrinsicElements, IframeLoading, IframeReferrerPolicy, IframeSandbox };
+export {
+  IframeIntrinsicElements,
+  IframeLoading,
+  IframeReferrerPolicy,
+  IframeSandbox,
+};

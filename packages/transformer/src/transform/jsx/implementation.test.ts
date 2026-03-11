@@ -11,7 +11,9 @@ import {
 
 describe("transform/jsx", () => {
   it("isComponentTag returns true for uppercase identifiers", () => {
-    expect(isComponentTag({ type: "JSXIdentifier", name: "Counter" })).toBe(true);
+    expect(isComponentTag({ type: "JSXIdentifier", name: "Counter" })).toBe(
+      true,
+    );
   });
 
   it("isComponentTag returns false for lowercase html tags", () => {

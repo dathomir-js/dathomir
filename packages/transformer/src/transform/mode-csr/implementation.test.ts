@@ -16,7 +16,9 @@ const nested: NestedTransformers = {
   }),
 };
 
-function makeElement(attributes: JSXElement["openingElement"]["attributes"] = []): JSXElement {
+function makeElement(
+  attributes: JSXElement["openingElement"]["attributes"] = [],
+): JSXElement {
   return {
     type: "JSXElement",
     openingElement: {
@@ -139,7 +141,10 @@ describe("transform/mode-csr", () => {
     const output = transformJSXNode(node, state, nested) as unknown as {
       callee: {
         body: {
-          body: Array<{ type: string; declarations?: Array<{ id: { name: string } }> }>;
+          body: Array<{
+            type: string;
+            declarations?: Array<{ id: { name: string } }>;
+          }>;
         };
       };
     };
@@ -148,21 +153,25 @@ describe("transform/mode-csr", () => {
     const firstTemplateEffectIndex = statements.findIndex(
       (stmt) =>
         stmt.type === "ExpressionStatement" &&
-        (stmt as unknown as { expression?: { callee?: { name?: string } } }).expression
-          ?.callee?.name === "templateEffect",
+        (stmt as unknown as { expression?: { callee?: { name?: string } } })
+          .expression?.callee?.name === "templateEffect",
     );
     const insertNodeDeclarationIndexes = statements
       .map((stmt, index) => ({
         index,
         name:
-          stmt.type === "VariableDeclaration" ? (stmt.declarations?.[0]?.id.name ?? "") : "",
+          stmt.type === "VariableDeclaration"
+            ? (stmt.declarations?.[0]?.id.name ?? "")
+            : "",
       }))
       .filter(({ name }) => name.startsWith("_n0_"));
 
     expect(firstTemplateEffectIndex).toBeGreaterThan(-1);
     expect(insertNodeDeclarationIndexes.length).toBeGreaterThanOrEqual(2);
-    expect(insertNodeDeclarationIndexes.every(({ index }) => index < firstTemplateEffectIndex)).toBe(
-      true,
-    );
+    expect(
+      insertNodeDeclarationIndexes.every(
+        ({ index }) => index < firstTemplateEffectIndex,
+      ),
+    ).toBe(true);
   });
 });

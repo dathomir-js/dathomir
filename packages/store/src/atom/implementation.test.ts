@@ -66,7 +66,10 @@ describe("atom", () => {
 
     it("allows derived atoms to reference other atoms through get()", () => {
       const countAtom = atom("count", 3);
-      const labelAtom = atom("label", (get: Getter) => `count:${get(countAtom)}`);
+      const labelAtom = atom(
+        "label",
+        (get: Getter) => `count:${get(countAtom)}`,
+      );
       const derivedAtom = labelAtom as DerivedAtom<string>;
       const primitiveGetter: Getter = <T>(target: Parameters<Getter>[0]) => {
         if (target.kind === "primitive") {

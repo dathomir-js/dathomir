@@ -4,7 +4,7 @@ import {
   clearRegistry,
   getComponent,
   hasComponent,
-  registerComponent
+  registerComponent,
 } from "./implementation";
 
 describe("registry", () => {
@@ -128,10 +128,7 @@ describe("registry", () => {
   describe("ComponentRegistration structure", () => {
     it("should contain all required fields", () => {
       const setup = () => document.createTextNode("test");
-      const cssTexts = [
-        ":host { display: block; }",
-        "div { color: blue; }",
-      ];
+      const cssTexts = [":host { display: block; }", "div { color: blue; }"];
       const propsSchema = {
         name: { type: String },
         value: { type: String },

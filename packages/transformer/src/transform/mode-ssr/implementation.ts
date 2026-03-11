@@ -1,4 +1,11 @@
-import { nArr, nCall, nId, nLit, nNew, nObj } from "@/transform/ast/implementation";
+import {
+  nArr,
+  nCall,
+  nId,
+  nLit,
+  nNew,
+  nObj,
+} from "@/transform/ast/implementation";
 import type { ESTNode } from "@/transform/ast/implementation";
 import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
 import type { TransformState } from "@/transform/state/implementation";

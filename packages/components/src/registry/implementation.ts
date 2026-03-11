@@ -7,7 +7,10 @@
  * @module
  */
 
-import type { PropsSchema, SetupFunction } from "@/defineComponent/implementation";
+import type {
+  PropsSchema,
+  SetupFunction,
+} from "@/defineComponent/implementation";
 
 /** Registered component metadata for SSR. */
 interface ComponentRegistration {
@@ -66,4 +69,3 @@ function clearRegistry(): void {
 
 export { clearRegistry, getComponent, hasComponent, registerComponent };
 export type { ComponentRegistration };
-

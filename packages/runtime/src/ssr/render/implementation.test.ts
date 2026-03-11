@@ -187,7 +187,9 @@ describe("SSR renderToString", () => {
 
   it("supports the object overload with storeSnapshotSchema", () => {
     const countAtom = atom("count", 1);
-    const store = createAtomStore({ appId: "runtime-render-to-string-options" });
+    const store = createAtomStore({
+      appId: "runtime-render-to-string-options",
+    });
     const schema = defineAtomStoreSnapshot({ count: countAtom });
     const tree: Tree[] = [["div", null, "Static"]];
 

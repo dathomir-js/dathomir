@@ -1,21 +1,22 @@
 import {
-  atom,
-  createAtomStore,
-  defineAtomStoreSnapshot,
-  withStore,
+    atom,
+    createAtomStore,
+    defineAtomStoreSnapshot,
+    withStore,
 } from "@dathomir/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
-  ComponentClass,
-  ComponentContext,
+    ComponentClass,
+    ComponentContext,
 } from "@/defineComponent/implementation";
 import { clearRegistry, registerComponent } from "@/registry/implementation";
 import {
-  _resetRendererState,
-  ensureComponentRenderer,
-  renderDSD,
-  renderDSDContent,
+    _resetRendererState,
+    createComponentRenderer,
+    ensureComponentRenderer,
+    renderDSD,
+    renderDSDContent,
 } from "./implementation";
 
 describe("ssr", () => {
@@ -234,6 +235,27 @@ describe("ssr", () => {
       expect(html).toContain("<div>6</div>");
     });
 
+    it("should prefer an explicit store option over an active withStore boundary", () => {
+      const countAtom = atom("count", 0);
+      const explicitStore = createAtomStore({ appId: "ssr-explicit-store" });
+      const activeStore = createAtomStore({ appId: "ssr-active-override" });
+
+      explicitStore.set(countAtom, 11);
+      activeStore.set(countAtom, 22);
+
+      registerComponent(
+        "explicit-store-test",
+        (_host, ctx) => `<div>${ctx.store.ref(countAtom).value}</div>`,
+        [],
+      );
+
+      const html = withStore(activeStore, () =>
+        renderDSDContent("explicit-store-test", {}, { store: explicitStore }),
+      );
+
+      expect(html).toContain("<div>11</div>");
+    });
+
     it("should include a data-dh-store script inside the template when schema is provided", () => {
       const countAtom = atom("count", 2);
       const store = createAtomStore({ appId: "ssr-template-store-script" });
@@ -299,6 +321,14 @@ describe("ssr", () => {
       // renderDSD should work after setup
       const html = renderDSD("renderer-test", {});
       expect(html).toContain("<div>Renderer Test</div>");
+    });
+  });
+
+  describe("createComponentRenderer", () => {
+    it("returns null for unregistered components", () => {
+      const renderer = createComponentRenderer();
+
+      expect(renderer("missing-element", {})).toBeNull();
     });
   });
 

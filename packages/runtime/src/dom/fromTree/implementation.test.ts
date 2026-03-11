@@ -23,6 +23,38 @@ describe("fromTree", () => {
     expect(button.hasAttribute("disabled")).toBe(true);
   });
 
+  it("should serialize style objects to CSS text", () => {
+    const tree: Tree[] = [
+      [
+        "div",
+        {
+          style: {
+            paddingTop: "10px",
+            borderRadius: "8px",
+            display: null,
+            opacity: "",
+          },
+        },
+      ],
+    ];
+    const factory = fromTree(tree);
+    const fragment = factory();
+
+    const div = fragment.firstChild as HTMLDivElement;
+    expect(div.getAttribute("style")).toBe(
+      "padding-top: 10px; border-radius: 8px",
+    );
+  });
+
+  it("should omit empty style object attributes", () => {
+    const tree: Tree[] = [["div", { style: { display: null, opacity: "" } }]];
+    const factory = fromTree(tree);
+    const fragment = factory();
+
+    const div = fragment.firstChild as HTMLDivElement;
+    expect(div.hasAttribute("style")).toBe(false);
+  });
+
   it("should create text nodes", () => {
     const tree: Tree[] = [["p", null, "Hello World"]];
     const factory = fromTree(tree);
@@ -149,5 +181,19 @@ describe("fromTree", () => {
 
     const circle = svg.firstChild as SVGCircleElement;
     expect(circle.namespaceURI).toBe("http://www.w3.org/2000/svg");
+  });
+
+  it("should auto-detect MathML namespaces", () => {
+    const tree: Tree[] = [["div", null, ["math", null, ["mi", null, "x"]]]];
+    const factory = fromTree(tree);
+    const fragment = factory();
+
+    const div = fragment.firstChild as HTMLDivElement;
+    const math = div.firstChild as Element;
+    const mi = math.firstChild as Element;
+
+    expect(math.namespaceURI).toBe("http://www.w3.org/1998/Math/MathML");
+    expect(mi.namespaceURI).toBe("http://www.w3.org/1998/Math/MathML");
+    expect(mi.textContent).toBe("x");
   });
 });

@@ -70,7 +70,7 @@ function handleMismatch(
 ): boolean
 ```
 
-Hydration ミスマッチの処理。開発モードでは `HydrationMismatchError` を投げ、本番モードでは警告を出して CSR フォールバックを許可する。
+Hydration ミスマッチの処理。開発モードでは `HydrationMismatchError` を投げて処理を中断し、本番モードでは警告を出して `false` を返し、CSR フォールバックを許可する。
 
 === `isHydrated` / `markHydrated`
 

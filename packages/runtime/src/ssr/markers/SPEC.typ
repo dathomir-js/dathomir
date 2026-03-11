@@ -41,6 +41,14 @@ function createStateScript(serializedState: string): string
 
 状態スクリプトタグを生成する。形式: `<script type="application/json" data-dh-state>{state}</script>`
 
+=== `createStoreScript`
+
+```typescript
+function createStoreScript(serializedSnapshot: string): string
+```
+
+store snapshot スクリプトタグを生成する。形式: `<script type="application/json" data-dh-store>{snapshot}</script>`
+
 == 型定義
 
 ```typescript
@@ -57,6 +65,7 @@ const enum MarkerType {
 - 挿入: `<!--dh:i:{id}-->` — 動的コンポーネント挿入位置を示す
 - ブロック: `<!--dh:b:{id}-->...<!--/dh:b-->` — 条件分岐/リストのブロック範囲
 - 状態: `<script type="application/json" data-dh-state>` — シリアライズされた Signal 初期値
+- store: `<script type="application/json" data-dh-store>` — シリアライズされた store snapshot
 
 == 設計判断
 

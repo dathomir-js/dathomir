@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { deserializeState } from "../../../runtime/src/hydration/deserialize/implementation";
+import { serializeState } from "../../../runtime/src/ssr/serialize/implementation";
 import type { Getter } from "../atom/implementation";
 import { atom } from "../atom/implementation";
 import { createAtomStore } from "../createAtomStore/implementation";
@@ -85,6 +87,37 @@ describe("defineAtomStoreSnapshot", () => {
 
       expect(store.ref(countAtom).value).toBe(8);
       expect(store.ref(themeAtom).value).toBe("dark");
+    });
+
+    it("round-trips snapshot values through serializeState and deserializeState", () => {
+      const countAtom = atom("count", 0);
+      const themeAtom = atom("theme", "light");
+      const schema = defineAtomStoreSnapshot({
+        count: countAtom,
+        theme: themeAtom,
+      });
+      const sourceStore = createAtomStore({
+        appId: "snapshot-roundtrip-source",
+      });
+      const targetStore = createAtomStore({
+        appId: "snapshot-roundtrip-target",
+      });
+
+      sourceStore.set(countAtom, 8);
+      sourceStore.set(themeAtom, "dark");
+
+      const payload = serializeState(schema.serialize(sourceStore) as never);
+      const parsed = deserializeState(payload) as {
+        count: number;
+        theme: string;
+      };
+
+      schema.hydrate(targetStore, parsed);
+
+      expect(schema.serialize(targetStore)).toEqual({
+        count: 8,
+        theme: "dark",
+      });
     });
   });
 

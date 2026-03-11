@@ -49,6 +49,27 @@ describe("onCleanup", () => {
     expect(order).toEqual(["custom"]);
   });
 
+  it("registers cleanup handlers inside effect scopes", () => {
+    const order: string[] = [];
+    const count = signal(0);
+
+    const dispose = createRoot(() => {
+      templateEffect(() => {
+        const value = count.value;
+        order.push(`run:${value}`);
+        onCleanup(() => order.push(`cleanup:${value}`));
+      });
+    });
+
+    expect(order).toEqual(["run:0"]);
+
+    count.set(1);
+    expect(order).toEqual(["run:0", "cleanup:0", "run:1"]);
+
+    dispose();
+    expect(order).toEqual(["run:0", "cleanup:0", "run:1", "cleanup:1"]);
+  });
+
   it("runs all cleanups on dispose", () => {
     const cleanups: string[] = [];
 

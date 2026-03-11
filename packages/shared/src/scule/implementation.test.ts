@@ -63,6 +63,18 @@ describe("splitByCase", () => {
   it("should handle consecutive uppercase (acronyms)", () => {
     expect(splitByCase("XMLParser")).toEqual(["XML", "Parser"]);
   });
+
+  it("should support custom separator lists", () => {
+    expect(splitByCase("api::client", [":"] as const)).toEqual([
+      "api",
+      "client",
+    ]);
+    expect(splitByCase("user.id/name", [".", "/"] as const)).toEqual([
+      "user",
+      "id",
+      "name",
+    ]);
+  });
 });
 
 describe("upperFirst", () => {
@@ -109,6 +121,12 @@ describe("camelCase", () => {
   it("should handle empty call", () => {
     expect(camelCase()).toBe("");
   });
+
+  it("should normalize each segment when requested", () => {
+    expect(camelCase("XML_HTTP_REQUEST", { normalize: true })).toBe(
+      "xmlHttpRequest",
+    );
+  });
 });
 
 describe("pascalCase", () => {
@@ -126,6 +144,12 @@ describe("pascalCase", () => {
 
   it("should handle empty call", () => {
     expect(pascalCase()).toBe("");
+  });
+
+  it("should normalize each segment when requested", () => {
+    expect(pascalCase("XML_HTTP_REQUEST", { normalize: true })).toBe(
+      "XmlHttpRequest",
+    );
   });
 });
 
@@ -191,6 +215,12 @@ describe("trainCase", () => {
   it("should handle empty call", () => {
     expect(trainCase()).toBe("");
   });
+
+  it("should normalize each segment when requested", () => {
+    expect(trainCase("XML_HTTP_REQUEST", { normalize: true })).toBe(
+      "Xml-Http-Request",
+    );
+  });
 });
 
 describe("titleCase", () => {
@@ -210,5 +240,11 @@ describe("titleCase", () => {
     expect(titleCase("beauty-and-the-beast")).toBe("Beauty and the Beast");
     expect(titleCase("lord-of-the-rings")).toBe("Lord of the Rings");
     expect(titleCase("war_and_peace")).toBe("War and Peace");
+  });
+
+  it("should normalize each segment when requested", () => {
+    expect(titleCase("WAR_AND_PEACE", { normalize: true })).toBe(
+      "War and Peace",
+    );
   });
 });

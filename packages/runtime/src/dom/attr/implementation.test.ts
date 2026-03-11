@@ -95,6 +95,29 @@ describe("setAttr", () => {
     setAttr(button, "aria-label", "Close");
     expect(button.getAttribute("aria-label")).toBe("Close");
   });
+
+  it("should serialize style objects to CSS text", () => {
+    const div = document.createElement("div");
+    setAttr(div, "style", {
+      paddingTop: "10px",
+      borderRadius: "8px",
+      display: null,
+      opacity: "",
+    });
+
+    expect(div.getAttribute("style")).toBe(
+      "padding-top: 10px; border-radius: 8px",
+    );
+  });
+
+  it("should remove style when the serialized style object is empty", () => {
+    const div = document.createElement("div");
+    div.setAttribute("style", "color: red");
+
+    setAttr(div, "style", { display: null, opacity: "" });
+
+    expect(div.hasAttribute("style")).toBe(false);
+  });
 });
 
 describe("setProp", () => {

@@ -155,4 +155,16 @@ describe("spread", () => {
     expect(button.getAttribute("aria-label")).toBe("Close button");
     expect(button.getAttribute("aria-pressed")).toBe("false");
   });
+
+  it("should no-op when element is null", () => {
+    vi.stubGlobal("__DEV__", true);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const next = { class: "test" };
+
+    expect(spread(null as unknown as Element, null, next)).toBe(next);
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
 });

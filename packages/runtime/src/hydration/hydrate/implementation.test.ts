@@ -19,6 +19,11 @@ import {
   markHydrated,
 } from "@/hydration/hydrate/implementation";
 
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
 describe("HydrationMismatchError", () => {
   it("is an instance of Error", () => {
     const error = new HydrationMismatchError("test mismatch");
@@ -39,7 +44,18 @@ describe("HydrationMismatchError", () => {
 
 describe("handleMismatch", () => {
   it("throws HydrationMismatchError in dev mode", () => {
+    vi.stubGlobal("__DEV__", true);
     expect(() => handleMismatch("test error")).toThrow(HydrationMismatchError);
+  });
+
+  it("warns and returns false in production mode", () => {
+    vi.stubGlobal("__DEV__", false);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    expect(handleMismatch("test error")).toBe(false);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[dathomir] Hydration mismatch: test error. Falling back to CSR.",
+    );
   });
 });
 

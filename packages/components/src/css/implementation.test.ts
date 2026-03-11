@@ -51,7 +51,11 @@ describe("css", () => {
       }
     `;
     const text = getCssText(sheet);
-    expect(text).toBe(":host { color: blue; }");
+    expect(text).toBe(`
+      :host {
+        color: blue;
+      }
+    `);
   });
 
   // Test case #6: getCssText() returns string argument as-is

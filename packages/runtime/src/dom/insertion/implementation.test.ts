@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { append, insert } from "./implementation";
 
@@ -143,6 +143,41 @@ describe("insert", () => {
     expect((parent.childNodes[0] as Element).tagName).toBe("P");
   });
 
+  it("should remove SSR content after hydration anchors on first insert", () => {
+    const parent = document.createElement("div");
+    const anchor = document.createComment("dh:i:0");
+    const ssrText = document.createTextNode("server rendered");
+    const nextMarker = document.createComment("dh:t:1");
+    parent.append(anchor, ssrText, nextMarker);
+
+    const child = document.createElement("span");
+    child.textContent = "client";
+    insert(parent, child, anchor);
+
+    expect(parent.textContent).toBe("client");
+    expect(parent.contains(ssrText)).toBe(false);
+    expect(parent.childNodes[0]).toBe(child);
+    expect(parent.childNodes[1]).toBe(anchor);
+    expect(parent.childNodes[2]).toBe(nextMarker);
+  });
+
+  it("should preserve sibling template nodes for CSR anchors on first insert", () => {
+    const parent = document.createElement("div");
+    const anchor = document.createComment("{insert}");
+    const staticSibling = document.createElement("strong");
+    staticSibling.textContent = "static";
+    parent.append(anchor, staticSibling);
+
+    const child = document.createElement("span");
+    child.textContent = "client";
+    insert(parent, child, anchor);
+
+    expect(parent.childNodes[0]).toBe(child);
+    expect(parent.childNodes[1]).toBe(anchor);
+    expect(parent.childNodes[2]).toBe(staticSibling);
+    expect(staticSibling.textContent).toBe("static");
+  });
+
   it("should convert unknown types to text nodes", () => {
     const parent = document.createElement("div");
     const anchor = document.createComment("anchor");
@@ -152,5 +187,18 @@ describe("insert", () => {
 
     expect(parent.childNodes.length).toBe(2);
     expect(parent.childNodes[0].textContent).toBe("42");
+  });
+
+  it("should no-op when parent is null", () => {
+    vi.stubGlobal("__DEV__", true);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    expect(() => {
+      insert(null as unknown as Node, document.createTextNode("x"), null);
+    }).not.toThrow();
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+    vi.unstubAllGlobals();
   });
 });

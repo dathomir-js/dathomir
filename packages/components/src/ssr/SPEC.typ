@@ -37,10 +37,10 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
 
     function ensureComponentRenderer(): void
 
-    function renderComponentContent(
+    function createComponentRenderer(): (
       tagName: string,
       attrs: Record<string, unknown>,
-    ): string | null
+    ) => string | null
 
     function escapeAttr(value: string): string
 
@@ -54,7 +54,7 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     - `renderDSDContent()` は template 部分のみ返す
     - 未登録コンポーネントでは `renderDSD()` と `renderDSDContent()` は例外を投げる
     - `ensureComponentRenderer()` は冪等である
-    - `renderComponentContent()` は未登録時に `null` を返す
+    - `createComponentRenderer()` が返す renderer は未登録時に `null` を返す
     - `escapeAttr()` は `&`, `"`, `<`, `>` を HTML エスケープする
     - `options.store` が指定された場合、SSR 時の `ComponentContext.store` はその store instance を返す
     - `options.store` が未指定でも、active な `withStore()` boundary が存在する場合はその store instance を返す
@@ -83,15 +83,15 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     9. CSS が `<style>` タグとして DSD に含まれる
     10. 複数の `<style>` タグが正しく出力される
     11. `ensureComponentRenderer()` が複数回呼ばれても安全である
-     12. `renderComponentContent()` が未登録コンポーネントで `null` を返す
-     13. `Number` 型プロップで `null` 属性はデフォルト値を使う
-     14. `String` 型プロップで `null` 属性はデフォルト値を使う
-     15. SSR で `options.store` を渡した場合、`ctx.store` から同じ store instance を取得できる
-      16. SSR で `options.store` がなくても active `withStore()` boundary がある場合、`ctx.store` からその store instance を取得できる
-      17. SSR で `options.store` も active `withStore()` boundary もない場合、`ctx.store` にアクセスすると明示エラーになる
-      18. `options.storeSnapshotSchema` を渡した場合、DSD に `data-dh-store` script が含まれる
-      19. `options.storeSnapshotSchema` を `options.store` なしで使うとエラーになる
-    ],
+    12. `createComponentRenderer()` が返す renderer が未登録コンポーネントで `null` を返す
+      13. `Number` 型プロップで `null` 属性はデフォルト値を使う
+      14. `String` 型プロップで `null` 属性はデフォルト値を使う
+      15. SSR で `options.store` を渡した場合、`ctx.store` から同じ store instance を取得できる
+        16. SSR で `options.store` がなくても active `withStore()` boundary がある場合、`ctx.store` からその store instance を取得できる
+        17. SSR で `options.store` も active `withStore()` boundary もない場合、`ctx.store` にアクセスすると明示エラーになる
+        18. `options.storeSnapshotSchema` を渡した場合、DSD に `data-dh-store` script が含まれる
+        19. `options.storeSnapshotSchema` を `options.store` なしで使うとエラーになる
+  ],
   impl_notes: [
     *使用例*:
     - React/Next.js/Vue などから `renderDSD()` または `renderDSDContent()` を直接呼び出せる

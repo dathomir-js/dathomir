@@ -29,6 +29,7 @@ function insert(
 ```
 
 アンカーノードの前に子ノードを挿入する。`anchor` が `null` の場合は末尾に追加する。
+`parent` が `null` / `undefined` の場合は何もせず終了し、DEV モードでは警告する。
 
 `child` の型:
 - `Node`: 単一のノード

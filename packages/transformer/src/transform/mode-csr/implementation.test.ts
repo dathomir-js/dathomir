@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createInitialState } from "@/transform/state/implementation";
 import type { JSXElement } from "@/transform/jsx/implementation";
+import { createInitialState } from "@/transform/state/implementation";
 import type { NestedTransformers } from "@/transform/tree/implementation";
 
 import { transformJSXNode } from "./implementation";
@@ -82,6 +82,108 @@ describe("transform/mode-csr", () => {
     transformJSXNode(node, state, nested);
 
     expect(state.runtimeImports.has("event")).toBe(true);
+  });
+
+  it("wraps reactive attributes in templateEffect", () => {
+    const state = createInitialState("csr");
+    const node = makeElement([
+      {
+        type: "JSXAttribute",
+        name: { type: "JSXIdentifier", name: "title" },
+        value: {
+          type: "JSXExpressionContainer",
+          expression: {
+            type: "MemberExpression",
+            object: { type: "Identifier", name: "count" },
+            property: { type: "Identifier", name: "value" },
+            computed: false,
+            optional: false,
+          },
+        },
+      },
+    ]);
+
+    const output = JSON.stringify(transformJSXNode(node, state, nested));
+
+    expect(state.runtimeImports.has("templateEffect")).toBe(true);
+    expect(state.runtimeImports.has("setAttr")).toBe(true);
+    expect(output).toContain('"name":"setAttr"');
+  });
+
+  it("does not wrap component inserts in templateEffect", () => {
+    const state = createInitialState("csr");
+    const node = {
+      ...makeElement(),
+      children: [
+        {
+          type: "JSXElement",
+          openingElement: {
+            type: "JSXOpeningElement",
+            name: { type: "JSXIdentifier", name: "Counter" },
+            attributes: [],
+            selfClosing: true,
+          },
+          children: [],
+          closingElement: null,
+        },
+      ],
+    } as JSXElement;
+
+    const output = JSON.stringify(transformJSXNode(node, state, nested));
+
+    expect(state.runtimeImports.has("templateEffect")).toBe(false);
+    expect(output).not.toContain('"name":"templateEffect"');
+  });
+
+  it("wraps dynamic inserts in templateEffect", () => {
+    const state = createInitialState("csr");
+    const node = {
+      ...makeElement(),
+      children: [
+        {
+          type: "JSXExpressionContainer",
+          expression: {
+            type: "LogicalExpression",
+            operator: "&&",
+            left: { type: "Literal", value: true, raw: "true" },
+            right: {
+              type: "JSXElement",
+              openingElement: {
+                type: "JSXOpeningElement",
+                name: { type: "JSXIdentifier", name: "span" },
+                attributes: [],
+                selfClosing: false,
+              },
+              children: [{ type: "JSXText", value: "A" }],
+              closingElement: null,
+            },
+          },
+        },
+      ],
+    } as JSXElement;
+
+    const output = JSON.stringify(transformJSXNode(node, state, nested));
+
+    expect(state.runtimeImports.has("insert")).toBe(true);
+    expect(state.runtimeImports.has("templateEffect")).toBe(true);
+    expect(output).toContain('"name":"templateEffect"');
+    expect(output).toContain('"name":"insert"');
+  });
+
+  it("wraps spread attributes in templateEffect", () => {
+    const state = createInitialState("csr");
+    const node = makeElement([
+      {
+        type: "JSXSpreadAttribute",
+        argument: { type: "Identifier", name: "props" },
+      } as never,
+    ]);
+
+    const output = JSON.stringify(transformJSXNode(node, state, nested));
+
+    expect(state.runtimeImports.has("spread")).toBe(true);
+    expect(state.runtimeImports.has("templateEffect")).toBe(true);
+    expect(output).toContain('"name":"spread"');
   });
 
   it("declares insert anchors before templateEffect expressions", () => {

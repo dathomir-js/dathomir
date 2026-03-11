@@ -6,6 +6,7 @@ import {
   atom,
   createAtomStore,
   defineAtomStoreSnapshot,
+  withStore,
 } from "@dathomir/store";
 import { describe, expect, it } from "vitest";
 
@@ -117,6 +118,35 @@ describe("SSR Render", () => {
     });
 
     expect(html).toContain("<div>7</div>");
+  });
+
+  it("prefers the active store boundary over the render option store for nested renders", () => {
+    const countAtom = atom("count", 0);
+    const rootStore = createAtomStore({ appId: "runtime-root-store" });
+    const nestedStore = createAtomStore({ appId: "runtime-nested-store" });
+    const tree: Tree[] = [["outer-shell", null]];
+
+    rootStore.set(countAtom, 1);
+    nestedStore.set(countAtom, 2);
+
+    const html = renderTree(tree, {
+      store: rootStore,
+      componentRenderer: (tagName) => {
+        if (tagName === "outer-shell") {
+          return withStore(nestedStore, () =>
+            renderTree([["inner-counter", null]], {
+              componentRenderer: (_innerTag, _attrs, options) => {
+                return `<span>${options?.store?.ref(countAtom).value}</span>`;
+              },
+            }),
+          );
+        }
+
+        return null;
+      },
+    });
+
+    expect(html).toContain("<span>2</span>");
   });
 
   it("emits a store snapshot script when storeSnapshotSchema is provided", () => {

@@ -49,12 +49,16 @@
       "path": "./packages/runtime"
     },
     {
-      "name": "📦 @dathomir/transformer",
-      "path": "./packages/transformer"
-    },
-        {
       "name": "📦 @dathomir/shared",
       "path": "./packages/shared"
+    },
+    {
+      "name": "📦 @dathomir/store",
+      "path": "./packages/store"
+    },
+    {
+      "name": "📦 @dathomir/transformer",
+      "path": "./packages/transformer"
     },
     {
       "name": "=== 🎮 playgrounds ===",

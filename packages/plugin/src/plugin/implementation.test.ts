@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 import { transform } from "@dathomir/transformer";
@@ -29,6 +31,11 @@ type RollupLikePlugin = {
     id: string,
   ) => unknown;
 };
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../..",
+);
 
 describe("plugin", () => {
   describe("exports", () => {
@@ -264,42 +271,38 @@ describe("plugin", () => {
     it("should resolve package-local @/ imports using the nearest tsconfig paths", async () => {
       const plugin = dathomirVitePlugin();
       const resolveId = plugin.resolveId as Function;
+      const importer = path.join(repoRoot, "packages/components/src/index.ts");
+      const expected = path.join(
+        repoRoot,
+        "packages/components/src/css/implementation.ts",
+      );
 
       const resolved = await resolveId.call(
         {},
         "@/css/implementation",
-        "/home/kcatt/dev/dathomir/packages/components/src/index.ts",
+        importer,
       );
 
-      expect(resolved).toBe(
-        "/home/kcatt/dev/dathomir/packages/components/src/css/implementation.ts",
-      );
+      expect(resolved).toBe(expected);
     });
 
     it("should resolve directory aliases to index.ts using tsconfig paths", async () => {
       const plugin = dathomirVitePlugin();
       const resolveId = plugin.resolveId as Function;
+      const importer = path.join(repoRoot, "packages/runtime/src/index.ts");
+      const expected = path.join(repoRoot, "packages/runtime/src/ssr/index.ts");
 
-      const resolved = await resolveId.call(
-        {},
-        "@/ssr",
-        "/home/kcatt/dev/dathomir/packages/runtime/src/index.ts",
-      );
+      const resolved = await resolveId.call({}, "@/ssr", importer);
 
-      expect(resolved).toBe(
-        "/home/kcatt/dev/dathomir/packages/runtime/src/ssr/index.ts",
-      );
+      expect(resolved).toBe(expected);
     });
 
     it("should ignore aliases when no matching tsconfig path mapping exists", async () => {
       const plugin = dathomirVitePlugin();
       const resolveId = plugin.resolveId as Function;
+      const importer = path.join(repoRoot, "packages/runtime/src/index.ts");
 
-      const resolved = await resolveId.call(
-        {},
-        "#internal/foo",
-        "/home/kcatt/dev/dathomir/packages/runtime/src/index.ts",
-      );
+      const resolved = await resolveId.call({}, "#internal/foo", importer);
 
       expect(resolved).toBeNull();
     });

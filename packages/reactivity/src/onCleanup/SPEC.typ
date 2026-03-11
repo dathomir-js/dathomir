@@ -13,7 +13,7 @@
 #feature_spec(
   name: "onCleanup",
   summary: [
-    createRoot の owner スコープにクリーンアップ関数を登録し、dispose 時に安全に実行する。
+    createRoot の owner スコープまたは effect スコープにクリーンアップ関数を登録し、dispose または再実行時に安全に実行する。
   ],
   api: [
     ```typescript
@@ -21,12 +21,13 @@
     ```
 
     *登録*:
-    - createRoot スコープ内で呼び出す必要がある
-    - クリーンアップ関数は現在の owner の cleanups 配列に追加される
-    - `dispose()` が呼び出されたときに登録順に呼び出される
+    - createRoot スコープ内で呼び出すと、クリーンアップ関数は現在の owner の cleanups 配列に追加される
+    - effect 内で呼び出すと、その effect の cleanup 配列に追加される
+    - owner の `dispose()` または effect の再実行 / stop 時に登録順に呼び出される
 
     *実行*:
     - owner の `dispose()` が実行されたときに呼び出される
+    - effect スコープでは再実行前に前回登録分が呼び出される
     - すべての追跡された effect がクリーンアップされた後に呼び出される
     - あるクリーンアップでの例外は他のクリーンアップの実行を妨げない
   ],
@@ -43,5 +44,6 @@
     - dispose でのすべてのクリーンアップを実行する
     - あるクリーンアップが throw しても他のクリーンアップを継続実行する（first と third が両方実行される）
     - createRoot 外で呼び出されたときは何もしない
+    - effect 内で登録した cleanup が再実行前と stop 時に呼ばれる
   ],
 )

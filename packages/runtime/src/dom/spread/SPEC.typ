@@ -34,6 +34,7 @@ type SpreadProps = Record<string, unknown>
 - 削除されたキーは `setAttr(element, key, null)` で削除
 - イベントハンドラ（`on` で始まり 3 文字以上のキー、値が関数）は `addEventListener`/`removeEventListener` で管理
 - `WeakMap` で要素ごとのイベントハンドラを追跡
+- defensive runtime behavior として、`element` が `null` / `undefined` なら何もしない（DEV モードでは警告）
 
 == イベントハンドラ判定
 

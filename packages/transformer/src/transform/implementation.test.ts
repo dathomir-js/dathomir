@@ -60,7 +60,6 @@ describe("transform", () => {
 
     const result = transform(code);
 
-    expect(result.code).toContain("templateEffect");
     expect(result.code).toContain("setAttr");
     expect(result.code).toContain("class");
     expect(result.code).toContain("isActive.value");
@@ -445,10 +444,26 @@ describe("transform", () => {
 
       const result = transform(code);
 
-      // Non-reactive expression attribute should NOT produce templateEffect+setAttr
+      // Non-reactive expression attribute should avoid templateEffect and use one-time setAttr
       expect(result.code).not.toContain("templateEffect");
-      expect(result.code).not.toContain("setAttr");
+      expect(result.code).toContain("setAttr");
       expect(result.code).toContain("getClass");
+    });
+
+    it("should preserve local identifiers used by static expression attributes", () => {
+      const code = `
+        function App() {
+          const modeLabel = typeof document === "undefined" ? "SSR" : "CSR";
+          return <p data-render-mode={modeLabel}>Current render mode</p>;
+        }
+      `;
+
+      const result = transform(code);
+
+      expect(result.code).toContain("setAttr");
+      expect(result.code).toContain("modeLabel");
+      expect(result.code).not.toContain('{ ["data-render-mode"]: modeLabel }');
+      expect(result.code).not.toContain("templateEffect");
     });
 
     it("should support namespaced attributes like xlink:href", () => {

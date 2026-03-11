@@ -81,26 +81,27 @@ function transformJSXNode(
 
       case "attr": {
         state.runtimeImports.add("setAttr");
-        state.runtimeImports.add("templateEffect");
 
-        updateStatements.push(
-          nExprStmt(
-            nCall(nId("templateEffect"), [
-              nArrowBlock(
-                [],
-                nBlock([
-                  nExprStmt(
-                    nCall(nId("setAttr"), [
-                      nodeId,
-                      nLit(part.key ?? ""),
-                      part.expression,
-                    ]),
-                  ),
-                ]),
-              ),
-            ]),
-          ),
+        const attrUpdate = nExprStmt(
+          nCall(nId("setAttr"), [
+            nodeId,
+            nLit(part.key ?? ""),
+            part.expression,
+          ]),
         );
+
+        if (part.expression.type === "MemberExpression") {
+          state.runtimeImports.add("templateEffect");
+          updateStatements.push(
+            nExprStmt(
+              nCall(nId("templateEffect"), [
+                nArrowBlock([], nBlock([attrUpdate])),
+              ]),
+            ),
+          );
+        } else {
+          updateStatements.push(attrUpdate);
+        }
         break;
       }
 

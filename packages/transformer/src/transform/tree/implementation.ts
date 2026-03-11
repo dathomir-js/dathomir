@@ -325,7 +325,7 @@ function processAttributes(
       } else if (containsReactiveAccess(expr)) {
         dynamicParts.push({ type: "attr", path, expression: expr, key });
       } else {
-        staticProps.push(nProp(keyNode, expr, computed));
+        dynamicParts.push({ type: "attr", path, expression: expr, key });
       }
     }
   }

@@ -84,6 +84,39 @@ describe("transform/mode-csr", () => {
     expect(state.runtimeImports.has("event")).toBe(true);
   });
 
+  it("initializes static expression attributes with setAttr without templateEffect", () => {
+    const state = createInitialState("csr");
+    const node = makeElement([
+      {
+        type: "JSXAttribute",
+        name: { type: "JSXIdentifier", name: "data-render-mode" },
+        value: {
+          type: "JSXExpressionContainer",
+          expression: { type: "Identifier", name: "modeLabel" },
+        },
+      },
+    ]);
+
+    const output = transformJSXNode(node, state, nested) as unknown as {
+      callee: {
+        body: {
+          body: Array<{ type: string; expression?: { callee?: { name?: string } } }>;
+        };
+      };
+    };
+
+    const statements = output.callee.body.body;
+    expect(state.runtimeImports.has("setAttr")).toBe(true);
+    expect(state.runtimeImports.has("templateEffect")).toBe(false);
+    expect(
+      statements.some(
+        (stmt) =>
+          stmt.type === "ExpressionStatement" &&
+          stmt.expression?.callee?.name === "setAttr",
+      ),
+    ).toBe(true);
+  });
+
   it("wraps reactive attributes in templateEffect", () => {
     const state = createInitialState("csr");
     const node = makeElement([

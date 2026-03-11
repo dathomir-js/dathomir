@@ -51,8 +51,9 @@
   ],
   steps: [
     1. JSX 式を `fromTree()` 呼び出しに変換する。
-    2. 静的属性は構造化配列に含める。
-    3. 動的属性は `templateEffect` でラップする。
+    2. リテラル属性は構造化配列に含める。
+    3. reactive access を含む属性は `templateEffect` でラップする。
+    4. reactive access を含まない式属性は lexical scope を壊さないよう `setAttr()` で一度だけ初期化する。
     4. イベントハンドラは `event()` に変換する。
     5. テキスト式は `setText()` へ変換する。
     6. コンポーネント要素は `insert()` で挿入し、`templateEffect` ではラップしない。
@@ -326,7 +327,8 @@
     - Fragment 内の動的テキストで `templateEffect` + `setText` が正しく生成される
     - Fragment 内のコンポーネントで `insert()` が正しく生成される
     - ハイフン付き属性名で文字列リテラルキーの ObjectProperty を生成する
-    - 静的式属性では `templateEffect` を生成しない
+    - 静的式属性では `templateEffect` なしで `setAttr()` により初期化する
+    - 関数スコープ内ローカル識別子を属性に渡しても hoist によるスコープ破壊が起きない
     - SSR モードの条件付きレンダリングで各 JSX 分岐が `renderToString()` に変換される
     - SSR モードの logical expression で JSX 分岐が `renderToString()` に変換される
   ],

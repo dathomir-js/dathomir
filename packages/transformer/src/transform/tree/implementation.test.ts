@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { nId } from "@/transform/ast/implementation";
+import { nId, nLit } from "@/transform/ast/implementation";
 import { createInitialState } from "@/transform/state/implementation";
 import type { ESTNode } from "@/transform/ast/implementation";
 import type {
@@ -95,6 +95,25 @@ describe("transform/tree", () => {
     expect(dynamicParts).toHaveLength(1);
     expect(dynamicParts[0]?.type).toBe("attr");
     expect(dynamicParts[0]?.key).toBe("class");
+  });
+
+  it("processAttributes keeps non-reactive expression attributes as attr dynamic parts", () => {
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+    const attributes: Parameters<typeof processAttributes>[0] = [
+      {
+        type: "JSXAttribute",
+        name: { type: "JSXIdentifier", name: "data-render-mode" },
+        value: expr(nId("modeLabel")),
+      },
+    ];
+
+    const result = processAttributes(attributes, dynamicParts, [0]);
+
+    expect(result.attrs).toEqual(nLit(null));
+    expect(dynamicParts).toHaveLength(1);
+    expect(dynamicParts[0]?.type).toBe("attr");
+    expect(dynamicParts[0]?.key).toBe("data-render-mode");
+    expect(dynamicParts[0]?.expression).toEqual(nId("modeLabel"));
   });
 
   it("jsxToTree keeps fragment dynamic text parts", () => {

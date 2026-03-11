@@ -72,6 +72,20 @@
 	],
 )
 
+#adr(
+	header: header("非 reactive な式属性は attr dynamic part として初期化する", Status.Accepted, "2026-03-11"),
+	context: [
+		静的式属性を tree の static props へ直接埋め込むと、テンプレート宣言が関数スコープ外へ hoist されたときにローカル識別子を参照できなくなる。
+	],
+	decision: [
+		reactive access を含まない式属性も `attr` dynamic part として収集し、更新側で `setAttr()` を 1 回だけ実行して初期値を反映する。
+	],
+	rationale: [
+		- lexical scope を壊さずにローカル値を属性へ流せる
+		- reactive access を含まないため `templateEffect` は不要で、初期化コストだけで済む
+	],
+)
+
 == 機能仕様
 
 #feature_spec(
@@ -87,10 +101,11 @@
 		- `jsxElementToTree`
 		- `jsxToTree`
 	],
-	test_cases: [
-		- 静的 HTML を tree 化できる
-		- `signal.value` を含む属性が attr dynamic part になる
-		- イベント属性が event dynamic part になる
+		test_cases: [
+			- 静的 HTML を tree 化できる
+			- `signal.value` を含む属性が attr dynamic part になる
+			- reactive access を含まない式属性も attr dynamic part として保持される
+			- イベント属性が event dynamic part になる
 		- `.map()` / ternary / call expression が insert dynamic part になる
 		- `logical expression`（`&&` / `||`）が insert dynamic part になる
 		- JSX を含む一般式（Array/Object/Binary など）が insert dynamic part になる

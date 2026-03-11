@@ -2,8 +2,14 @@
  * Tests for state serialization.
  */
 
+import {
+  atom,
+  createAtomStore,
+  defineAtomStoreSnapshot,
+} from "@dathomir/store";
 import { describe, expect, it } from "vitest";
 
+import { deserializeState } from "@/hydration/deserialize/implementation";
 import { isSerializable, serializeState } from "@/ssr/serialize/implementation";
 
 describe("State Serialization", () => {
@@ -122,5 +128,41 @@ describe("isSerializable", () => {
 
   it("returns false for objects with functions", () => {
     expect(isSerializable({ fn: () => {} })).toBe(false);
+  });
+});
+
+describe("Atom store snapshot integration", () => {
+  it("round-trips a snapshot object through serializeState and deserializeState", () => {
+    const countAtom = atom("count", 0);
+    const themeAtom = atom("theme", "light");
+    const schema = defineAtomStoreSnapshot({
+      count: countAtom,
+      theme: themeAtom,
+    });
+    const store = createAtomStore({ appId: "runtime-snapshot" });
+
+    store.set(countAtom, 12);
+    store.set(themeAtom, "dark");
+
+    const snapshot = schema.serialize(store);
+    const serialized = serializeState(snapshot);
+    const deserialized = deserializeState(serialized);
+
+    expect(deserialized).toEqual({ count: 12, theme: "dark" });
+  });
+
+  it("keeps runtime serialization as a plain object layer over snapshot schemas", () => {
+    const sessionAtom = atom("session", { user: "luke", role: "admin" });
+    const schema = defineAtomStoreSnapshot({ session: sessionAtom });
+    const store = createAtomStore({ appId: "runtime-session" });
+
+    store.set(sessionAtom, { user: "leia", role: "editor" });
+
+    const serialized = serializeState(schema.serialize(store));
+    const restored = deserializeState(serialized);
+
+    expect(restored).toEqual({
+      session: { user: "leia", role: "editor" },
+    });
   });
 });

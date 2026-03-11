@@ -25,6 +25,14 @@ function parseStateScript(container: Element | ShadowRoot): StateObject | null
 
 `<script type="application/json" data-dh-state>` 要素からシリアライズされた状態を取得し、デシリアライズする。パース後にスクリプト要素を DOM から削除する。
 
+=== `parseStoreScript`
+
+```typescript
+function parseStoreScript(container: Element | ShadowRoot): StateObject | null
+```
+
+`<script type="application/json" data-dh-store>` 要素から store snapshot を取得し、デシリアライズする。パース後にスクリプト要素を DOM から削除する。
+
 == 依存関係
 
 - `devalue` の `parse` 関数
@@ -35,3 +43,4 @@ function parseStateScript(container: Element | ShadowRoot): StateObject | null
 - `devalue` を使用することで、`Date`、`RegExp`、`Map`、`Set`、`bigint` 等の複雑な型も安全にデシリアライズ
 - スクリプト要素の削除により、Hydration 後の DOM をクリーンに保つ
 - `type="application/json"` により、ブラウザがスクリプトを実行しない
+- `data-dh-state` と `data-dh-store` は責務を分離し、store snapshot は `parseStoreScript()` でのみ読む

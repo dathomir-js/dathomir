@@ -1,4 +1,7 @@
 import { transform, type TransformOptions } from "@dathomir/transformer";
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
 import { createUnplugin, type UnpluginContext } from "unplugin";
 import type { TransformResult, Plugin as VitePlugin } from "vite";
 
@@ -97,6 +100,171 @@ interface ViteTransformContext extends UnpluginContext {
   };
 }
 
+type TsconfigPaths = Record<string, string[]>;
+
+const tsconfigPathCache = new Map<string, TsconfigPaths | null>();
+const require = createRequire(import.meta.url);
+
+function stripQueryAndHash(value: string): string {
+  return value.split("?")[0]?.split("#")[0] ?? value;
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizePathMappingValue(value: string, configDirectory: string): string {
+  return value.replaceAll("${configDir}", configDirectory);
+}
+
+function resolveExtendsPath(configDirectory: string, extendsValue: string): string | null {
+  if (extendsValue.startsWith(".") || extendsValue.startsWith("/")) {
+    const directPath = path.resolve(configDirectory, extendsValue);
+    if (fs.existsSync(directPath)) {
+      return directPath;
+    }
+
+    const jsonPath = `${directPath}.json`;
+    return fs.existsSync(jsonPath) ? jsonPath : null;
+  }
+
+  try {
+    return require.resolve(extendsValue, { paths: [configDirectory] });
+  } catch {
+    return null;
+  }
+}
+
+function findNearestTsconfigPath(importer: string): string | null {
+  let currentDirectory = path.dirname(path.normalize(stripQueryAndHash(importer)));
+
+  while (true) {
+    const tsconfigPath = path.join(currentDirectory, "tsconfig.json");
+    if (fs.existsSync(tsconfigPath)) {
+      return tsconfigPath;
+    }
+
+    const parentDirectory = path.dirname(currentDirectory);
+    if (parentDirectory === currentDirectory) {
+      return null;
+    }
+    currentDirectory = parentDirectory;
+  }
+}
+
+function readTsconfigPaths(tsconfigPath: string, sourceDirectory = path.dirname(tsconfigPath)): TsconfigPaths | null {
+  const cacheKey = `${tsconfigPath}::${sourceDirectory}`;
+  const cachedPaths = tsconfigPathCache.get(cacheKey);
+  if (cachedPaths !== undefined) {
+    return cachedPaths;
+  }
+
+  try {
+    const raw = fs.readFileSync(tsconfigPath, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isObjectRecord(parsed)) {
+      tsconfigPathCache.set(cacheKey, null);
+      return null;
+    }
+
+    const configDirectory = path.dirname(tsconfigPath);
+    const inheritedPaths: TsconfigPaths = {};
+    const extendsValue = parsed.extends;
+
+    if (typeof extendsValue === "string") {
+      const extendedTsconfigPath = resolveExtendsPath(configDirectory, extendsValue);
+      if (extendedTsconfigPath !== null) {
+        Object.assign(inheritedPaths, readTsconfigPaths(extendedTsconfigPath, sourceDirectory) ?? {});
+      }
+    }
+
+    const compilerOptions = parsed.compilerOptions;
+    if (!isObjectRecord(compilerOptions)) {
+      tsconfigPathCache.set(cacheKey, inheritedPaths);
+      return inheritedPaths;
+    }
+
+    const paths = compilerOptions.paths;
+    if (!isObjectRecord(paths)) {
+      tsconfigPathCache.set(cacheKey, inheritedPaths);
+      return inheritedPaths;
+    }
+
+    const normalizedPaths: TsconfigPaths = { ...inheritedPaths };
+    for (const [key, value] of Object.entries(paths)) {
+      if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+        normalizedPaths[key] = value.map((item) => normalizePathMappingValue(item, sourceDirectory));
+      }
+    }
+
+    tsconfigPathCache.set(cacheKey, normalizedPaths);
+    return normalizedPaths;
+  } catch {
+    tsconfigPathCache.set(cacheKey, null);
+    return null;
+  }
+}
+
+function matchPathAlias(pattern: string, source: string): string | null {
+  if (!pattern.includes("*")) {
+    return source === pattern ? "" : null;
+  }
+
+  const [prefix, suffix = ""] = pattern.split("*");
+  if (!source.startsWith(prefix) || !source.endsWith(suffix)) {
+    return null;
+  }
+
+  return source.slice(prefix.length, source.length - suffix.length);
+}
+
+function resolveCandidateFilePath(basePath: string): string | null {
+  const candidatePaths = [
+    `${basePath}.ts`,
+    `${basePath}.tsx`,
+    `${basePath}.js`,
+    `${basePath}.jsx`,
+    path.join(basePath, "index.ts"),
+    path.join(basePath, "index.tsx"),
+    path.join(basePath, "index.js"),
+    path.join(basePath, "index.jsx"),
+    basePath,
+  ];
+
+  return candidatePaths.find((candidatePath) => fs.existsSync(candidatePath)) ?? null;
+}
+
+function resolveLocalSourceAlias(importer: string, source: string): string | null {
+  const tsconfigPath = findNearestTsconfigPath(importer);
+  if (tsconfigPath === null) {
+    return null;
+  }
+
+  const paths = readTsconfigPaths(tsconfigPath);
+  if (paths === null) {
+    return null;
+  }
+
+  const tsconfigDirectory = path.dirname(tsconfigPath);
+  for (const [pattern, replacements] of Object.entries(paths)) {
+    const wildcardValue = matchPathAlias(pattern, source);
+    if (wildcardValue === null) {
+      continue;
+    }
+
+    for (const replacement of replacements) {
+      const replacementPath = replacement.replaceAll("*", wildcardValue);
+      const basePath = path.resolve(tsconfigDirectory, replacementPath);
+      const resolvedPath = resolveCandidateFilePath(basePath);
+      if (resolvedPath !== null) {
+        return resolvedPath;
+      }
+    }
+  }
+
+  return null;
+}
+
 /**
  * Core transform function shared by all plugins.
  */
@@ -142,6 +310,14 @@ function createVitePlugin(options: PluginOptions = {}): VitePlugin {
     name: "dathomir",
     enforce: "pre",
 
+    resolveId(source: string, importer?: string) {
+      if (!importer) {
+        return null;
+      }
+
+      return resolveLocalSourceAlias(importer, source);
+    },
+
     transform(code: string, id: string, transformOptions?: { ssr?: boolean }) {
       const isSsr = transformOptions?.ssr ?? false;
       const environmentName = this?.environment?.name;
@@ -164,7 +340,7 @@ const unpluginFactory = createUnplugin((options: PluginOptions = {}) => {
     transform(this: ViteTransformContext, code: string, id: string) {
       const environmentName = this.environment?.name;
       const isSsr = environmentName === "ssr" || environmentName === "edge";
-      return doTransform(code, id, isSsr, environmentName, options)!;
+      return doTransform(code, id, isSsr, environmentName, options);
     },
   };
 });

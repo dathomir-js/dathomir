@@ -6,10 +6,16 @@
  * @module
  */
 import { getCssText } from "@/css/implementation";
+import {
+  captureCurrentStore,
+  getStoreFromHost,
+  peekStoreFromHost,
+} from "@/defineComponent/internal";
 import { registerComponent } from "@/registry/implementation";
 import { ensureComponentRenderer } from "@/ssr/implementation";
 import type { RootDispose, Signal } from "@dathomir/reactivity";
 import { createRoot, signal } from "@dathomir/reactivity";
+import type { AtomStore } from "@dathomir/store";
 
 // ── Type definitions ────────────────────────────────────────────────
 
@@ -51,7 +57,7 @@ type InferProps<S extends PropsSchema> = {
  * Props can be accessed via .value and will reactively update when attributes change.
  */
 type FunctionComponent<S extends PropsSchema = PropsSchema> = (
-  props: InferProps<S>,
+  ctx: ComponentContext<S>,
 ) => Node | DocumentFragment | string;
 
 /** Internal setup function with host and context. @internal */
@@ -62,7 +68,9 @@ type SetupFunction<S extends PropsSchema = PropsSchema> = (
 
 /** Context passed to setup and hydrate functions. */
 interface ComponentContext<S extends PropsSchema = PropsSchema> {
+  readonly host: HTMLElement;
   readonly props: Readonly<InferProps<S>>;
+  readonly store: AtomStore;
 }
 
 /** Options for defineComponent. */
@@ -95,7 +103,6 @@ type ComponentElement<C> =
 
 /** Function that hydrates existing DSD content without creating new DOM. */
 type HydrateSetupFunction<S extends PropsSchema = PropsSchema> = (
-  host: HTMLElement,
   ctx: ComponentContext<S>,
 ) => void;
 
@@ -165,7 +172,7 @@ function wrapFunctionComponent<S extends PropsSchema>(
   _propsSchema: S | undefined,
 ): SetupFunction<S> {
   return (_host: HTMLElement, ctx: ComponentContext<S>) => {
-    return fc(ctx.props);
+    return fc(ctx);
   };
 }
 
@@ -251,9 +258,11 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
   class Component extends HTMLElement {
     static observedAttributes = observedAttrNames;
     #dispose: RootDispose | undefined;
+    #storeRetryScheduled = false;
 
     constructor() {
       super();
+      captureCurrentStore(this);
 
       // Shadow DOM setup
       if (!this.shadowRoot) {
@@ -290,9 +299,66 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
 
     connectedCallback(): void {
       const propSignals = propSignalMap.get(this) ?? {};
-      const ctx = { props: propSignals } as ComponentContext<S>;
+      const ctx = {
+        host: this,
+        props: propSignals,
+        get store() {
+          return getStoreFromHost(this.host);
+        },
+      } as ComponentContext<S>;
       const shadowRoot = this.shadowRoot!;
       const hasDSD = shadowRoot.childNodes.length > 0;
+
+      const retryIfStoreEventuallyBinds = (run: () => void): boolean => {
+        if (peekStoreFromHost(this) !== undefined || this.#storeRetryScheduled) {
+          return false;
+        }
+
+        this.#storeRetryScheduled = true;
+        queueMicrotask(() => {
+          this.#storeRetryScheduled = false;
+          if (!this.isConnected || peekStoreFromHost(this) === undefined) {
+            return;
+          }
+
+          run();
+        });
+        return true;
+      };
+
+      const isMissingStoreError = (error: unknown): boolean => {
+        return error instanceof Error && error.message === "[dathomir] No store bound to component host";
+      };
+
+      const runHydrate = () => {
+        try {
+          this.#dispose = createRoot(() => {
+            hydrateSetup!(ctx);
+          });
+        } catch (error) {
+          if (isMissingStoreError(error) && retryIfStoreEventuallyBinds(runHydrate)) {
+            return;
+          }
+          console.error("[dathomir] Error in component hydrate:", error);
+        }
+      };
+
+      const runSetup = () => {
+        try {
+          this.#dispose = createRoot(() => {
+            if (hasDSD) {
+              shadowRoot.innerHTML = "";
+            }
+            const content = resolvedSetup(this, ctx);
+            shadowRoot.append(content as string | Node);
+          });
+        } catch (error) {
+          if (isMissingStoreError(error) && retryIfStoreEventuallyBinds(runSetup)) {
+            return;
+          }
+          console.error("[dathomir] Error in component setup:", error);
+        }
+      };
 
       if (hasDSD) {
         if (sheets) {
@@ -303,33 +369,12 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
         }
 
         if (hydrateSetup) {
-          try {
-            this.#dispose = createRoot(() => {
-              hydrateSetup(this, ctx);
-            });
-          } catch (error) {
-            console.error("[dathomir] Error in component hydrate:", error);
-          }
+          runHydrate();
         } else {
-          try {
-            this.#dispose = createRoot(() => {
-              shadowRoot.innerHTML = "";
-              const content = resolvedSetup(this, ctx);
-              shadowRoot.append(content as string | Node);
-            });
-          } catch (error) {
-            console.error("[dathomir] Error in component setup:", error);
-          }
+          runSetup();
         }
       } else {
-        try {
-          this.#dispose = createRoot(() => {
-            const content = resolvedSetup(this, ctx);
-            shadowRoot.append(content as string | Node);
-          });
-        } catch (error) {
-          console.error("[dathomir] Error in component setup:", error);
-        }
+        runSetup();
       }
     }
 
@@ -392,4 +437,3 @@ export type {
   FunctionComponent,
   HydrateSetupFunction, InferProps, InferPropType, PropDefinition, PropsSchema, PropType, SetupFunction
 };
-

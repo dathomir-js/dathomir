@@ -6,6 +6,7 @@ export default defineConfig({
     "src/jsx-runtime/index.ts",
     "src/reactivity/index.ts",
     "src/runtime/index.ts",
+    "src/store/index.ts",
     "src/shared/index.ts",
   ],
   dts: true,

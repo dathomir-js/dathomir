@@ -48,10 +48,18 @@ function createStateScript(serializedState: string): string {
   return `<script type="application/json" data-dh-state>${serializedState}</script>`;
 }
 
+/**
+ * Create a store snapshot script element for SSR.
+ */
+function createStoreScript(serializedSnapshot: string): string {
+  return `<script type="application/json" data-dh-store>${serializedSnapshot}</script>`;
+}
+
 export {
   createBlockEndMarker,
   createDataMarker,
   createMarker,
   createStateScript,
+  createStoreScript,
   MarkerType,
 };

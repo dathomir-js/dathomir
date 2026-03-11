@@ -36,6 +36,11 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./internal": {
+      "types": "./dist/internal.d.mts",
+      "import": "./dist/internal.mjs",
+      "require": "./dist/internal.cjs"
+    },
     "./ssr": {
       "types": "./dist/ssr/index.d.mts",
       "import": "./dist/ssr/index.mjs",
@@ -64,6 +69,7 @@
   },
   "dependencies": {
     "@dathomir/reactivity": "workspace:*",
-    "@dathomir/runtime": "workspace:*"
+    "@dathomir/runtime": "workspace:*",
+    "@dathomir/store": "workspace:*"
   }
 }

@@ -21,6 +21,9 @@ export type {
 // Runtime
 export * from "@/runtime/index";
 
+// Store
+export * from "@/store/index";
+
 // Shared
 export * from "@/shared/index";
 

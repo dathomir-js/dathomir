@@ -1,8 +1,19 @@
 import { createRoot, signal } from "@dathomir/reactivity";
 import { describe, expect, it, vi } from "vitest";
 
+import { atom, createAtomStore, defineComponent, withStore } from "../index";
 import { Fragment } from "./Fragment";
 import { jsx, jsxs } from "./index";
+
+function waitForMicrotask(): Promise<void> {
+  return new Promise((resolve) => queueMicrotask(resolve));
+}
+
+let tagCounter = 0;
+function uniqueTag(): string {
+  return `core-test-el-${++tagCounter}-${Date.now()}`;
+}
+
 
 describe("jsx / createElement", () => {
   describe("basic element creation", () => {
@@ -80,6 +91,61 @@ describe("jsx / createElement", () => {
       };
       const el = jsx(MyComponent, null) as HTMLElement;
       expect(el.textContent).toContain("0");
+    });
+
+    it("supports withStore around plain function components", () => {
+      const countAtom = atom("count", 2);
+      const store = createAtomStore({ appId: "core-function-store" });
+
+      const MyComponent = () => {
+        return jsx("div", { children: store.ref(countAtom).value }) as Node;
+      };
+
+      const el = withStore(store, () => jsx(MyComponent, null)) as HTMLElement;
+
+      expect(el.textContent).toBe("2");
+    });
+
+    it("supports withStore around JSX-created custom elements", async () => {
+      const tag = uniqueTag();
+      const countAtom = atom("count", 2);
+      const store = createAtomStore({ appId: `core-${tag}` });
+
+      defineComponent(tag, ({ store: ctxStore }) => {
+        return document.createTextNode(String(ctxStore.ref(countAtom).value));
+      });
+
+      const el = withStore(store, () => jsx(tag, null)) as HTMLElement;
+      document.body.appendChild(el);
+      await waitForMicrotask();
+
+      expect(el.shadowRoot?.textContent).toBe("2");
+
+      el.remove();
+    });
+
+    it("propagates store to nested custom elements inside a JSX subtree", async () => {
+      const tag = uniqueTag();
+      const themeAtom = atom("theme", "dark");
+      const store = createAtomStore({ appId: `core-nested-${tag}` });
+
+      defineComponent(tag, ({ store: ctxStore }) => {
+        return document.createTextNode(ctxStore.ref(themeAtom).value);
+      });
+
+      const root = withStore(store, () => {
+        return jsxs("section", {
+          children: [jsx("div", { children: "before" }), jsx(tag, null)],
+        });
+      }) as HTMLElement;
+
+      document.body.appendChild(root);
+      await waitForMicrotask();
+
+      const nested = root.querySelector(tag) as HTMLElement | null;
+      expect(nested?.shadowRoot?.textContent).toBe("dark");
+
+      root.remove();
     });
   });
 

@@ -1,3 +1,9 @@
+import {
+  atom,
+  createAtomStore,
+  defineAtomStoreSnapshot,
+  withStore,
+} from "@dathomir/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -131,6 +137,33 @@ describe("ssr", () => {
       expect(html).toContain('value="123"');
       expect(html).toContain('disabled="true"');
     });
+
+    it("should include a data-dh-store script when storeSnapshotSchema is provided", () => {
+      const themeAtom = atom("theme", "light");
+      const store = createAtomStore({ appId: "ssr-dsd-store-script" });
+      const schema = defineAtomStoreSnapshot({ uiTheme: themeAtom });
+
+      store.set(themeAtom, "dark");
+      registerComponent("snapshot-element", () => "<div>Snapshot</div>", []);
+
+      const html = renderDSD("snapshot-element", {}, {
+        store,
+        storeSnapshotSchema: schema,
+      } as never);
+
+      expect(html).toContain("data-dh-store");
+      expect(html).toContain("uiTheme");
+      expect(html).toContain("dark");
+    });
+
+    it("should throw when storeSnapshotSchema is provided without a store", () => {
+      const schema = defineAtomStoreSnapshot({ count: atom("count", 0) });
+      registerComponent("snapshot-error-element", () => "<div>Error</div>", []);
+
+      expect(() => {
+        renderDSD("snapshot-error-element", {}, { storeSnapshotSchema: schema } as never);
+      }).toThrow("storeSnapshotSchema requires a store");
+    });
   });
 
   describe("renderDSDContent", () => {
@@ -169,6 +202,68 @@ describe("ssr", () => {
 
       expect(html).toContain("<style>:host { padding: 10px; }</style>");
       expect(html).toContain("<div>Styled Template</div>");
+    });
+
+    it("should provide ctx.store when a store option is passed", () => {
+      const countAtom = atom("count", 4);
+      const store = createAtomStore({ appId: "ssr-dsd-content-store" });
+
+      registerComponent(
+        "template-store-test",
+        (_host, ctx) => `<div>${ctx.store.ref(countAtom).value}</div>`,
+        [],
+      );
+
+      const html = renderDSDContent("template-store-test", {}, { store });
+
+      expect(html).toContain("<div>4</div>");
+    });
+
+    it("should provide ctx.store from an active withStore boundary when no store option is passed", () => {
+      const countAtom = atom("count", 6);
+      const store = createAtomStore({ appId: "ssr-active-store" });
+
+      registerComponent(
+        "active-store-test",
+        (_host, ctx) => `<div>${ctx.store.ref(countAtom).value}</div>`,
+        [],
+      );
+
+      const html = withStore(store, () => renderDSDContent("active-store-test", {}));
+
+      expect(html).toContain("<div>6</div>");
+    });
+
+    it("should include a data-dh-store script inside the template when schema is provided", () => {
+      const countAtom = atom("count", 2);
+      const store = createAtomStore({ appId: "ssr-template-store-script" });
+      const schema = defineAtomStoreSnapshot({ count: countAtom });
+
+      store.set(countAtom, 10);
+      registerComponent("template-snapshot-test", () => "<div>Template Snapshot</div>", []);
+
+      const html = renderDSDContent("template-snapshot-test", {}, {
+        store,
+        storeSnapshotSchema: schema,
+      } as never);
+
+      expect(html).toContain("<script type=\"application/json\" data-dh-store>");
+      expect(html).toContain("count");
+      expect(html).toContain("10");
+      expect(html).toContain("<div>Template Snapshot</div>");
+    });
+
+    it("should throw when renderDSDContent uses storeSnapshotSchema without store", () => {
+      const schema = defineAtomStoreSnapshot({ count: atom("count", 0) });
+      registerComponent("template-snapshot-error", () => "<div>Error</div>", []);
+
+      expect(() => {
+        renderDSDContent(
+          "template-snapshot-error",
+          {},
+          { storeSnapshotSchema: schema } as never,
+        );
+      }).toThrow("storeSnapshotSchema requires a store");
     });
 
     it("should throw error for unregistered component", () => {
@@ -218,6 +313,7 @@ describe("ssr", () => {
       ];
       expect(ctx.props.name.value).toBe("test");
       expect(ctx.props.count.value).toBe(123);
+      expect(ctx.host).toBeDefined();
     });
 
     it("should handle missing attributes with defaults", () => {
@@ -288,6 +384,38 @@ describe("ssr", () => {
       ];
       expect(ctx.props.enabled.value).toBe(true);
       expect(ctx.props.disabled.value).toBe(false);
+    });
+
+    it("should provide ctx.store when SSR store option is passed", () => {
+      const countAtom = atom("count", 3);
+      const store = createAtomStore({ appId: "ssr-store" });
+
+      registerComponent(
+        "store-supported",
+        (_host, ctx) => {
+          return `<div>${ctx.store.ref(countAtom).value}</div>`;
+        },
+        [],
+      );
+
+      const html = renderDSD("store-supported", {}, { store });
+
+      expect(html).toContain("<div>3</div>");
+    });
+
+    it("should throw when SSR setup accesses ctx.store without a store option", () => {
+      registerComponent(
+        "store-unsupported",
+        (_host, ctx) => {
+          void ctx.store;
+          return "<div>Store</div>";
+        },
+        [],
+      );
+
+      expect(() => renderDSD("store-unsupported", {})).toThrow(
+        "SSR component context does not provide a store yet",
+      );
     });
   });
 

@@ -7,17 +7,28 @@
  * - Inserts state script for Signal initialization
  */
 
+import { withStore } from "@dathomir/store";
+import { getCurrentStore } from "@dathomir/store/internal";
+
 import {
   MarkerType,
   createBlockEndMarker,
   createMarker,
   createStateScript,
+  createStoreScript,
 } from "@/ssr/markers/implementation";
 import {
   serializeState,
+  type SerializableValue,
   type StateObject,
 } from "@/ssr/serialize/implementation";
 import { type Tree, type TreeNode } from "@/types/tree";
+
+import type {
+  AtomStore,
+  AtomStoreSnapshot,
+  PrimitiveAtom,
+} from "@dathomir/store";
 
 const VOID_ELEMENTS = new Set([
   "area",
@@ -79,7 +90,15 @@ interface RenderContext {
   dynamicValues: Map<number, unknown>;
   /** Component renderer for Declarative Shadow DOM */
   componentRenderer?: ComponentRenderer;
+  /** Request-scoped store for SSR */
+  store?: AtomStore;
+  /** Optional snapshot schema for store transfer */
+  storeSnapshotSchema?: AtomStoreSnapshot<
+    Record<string, PrimitiveAtom<unknown>>
+  >;
 }
+
+type SerializableStoreSnapshot = Record<string, SerializableValue>;
 
 /**
  * Renders DSD content for a custom element.
@@ -88,6 +107,7 @@ interface RenderContext {
 type ComponentRenderer = (
   tagName: string,
   attrs: Record<string, unknown>,
+  options?: { store?: AtomStore },
 ) => string | null;
 
 /**
@@ -108,6 +128,12 @@ interface RenderOptions {
   includeState?: boolean;
   /** Component renderer for Declarative Shadow DOM output */
   componentRenderer?: ComponentRenderer;
+  /** Request-scoped store available during SSR rendering */
+  store?: AtomStore;
+  /** Optional snapshot schema for store transfer */
+  storeSnapshotSchema?: AtomStoreSnapshot<
+    Record<string, PrimitiveAtom<unknown>>
+  >;
 }
 
 /**
@@ -119,7 +145,18 @@ function createContext(options: RenderOptions = {}): RenderContext {
     state: options.state ?? {},
     dynamicValues: options.dynamicValues ?? new Map(),
     componentRenderer: options.componentRenderer ?? globalComponentRenderer,
+    store: options.store,
+    storeSnapshotSchema: options.storeSnapshotSchema,
   };
+}
+
+function assertStoreSnapshotOptions(options: RenderOptions): void {
+  if (
+    options.storeSnapshotSchema !== undefined &&
+    options.store === undefined
+  ) {
+    throw new Error("[dathomir] storeSnapshotSchema requires a store");
+  }
 }
 
 /**
@@ -263,7 +300,10 @@ function renderNode(node: Tree, ctx: RenderContext): string {
     // Check for custom elements with DSD support
     if (tag.includes("-") && ctx.componentRenderer) {
       const attrObj = (attrs ?? {}) as Record<string, unknown>;
-      const dsdContent = ctx.componentRenderer(tag, attrObj);
+      const activeStore = getCurrentStore() ?? ctx.store;
+      const dsdContent = ctx.componentRenderer(tag, attrObj, {
+        store: activeStore,
+      });
       if (dsdContent !== null) {
         // Render as custom element with Declarative Shadow DOM
         const attrStr = attrs ? renderAttrs(attrs) : "";
@@ -309,19 +349,35 @@ function setComponentRenderer(renderer: ComponentRenderer | undefined): void {
  * Render a tree to HTML string.
  */
 function renderTree(tree: Tree[], options: RenderOptions = {}): string {
-  const ctx = createContext(options);
-  let html = "";
+  assertStoreSnapshotOptions(options);
 
-  for (const node of tree) {
-    html += renderNode(node, ctx);
-  }
+  const render = () => {
+    const ctx = createContext(options);
+    let html = "";
 
-  // Include state script if requested
-  if (options.includeState && Object.keys(ctx.state).length > 0) {
-    html = createStateScript(serializeState(ctx.state)) + html;
-  }
+    if (ctx.storeSnapshotSchema !== undefined && ctx.store !== undefined) {
+      const snapshot = ctx.storeSnapshotSchema.serialize(
+        ctx.store,
+      ) as SerializableStoreSnapshot;
+      html += createStoreScript(
+        serializeState(snapshot),
+      );
+    }
 
-  return html;
+    for (const node of tree) {
+      html += renderNode(node, ctx);
+    }
+
+    if (options.includeState && Object.keys(ctx.state).length > 0) {
+      html = createStateScript(serializeState(ctx.state)) + html;
+    }
+
+    return html;
+  };
+
+  return options.store === undefined
+    ? render()
+    : withStore(options.store, render);
 }
 
 /**
@@ -329,15 +385,34 @@ function renderTree(tree: Tree[], options: RenderOptions = {}): string {
  */
 function renderToString(
   tree: Tree[],
-  state: StateObject = {},
+  stateOrOptions: StateObject | RenderOptions = {},
   dynamicValues: Map<number, unknown> = new Map(),
   componentRenderer?: ComponentRenderer,
+  store?: AtomStore,
 ): string {
+  if (
+    "state" in stateOrOptions ||
+    "dynamicValues" in stateOrOptions ||
+    "includeState" in stateOrOptions ||
+    "componentRenderer" in stateOrOptions ||
+    "store" in stateOrOptions ||
+    "storeSnapshotSchema" in stateOrOptions
+  ) {
+    const options = stateOrOptions as RenderOptions;
+    return renderTree(tree, {
+      ...options,
+      includeState:
+        options.includeState ?? Object.keys(options.state ?? {}).length > 0,
+    });
+  }
+
+  const state = stateOrOptions as StateObject;
   return renderTree(tree, {
     state,
     dynamicValues,
     includeState: Object.keys(state).length > 0,
     componentRenderer,
+    store,
   });
 }
 

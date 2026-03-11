@@ -20,11 +20,19 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     function renderDSD(
       target: string | ComponentClass,
       attrs?: Record<string, string>,
+      options?: {
+        store?: AtomStore;
+        storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
+      },
     ): string
 
     function renderDSDContent(
       target: string | ComponentClass,
       attrs?: Record<string, string>,
+      options?: {
+        store?: AtomStore;
+        storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
+      },
     ): string
 
     function ensureComponentRenderer(): void
@@ -48,6 +56,11 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     - `ensureComponentRenderer()` は冪等である
     - `renderComponentContent()` は未登録時に `null` を返す
     - `escapeAttr()` は `&`, `"`, `<`, `>` を HTML エスケープする
+    - `options.store` が指定された場合、SSR 時の `ComponentContext.store` はその store instance を返す
+    - `options.store` が未指定でも、active な `withStore()` boundary が存在する場合はその store instance を返す
+    - `options.store` も active `withStore()` boundary もない場合、SSR 時の `ctx.store` アクセスは明示的に例外を投げる
+    - `options.storeSnapshotSchema` が指定された場合、DSD template 内へ `<script type="application/json" data-dh-store>` を含める
+    - `options.storeSnapshotSchema` を使う場合は `options.store` も必須とする
   ],
 )
 
@@ -70,10 +83,15 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     9. CSS が `<style>` タグとして DSD に含まれる
     10. 複数の `<style>` タグが正しく出力される
     11. `ensureComponentRenderer()` が複数回呼ばれても安全である
-    12. `renderComponentContent()` が未登録コンポーネントで `null` を返す
-    13. `Number` 型プロップで `null` 属性はデフォルト値を使う
-    14. `String` 型プロップで `null` 属性はデフォルト値を使う
-  ],
+     12. `renderComponentContent()` が未登録コンポーネントで `null` を返す
+     13. `Number` 型プロップで `null` 属性はデフォルト値を使う
+     14. `String` 型プロップで `null` 属性はデフォルト値を使う
+     15. SSR で `options.store` を渡した場合、`ctx.store` から同じ store instance を取得できる
+      16. SSR で `options.store` がなくても active `withStore()` boundary がある場合、`ctx.store` からその store instance を取得できる
+      17. SSR で `options.store` も active `withStore()` boundary もない場合、`ctx.store` にアクセスすると明示エラーになる
+      18. `options.storeSnapshotSchema` を渡した場合、DSD に `data-dh-store` script が含まれる
+      19. `options.storeSnapshotSchema` を `options.store` なしで使うとエラーになる
+    ],
   impl_notes: [
     *使用例*:
     - React/Next.js/Vue などから `renderDSD()` または `renderDSDContent()` を直接呼び出せる
@@ -166,6 +184,51 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     - `Boolean`: 属性存在で `true`、不在で `false`
     - `Number` と `String`: `null` ならデフォルト値にフォールバック
     - カスタム関数は `null` を含めてそのまま渡す
+  ],
+)
+
+#adr(
+  header("SSR store は request-scoped option として渡す", Status.Accepted, "2026-03-10"),
+  [
+    SSR では module global store を使わず、request ごとに分離された store instance を明示的に渡す必要がある。
+  ],
+  [
+    `renderDSD` / `renderDSDContent` は `options.store` を受け取り、指定時のみ `ctx.store` を有効化する。未指定時の `ctx.store` は明示エラーとする。
+  ],
+  [
+    - SSR request 境界を明示できる
+    - CSR の `withStore()` モデルと整合する
+    - store を必要としない SSR 利用では追加コストなしで使える
+  ],
+)
+
+#adr(
+  header("SSR store は active boundary fallback を許可する", Status.Accepted, "2026-03-11"),
+  [
+    nested SSR helper や custom renderer が `renderDSD()` / `renderDSDContent()` を既存の store boundary 内から呼び出す場合、毎回 `options.store` を明示しないと利用が不自然になる。
+  ],
+  [
+    `options.store` がない場合でも active な `withStore()` boundary があればその store を `ctx.store` に使い、どちらも存在しない場合のみ明示エラーとする。
+  ],
+  [
+    - explicit option を最優先しつつ nested SSR helper との相性を保てる
+    - CSR の `withStore()` モデルと揃う
+    - store が不要な SSR 利用では従来どおり追加コストなしで使える
+  ],
+)
+
+#adr(
+  header("DSD store snapshot は template 内の別 script として出力する", Status.Accepted, "2026-03-10"),
+  [
+    DSD 内で store snapshot を hydration に渡したいが、既存の state script とは責務を分離したい。
+  ],
+  [
+    `options.storeSnapshotSchema` が指定された場合は `<template shadowrootmode="open">` 内へ `<script type="application/json" data-dh-store>` を挿入する。payload は schema が列挙した atom 値のみとする。
+  ],
+  [
+    - DSD 単位で store snapshot を局所化できる
+    - hydration 側が template 内から store snapshot を独立に復元できる
+    - store を使わない SSR には影響しない
   ],
 )
 

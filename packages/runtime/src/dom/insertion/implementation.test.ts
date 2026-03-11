@@ -95,6 +95,39 @@ describe("insert", () => {
     expect((parent.childNodes[0] as Element).tagName).toBe("DIV");
   });
 
+  it("should insert iterable children containing a DocumentFragment", () => {
+    const parent = document.createElement("div");
+    const anchor = document.createComment("anchor");
+    parent.appendChild(anchor);
+
+    const fragment = document.createDocumentFragment();
+    const span = document.createElement("span");
+    span.textContent = "child";
+    fragment.appendChild(span);
+
+    insert(parent, [fragment] as unknown, anchor);
+
+    expect(parent.childNodes.length).toBe(2);
+    expect((parent.childNodes[0] as Element).tagName).toBe("SPAN");
+    expect(parent.textContent).toBe("child");
+  });
+
+  it("should insert iterable children with mixed node and text values", () => {
+    const parent = document.createElement("div");
+    const anchor = document.createComment("anchor");
+    parent.appendChild(anchor);
+
+    const span = document.createElement("span");
+    span.textContent = "A";
+
+    insert(parent, [span, "B", 3, null, false] as unknown, anchor);
+
+    expect(parent.childNodes.length).toBe(4);
+    expect((parent.childNodes[0] as Element).tagName).toBe("SPAN");
+    expect(parent.childNodes[1]?.textContent).toBe("B");
+    expect(parent.childNodes[2]?.textContent).toBe("3");
+  });
+
   it("should clean up previous inserted content on re-insert", () => {
     const parent = document.createElement("div");
     const anchor = document.createComment("anchor");

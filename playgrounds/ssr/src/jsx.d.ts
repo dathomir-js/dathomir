@@ -1,19 +1,19 @@
-/**
- * JSX type definitions for Dathomir.
- * Enables TypeScript support for JSX elements.
- */
-declare namespace JSX {
-  interface IntrinsicElements {
-    [elemName: string]: Record<string, unknown>;
-  }
+import type { JSX as CoreJSX } from "@dathomir/core/jsx-runtime";
 
-  interface Element extends Node {}
-
-  interface ElementAttributesProperty {
-    props: Record<string, unknown>;
-  }
-
-  interface ElementChildrenAttribute {
-    children: unknown;
+declare global {
+  namespace JSX {
+    interface IntrinsicElements extends CoreJSX.IntrinsicElements {
+      "dathomir-ssr-store-counter": Record<string, unknown>;
+    }
   }
 }
+
+declare module "@dathomir/core/jsx-runtime" {
+  namespace JSX {
+    interface IntrinsicElements {
+      "dathomir-ssr-store-counter": Record<string, unknown>;
+    }
+  }
+}
+
+export {};

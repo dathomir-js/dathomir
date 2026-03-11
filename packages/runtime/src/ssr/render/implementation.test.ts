@@ -2,6 +2,11 @@
  * Tests for SSR rendering functionality.
  */
 
+import {
+  atom,
+  createAtomStore,
+  defineAtomStoreSnapshot,
+} from "@dathomir/store";
 import { describe, expect, it } from "vitest";
 
 import { MarkerType, createMarker, renderToString, renderTree } from "@/ssr";
@@ -98,6 +103,49 @@ describe("SSR Render", () => {
       "<div>Count: <!--dh:t:1-->5 Items: <!--dh:t:2-->10</div>",
     );
   });
+
+  it("passes request-scoped store to ComponentRenderer through render options", () => {
+    const store = createAtomStore({ appId: "runtime-ssr-store" });
+    const countAtom = atom("count", 7);
+    const tree: Tree[] = [["my-counter", null]];
+
+    const html = renderTree(tree, {
+      store,
+      componentRenderer: (_tagName, _attrs, options) => {
+        return `<div>${options?.store?.ref(countAtom).value}</div>`;
+      },
+    });
+
+    expect(html).toContain("<div>7</div>");
+  });
+
+  it("emits a store snapshot script when storeSnapshotSchema is provided", () => {
+    const themeAtom = atom("theme", "light");
+    const store = createAtomStore({ appId: "runtime-store-script" });
+    const schema = defineAtomStoreSnapshot({ uiTheme: themeAtom });
+    const tree: Tree[] = [["div", null, "Hello"]];
+
+    store.set(themeAtom, "dark");
+
+    const html = renderTree(tree, {
+      store,
+      storeSnapshotSchema: schema,
+    } as never);
+
+    expect(html).toContain("data-dh-store");
+    expect(html).toContain("uiTheme");
+    expect(html).toContain("dark");
+    expect(html).toContain("<div>Hello</div>");
+  });
+
+  it("throws when storeSnapshotSchema is provided without a store", () => {
+    const schema = defineAtomStoreSnapshot({ count: atom("count", 0) });
+    const tree: Tree[] = [["div", null, "Hello"]];
+
+    expect(() => {
+      renderTree(tree, { storeSnapshotSchema: schema } as never);
+    }).toThrow("storeSnapshotSchema requires a store");
+  });
 });
 
 describe("SSR renderToString", () => {
@@ -117,5 +165,42 @@ describe("SSR renderToString", () => {
     const html = renderToString(tree);
     expect(html).not.toContain("data-dh-state");
     expect(html).toBe("<div>Static</div>");
+  });
+
+  it("accepts a request-scoped store as the fifth argument", () => {
+    const store = createAtomStore({ appId: "runtime-render-to-string-store" });
+    const countAtom = atom("count", 9);
+    const tree: Tree[] = [["my-counter", null]];
+
+    const html = renderToString(
+      tree,
+      {},
+      new Map(),
+      (_tagName, _attrs, options) => {
+        return `<div>${options?.store?.ref(countAtom).value}</div>`;
+      },
+      store,
+    );
+
+    expect(html).toContain("<div>9</div>");
+  });
+
+  it("supports the object overload with storeSnapshotSchema", () => {
+    const countAtom = atom("count", 1);
+    const store = createAtomStore({ appId: "runtime-render-to-string-options" });
+    const schema = defineAtomStoreSnapshot({ count: countAtom });
+    const tree: Tree[] = [["div", null, "Static"]];
+
+    store.set(countAtom, 33);
+
+    const html = renderToString(tree, {
+      store,
+      storeSnapshotSchema: schema,
+    } as never);
+
+    expect(html).toContain("data-dh-store");
+    expect(html).toContain("count");
+    expect(html).toContain("33");
+    expect(html).toContain("<div>Static</div>");
   });
 });

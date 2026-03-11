@@ -46,4 +46,32 @@ function parseStateScript(container: Element | ShadowRoot): StateObject | null {
   }
 }
 
-export { deserializeState, parseStateScript };
+/**
+ * Find and parse store snapshot script from a container.
+ */
+function parseStoreScript(container: Element | ShadowRoot): StateObject | null {
+  const script = container.querySelector(
+    'script[type="application/json"][data-dh-store]',
+  );
+
+  if (!script?.textContent) {
+    return null;
+  }
+
+  try {
+    const state = deserializeState(script.textContent);
+    script.remove();
+    return state;
+  } catch (err) {
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
+      console.error(
+        `[dathomir] Failed to parse store script. ` +
+          `Ensure the serialized store snapshot is valid devalue format.`,
+        err,
+      );
+    }
+    return null;
+  }
+}
+
+export { deserializeState, parseStateScript, parseStoreScript };

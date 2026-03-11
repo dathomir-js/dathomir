@@ -10,6 +10,7 @@ import {
   createDataMarker,
   createMarker,
   createStateScript,
+  createStoreScript,
 } from "@/ssr/markers/implementation";
 
 describe("Marker Creation", () => {
@@ -59,6 +60,15 @@ describe("Marker Creation", () => {
       const script = createStateScript("{}");
       expect(script).toBe(
         '<script type="application/json" data-dh-state>{}</script>',
+      );
+    });
+  });
+
+  describe("createStoreScript", () => {
+    it("creates store snapshot script element", () => {
+      const script = createStoreScript('{"count":5}');
+      expect(script).toBe(
+        '<script type="application/json" data-dh-store>{"count":5}</script>',
       );
     });
   });

@@ -1,7 +1,7 @@
 import { defineConfig } from "@dathomir/config/tsdown";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/ssr/index.ts"],
+  entry: ["src/index.ts", "src/internal.ts", "src/ssr/index.ts"],
   dts: {
     oxc: false,
   },

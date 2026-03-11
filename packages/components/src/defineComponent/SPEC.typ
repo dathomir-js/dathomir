@@ -49,11 +49,13 @@
     };
 
     type FunctionComponent<S extends PropsSchema = PropsSchema> = (
-      props: InferProps<S>,
+      ctx: ComponentContext<S>,
     ) => Node | DocumentFragment | string;
 
     interface ComponentContext<S extends PropsSchema = PropsSchema> {
+      readonly host: HTMLElement;
       readonly props: Readonly<InferProps<S>>;
+      readonly store: AtomStore;
     }
 
     interface ComponentOptions<S extends PropsSchema = PropsSchema> {
@@ -78,18 +80,19 @@
         : Record<string, unknown>;
 
     type HydrateSetupFunction<S extends PropsSchema = PropsSchema> = (
-      host: HTMLElement,
       ctx: ComponentContext<S>,
     ) => void;
     ```
   ],
   constraints: [
     - `tagName` は custom element 規約に従いハイフンを含む
-    - `component` はリアクティブ props を受け取る関数コンポーネントである
+    - `component` は `host` / `props` / `store` を持つ単一 context object を受け取る関数コンポーネントである
     - CSR では登録済み `HTMLElement` クラス、SSR では `__tagName__` / `__propsSchema__` を持つプレースホルダークラスを返す
     - コンストラクタで props シグナルを型変換付きで初期化し、各 prop に JS property getter / setter を定義する
+    - CSR の custom element constructor では current store boundary を host に捕捉する
+    - JSX runtime が生成した subtree 内の custom element に対しても current store boundary が伝播する
     - `attribute: false` の prop は属性監視せず、property setter 経由でのみ更新する
-    - `connectedCallback` では `createRoot` スコープ内で関数コンポーネントを実行する
+    - `connectedCallback` では host に bind 済みの store を解決し、`createRoot` スコープ内で関数コンポーネントを実行する
     - DSD が存在し `hydrate` がある場合は hydrate パス、`hydrate` がない場合は shadowRoot をクリアして再実行する
     - `disconnectedCallback` では `dispose` により cleanup を実行する
     - SSR では `getCssText()`、`registerComponent()`、`ensureComponentRenderer()` を用いて SSR 情報を登録する
@@ -222,7 +225,52 @@
   [
     - 関数は初回レンダリング時に 1 回だけ実行される
     - `.value` と `effect` を通じて props の変化を自動追跡できる
-    - `host` や `ctx` を直接扱わないシンプルな定義が可能になる
+    - 初期段階では `props` だけを使うコンポーネントも、`({ props }) => ...` として簡潔に書ける
+  ],
+)
+
+#adr(
+  header("関数コンポーネントは単一 context object を受け取る", Status.Accepted, "2026-03-10"),
+  [
+    `props` とは別に `store` や `host` などのコンポーネント実行文脈を追加していくと、多引数 API は拡張時に不安定になりやすい。
+  ],
+  [
+    関数コンポーネントと hydrate 関数は、`host` / `props` / `store` をまとめた単一の `ComponentContext` object を受け取る。
+  ],
+  [
+    - API の将来拡張がしやすくなる
+    - `ctx.store` を中心に state access を統一できる
+    - props だけを使う場合も object destructuring で簡潔に書ける
+  ],
+)
+
+#adr(
+  header("store binding は components 内部実装で扱う", Status.Accepted, "2026-03-10"),
+  [
+    `withStore()` の boundary を custom element instance まで運ぶ仕組みは必要だが、利用者に public API として公開すると mental model が複雑になる。
+  ],
+  [
+    current store の捕捉と host への binding は `@dathomir/components` 内部実装に閉じ込め、公開 API には含めない。
+  ],
+  [
+    - 利用者は `withStore()` と `ctx.store` だけを理解すればよい
+    - host-to-store binding の実装を将来変更しやすい
+    - `@dathomir/store` は atom/store/boundary の public API に集中できる
+  ],
+)
+
+#adr(
+  header("subtree store binding は custom element name 規約で判定する", Status.Accepted, "2026-03-10"),
+  [
+    JSX runtime が生成した subtree へ store を伝播する際、custom element host を軽量に検出する必要がある。
+  ],
+  [
+    初期バージョンでは tag name にハイフンを含む要素を custom element host とみなし、store binding の対象にする。
+  ],
+  [
+    - HTML Custom Elements の命名規約と一致する
+    - `customElements.get()` への依存を避けて軽量に走査できる
+    - 将来より厳密な host 判定が必要になった場合の差し替え余地を残せる
   ],
 )
 
@@ -295,5 +343,8 @@
     17. `ComponentElement<typeof MyComp>` でカスタム要素の props 型が推論される
     18. Number 型の prop: `null` 属性値はデフォルト値を使用する（`Number(null)` = 0 を使わない）
     19. `setup` 関数がエラーを投げても `#dispose` が安全に扱われる（再接続時も動作）
+    20. `withStore()` 内で生成された custom element が `ctx.store` から同じ store instance を受け取る
+    21. nested `withStore()` で生成された custom element は内側の store instance を受け取る
+    22. `withStore()` 内の JSX subtree に含まれる nested custom element も store instance を受け取る
   ],
 )

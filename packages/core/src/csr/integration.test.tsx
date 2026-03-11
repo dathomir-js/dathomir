@@ -2,6 +2,17 @@ import { createRoot, signal, templateEffect } from "@/reactivity/index";
 import { reconcile } from "@/runtime/index";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+function requireQuery<T extends Element>(
+  root: ParentNode,
+  selector: string,
+): T {
+  const element = root.querySelector<T>(selector);
+  if (element === null) {
+    throw new Error(`Expected element matching selector: ${selector}`);
+  }
+  return element;
+}
+
 // ---------------------------------------------------------------------------
 // CSR Integration Tests (TSX)
 //
@@ -131,8 +142,8 @@ describe("CSR integration", () => {
         ) as HTMLDivElement;
         container.appendChild(el);
 
-        const span = el.querySelector("span")!;
-        const button = el.querySelector("button")!;
+        const span = requireQuery<HTMLSpanElement>(el, "span");
+        const button = requireQuery<HTMLButtonElement>(el, "button");
 
         expect(span.textContent).toBe("0");
 
@@ -159,8 +170,8 @@ describe("CSR integration", () => {
       });
 
       container.appendChild(el);
-      const span = el.querySelector("span")!;
-      const button = el.querySelector("button")!;
+      const span = requireQuery<HTMLSpanElement>(el, "span");
+      const button = requireQuery<HTMLButtonElement>(el, "button");
 
       button.click();
       expect(span.textContent).toBe("1");
@@ -410,7 +421,7 @@ describe("CSR integration", () => {
         const el = (<Counter />) as HTMLElement;
         container.appendChild(el);
 
-        const p = el.querySelector("p")!;
+        const p = requireQuery<HTMLParagraphElement>(el, "p");
         const [decBtn, incBtn] = el.querySelectorAll("button");
 
         expect(p.textContent).toBe("0");
@@ -454,7 +465,7 @@ describe("CSR integration", () => {
         const el = (<Card title="Featured" />) as HTMLElement;
         container.appendChild(el);
 
-        expect(el.querySelector(".badge")!.textContent).toBe("Featured");
+        expect(requireQuery<HTMLElement>(el, ".badge").textContent).toBe("Featured");
       });
     });
   });
@@ -478,7 +489,7 @@ describe("CSR integration", () => {
       });
 
       container.appendChild(el);
-      const p = el.querySelector("p")!;
+      const p = requireQuery<HTMLParagraphElement>(el, "p");
       const [decBtn, incBtn] = el.querySelectorAll("button");
 
       expect(p.textContent).toBe("0");
@@ -533,8 +544,8 @@ describe("CSR integration", () => {
         el.appendChild(ul);
         container.appendChild(el);
 
-        const p = el.querySelector("p")!;
-        const button = el.querySelector("button")!;
+        const p = requireQuery<HTMLParagraphElement>(el, "p");
+        const button = requireQuery<HTMLButtonElement>(el, "button");
 
         expect(p.textContent).toBe("0");
         expect(ul.children.length).toBe(0);
@@ -569,10 +580,10 @@ describe("CSR integration", () => {
         container.appendChild(a);
         container.appendChild(b);
 
-        const btnA = a.querySelector("button")!;
-        const btnB = b.querySelector("button")!;
-        const countA = a.querySelector(".count")!;
-        const countB = b.querySelector(".count")!;
+        const btnA = requireQuery<HTMLButtonElement>(a, "button");
+        const btnB = requireQuery<HTMLButtonElement>(b, "button");
+        const countA = requireQuery<HTMLElement>(a, ".count");
+        const countB = requireQuery<HTMLElement>(b, ".count");
 
         btnA.click();
         btnA.click();

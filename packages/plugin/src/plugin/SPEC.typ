@@ -41,6 +41,7 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
     - モード判定の優先順位は `options.mode` → `environment.name` → `options.ssr` → CSR
     - `@dathomir/transformer` の `transform()` を呼び出し、`filename` と `runtimeModule` を渡す
     - transform 失敗時はファイルパスを付与したエラーとして再スローする
+    - Vite plugin は importer から最も近い `tsconfig.json` の `compilerOptions.paths` を参照して path alias import を解決できる
   ],
 )
 
@@ -63,12 +64,13 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
     - 強制モードが SSR フラグより優先される
     - Environment API の edge モードを SSR として扱う
 
-    *オプション*:
-    - `runtimeModule` オプションが transformer に正しく渡される
-    - `filename` が変換対象ファイルの ID として渡される
+     *オプション*:
+     - `runtimeModule` オプションが transformer に正しく渡される
+     - `filename` が変換対象ファイルの ID として渡される
+     - Vite plugin が最寄り `tsconfig.json` の path alias を使って importer 基準で `.ts` / `.tsx` / `index.ts` まで解決する
 
-    *エラーハンドリング*:
-    - transform 失敗時にファイル名を含むエラーメッセージをスローする
+     *エラーハンドリング*:
+     - transform 失敗時にファイル名を含むエラーメッセージをスローする
     - 非 Error オブジェクトがスローされた場合はそのまま再スローする
     - transformer がソースマップを返さない場合は `map` を `undefined` にする
 

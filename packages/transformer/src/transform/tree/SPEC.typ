@@ -58,6 +58,20 @@
 	],
 )
 
+#adr(
+	header: header("ローカル static expression は補助変数へ退避しない", Status.Accepted, "2026-03-11"),
+	context: [
+		`const label = ...` のようなローカル値を属性や text dynamic part に渡したとき、transformer がテンプレート外参照へ持ち上げるとスコープが壊れる。
+	],
+	decision: [
+		JSXExpressionContainer 内の式は、reactive access を検出して dynamic part に分類しても元の式ノードを保持し、補助変数へ hoist しない。
+	],
+	rationale: [
+		- 関数スコープ内ローカル値を安全に参照できる
+		- SSR/CSR の両モードで lexical scope を壊さない
+	],
+)
+
 == 機能仕様
 
 #feature_spec(

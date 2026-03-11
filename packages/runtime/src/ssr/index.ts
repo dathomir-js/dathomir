@@ -3,7 +3,11 @@
  * Provides functions for rendering structured arrays to HTML strings.
  */
 
-export { createMarker, MarkerType } from "./markers/implementation";
+export {
+  createMarker,
+  createStoreScript,
+  MarkerType,
+} from "./markers/implementation";
 export {
   renderToString,
   renderTree,

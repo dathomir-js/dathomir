@@ -1,5 +1,6 @@
 = render API
 
+#import "/SPEC/functions.typ": *
 #import "/SPEC/settings.typ": *
 #show: apply-settings
 
@@ -24,7 +25,13 @@ function renderToString(
   tree: Tree[],
   state?: StateObject,
   dynamicValues?: Map<number, unknown>,
-  componentRenderer?: ComponentRenderer
+  componentRenderer?: ComponentRenderer,
+  store?: AtomStore,
+): string
+
+function renderToString(
+  tree: Tree[],
+  options?: RenderOptions,
 ): string
 ```
 
@@ -54,13 +61,25 @@ interface RenderContext {
   state: StateObject;
   dynamicValues: Map<number, unknown>;
   componentRenderer?: ComponentRenderer;
+  store?: AtomStore;
+  storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
 }
 ```
 
 `ComponentRenderer` は Web Components の Declarative Shadow DOM (DSD) 内容を生成する関数。
 
 - 引数: `tagName` (カスタム要素名), `attrs` (属性オブジェクト)
+- 第3引数で request-scoped `store` を受け取れる
 - 戻り値: DSD の HTML 文字列、または `null`（登録されていない場合）
+
+`RenderOptions` は必要に応じて `store?: AtomStore` と `storeSnapshotSchema?: AtomStoreSnapshot<...>` を受け取り、SSR render 全体を request-scoped store boundary 内で評価できる。
+
+- render 実行中に nested `withStore()` boundary が作られた場合、`ComponentRenderer` にはその時点で active な store を優先して渡す
+
+- `storeSnapshotSchema` が指定された場合、SSR 出力へ `<script type="application/json" data-dh-store>...</script>` を挿入する
+- `storeSnapshotSchema` を使う場合は `store` も必須とする
+- `data-dh-store` の payload は `storeSnapshotSchema.serialize(store)` を `serializeState()` でシリアライズした plain object とする
+- 既存の `data-dh-state` とは別 script として扱う
 
 == 内部処理
 
@@ -72,6 +91,7 @@ interface RenderContext {
 - Void 要素（`<br>`、`<img>` 等）の閉じタグ省略
 - Boolean 属性（`disabled`, `checked` 等）の判定
 - Declarative Shadow DOM の生成（カスタム要素向け）
+- store snapshot schema がある場合の `<script data-dh-store>` 生成
 
 == 設計判断
 
@@ -138,6 +158,49 @@ interface RenderContext {
   ],
   [
     JSX の自然な記法でスタイルを記述でき、SSR でも正しく出力される。
+  ],
+)
+
+#adr(
+  header("SSR store は request-scoped render option で渡す", Status.Accepted, "2026-03-10"),
+  [
+    SSR 中に store を使う場合、module global ではなく request ごとに分離された store instance を render 呼び出し側から明示的に渡す必要がある。
+  ],
+  [
+    `RenderOptions.store` と `renderToString(..., store?)` を通じて store を受け取り、render 全体をその store boundary 内で実行する。`ComponentRenderer` にも同じ store を渡す。
+  ],
+  [
+    request 境界が明確になり、components/ssr 側の `ctx.store` と整合する。
+  ],
+)
+
+#adr(
+  header("ComponentRenderer は active store boundary を優先する", Status.Accepted, "2026-03-11"),
+  [
+    SSR 中に nested helper が `withStore()` でより内側の store boundary を作る場合、custom element DSD render でもその内側 boundary を観測する必要がある。
+  ],
+  [
+    custom element render 時は render option の `store` だけでなく current active store boundary を確認し、存在する場合は active boundary を優先して `ComponentRenderer` へ渡す。
+  ],
+  [
+    - nested SSR helper でも store override が一貫して動作する
+    - `components/ssr` の `ctx.store` fallback と整合する
+    - explicit root store は fallback として維持できる
+  ],
+)
+
+#adr(
+  header("store snapshot は明示 schema に基づく別 script として埋め込む", Status.Accepted, "2026-03-10"),
+  [
+    SSR 時に store の値を hydration へ渡したいが、既存の reactivity state script と責務を混ぜると構造が曖昧になる。
+  ],
+  [
+    `storeSnapshotSchema` が指定された場合は `<script type="application/json" data-dh-store>` を別途出力し、payload には schema が列挙した primitive atom 値だけを plain object として格納する。
+  ],
+  [
+    - store transfer と既存 state transfer の責務を分離できる
+    - schema ベースの明示 transfer と整合する
+    - hydration 側で store snapshot だけを独立に復元できる
   ],
 )
 

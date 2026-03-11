@@ -224,4 +224,15 @@ describe("transform/tree", () => {
 
     expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(true);
   });
+
+  it("keeps local expression identifiers intact in dynamic text parts", () => {
+    const state = createInitialState("csr");
+    const tree = div([expr(nId("modeLabel"))]);
+
+    const result = jsxToTree(tree, state, nested);
+    const textPart = result.dynamicParts.find((part) => part.type === "text");
+
+    expect(textPart).toBeDefined();
+    expect(textPart?.expression).toEqual(nId("modeLabel"));
+  });
 });

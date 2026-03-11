@@ -13,10 +13,14 @@ import {
   templateEffect,
   type RootDispose,
 } from "@dathomir/reactivity";
+import { withStore } from "@dathomir/store";
 
 import { setText } from "@/dom/text/implementation";
 import { event } from "@/events/implementation";
-import { parseStateScript } from "@/hydration/deserialize/implementation";
+import {
+  parseStateScript,
+  parseStoreScript,
+} from "@/hydration/deserialize/implementation";
 import {
   createWalker,
   findMarker,
@@ -24,6 +28,8 @@ import {
   HydrationMarkerType,
   type MarkerInfo,
 } from "@/hydration/walker/implementation";
+
+import type { AtomStore, AtomStoreSnapshot, PrimitiveAtom } from "@dathomir/store";
 
 /**
  * WeakMap to track hydrated ShadowRoots (idempotency).
@@ -44,6 +50,13 @@ interface HydrationContext {
   markerIndex: number;
   /** Event handlers to connect */
   eventHandlers: Map<Element, Map<string, EventListener>>;
+  /** Optional request/root-scoped store */
+  store?: AtomStore;
+}
+
+interface HydrationOptions {
+  store?: AtomStore;
+  storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
 }
 
 /**
@@ -132,7 +145,10 @@ function handleMismatch(
 /**
  * Create a hydration context.
  */
-function createHydrationContext(root: ShadowRoot): HydrationContext {
+function createHydrationContext(
+  root: ShadowRoot,
+  options: HydrationOptions = {},
+): HydrationContext {
   const state = parseStateScript(root) ?? {};
   const walker = createWalker(root);
   const markers: MarkerInfo[] = [];
@@ -150,6 +166,7 @@ function createHydrationContext(root: ShadowRoot): HydrationContext {
     markers,
     markerIndex: 0,
     eventHandlers: new Map(),
+    store: options.store,
   };
 }
 
@@ -205,7 +222,12 @@ function hydrateTextMarker(marker: MarkerInfo, getValue: () => unknown): void {
 function hydrateRoot(
   root: ShadowRoot,
   setup: (ctx: HydrationContext) => void,
+  options: HydrationOptions = {},
 ): RootDispose | null {
+  if (options.storeSnapshotSchema !== undefined && options.store === undefined) {
+    throw new Error("[dathomir] storeSnapshotSchema requires a store");
+  }
+
   // Check closed shadow root
   if (root.mode === "closed") {
     if (typeof __DEV__ !== "undefined" && __DEV__) {
@@ -220,12 +242,20 @@ function hydrateRoot(
   }
 
   // Create hydration context
-  const ctx = createHydrationContext(root);
+  const ctx = createHydrationContext(root, options);
+
+  if (options.storeSnapshotSchema !== undefined && options.store !== undefined) {
+    const snapshot = parseStoreScript(root);
+    if (snapshot !== null) {
+      options.storeSnapshotSchema.hydrate(options.store, snapshot as never);
+    }
+  }
 
   // Create cleanup scope and run setup
-  const dispose = createRoot(() => {
+  const runSetup = () => createRoot(() => {
     setup(ctx);
   });
+  const dispose = options.store === undefined ? runSetup() : withStore(options.store, runSetup);
 
   // Mark as hydrated
   markHydrated(root);
@@ -245,6 +275,7 @@ function hydrate(
     /** Event bindings: element -> event type -> handler */
     events?: Map<Element, Map<string, EventListener>>;
   },
+  options: HydrationOptions = {},
 ): RootDispose | null {
   return hydrateRoot(root, (ctx) => {
     // Process text bindings
@@ -270,7 +301,7 @@ function hydrate(
         }
       }
     }
-  });
+  }, options);
 }
 
 export {

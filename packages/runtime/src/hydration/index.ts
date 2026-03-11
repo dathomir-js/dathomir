@@ -17,5 +17,6 @@ export type { MarkerInfo } from "./walker/implementation";
 
 export {
   deserializeState,
+  parseStoreScript,
   parseStateScript,
 } from "./deserialize/implementation";

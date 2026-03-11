@@ -14,7 +14,28 @@ import type {
 } from "@/defineComponent/implementation";
 import { getComponent } from "@/registry/implementation";
 import { signal } from "@dathomir/reactivity";
-import { setComponentRenderer } from "@dathomir/runtime/ssr";
+import {
+  createStoreScript,
+  type SerializableValue,
+  setComponentRenderer,
+} from "@dathomir/runtime/ssr";
+import { serializeState } from "@dathomir/runtime/ssr";
+import type { AtomStore, AtomStoreSnapshot, PrimitiveAtom } from "@dathomir/store";
+import { withStore } from "@dathomir/store";
+import { getCurrentStore } from "@dathomir/store/internal";
+
+interface SSRStoreOptions {
+  store?: AtomStore;
+  storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
+}
+
+type SerializableStoreSnapshot = Record<string, SerializableValue>;
+
+function assertStoreSnapshotOptions(options: SSRStoreOptions): void {
+  if (options.storeSnapshotSchema !== undefined && options.store === undefined) {
+    throw new Error("[dathomir] storeSnapshotSchema requires a store");
+  }
+}
 
 /**
  * Get the default value for a PropDefinition (mirrors CSR getDefaultValue).
@@ -63,7 +84,12 @@ function coerceForSSR(def: PropDefinition, attrValue: string | null): unknown {
 function renderComponentContent(
   tagName: string,
   attrs: Record<string, unknown>,
+  options: SSRStoreOptions = {},
 ): string | null {
+  assertStoreSnapshotOptions(options);
+
+  const resolvedStore = options.store ?? getCurrentStore();
+
   const registration = getComponent(tagName);
   if (!registration) return null;
 
@@ -87,17 +113,36 @@ function renderComponentContent(
       );
     }
   }
-  const ctx = { props: propSignals } as ComponentContext<PropsSchema>;
+  const ctx = {
+    host: {} as HTMLElement,
+    props: propSignals,
+    get store() {
+      if (resolvedStore === undefined) {
+        throw new Error("[dathomir] SSR component context does not provide a store yet");
+      }
+      return resolvedStore;
+    },
+  } as ComponentContext<PropsSchema>;
 
   // Call setup function (in SSR mode, returns HTML string)
-  const mockHost = {} as HTMLElement;
-  const result = registration.setup(mockHost, ctx);
+  const result = resolvedStore === undefined
+    ? registration.setup(ctx.host, ctx)
+    : withStore(resolvedStore, () => registration.setup(ctx.host, ctx));
 
   // In SSR mode, the setup function returns an HTML string
   const contentHtml = typeof result === "string" ? result : "";
 
   // Build DSD content: <style> tags + component HTML
   let dsdContent = "";
+
+  if (options.storeSnapshotSchema !== undefined && resolvedStore !== undefined) {
+    const snapshot = options.storeSnapshotSchema.serialize(
+      resolvedStore,
+    ) as SerializableStoreSnapshot;
+    dsdContent += createStoreScript(
+      serializeState(snapshot),
+    );
+  }
 
   // Add CSS as <style> tags inside DSD
   for (const cssText of registration.cssTexts) {
@@ -146,9 +191,10 @@ function escapeAttr(value: string): string {
 function renderDSDContent(
   target: string | ComponentClass,
   attrs: Record<string, string> = {},
+  options: SSRStoreOptions = {},
 ): string {
   const tagName = typeof target === "string" ? target : target.__tagName__;
-  const content = renderComponentContent(tagName, attrs);
+  const content = renderComponentContent(tagName, attrs, options);
   if (content == null) {
     throw new Error(
       `[dathomir] Component "${tagName}" is not registered. Call defineComponent() first.`,
@@ -182,9 +228,10 @@ function renderDSDContent(
 function renderDSD(
   target: string | ComponentClass,
   attrs: Record<string, string> = {},
+  options: SSRStoreOptions = {},
 ): string {
   const tagName = typeof target === "string" ? target : target.__tagName__;
-  const dsdTemplate = renderDSDContent(tagName, attrs);
+  const dsdTemplate = renderDSDContent(tagName, attrs, options);
 
   // Build attribute string
   let attrStr = "";
@@ -242,4 +289,3 @@ export {
     renderDSD,
     renderDSDContent
 };
-

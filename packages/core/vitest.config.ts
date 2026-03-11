@@ -24,6 +24,10 @@ export default defineConfig({
         __dirname,
         "src/jsx-runtime/index.ts",
       ),
+      "@dathomir/components/internal": resolve(
+        __dirname,
+        "../components/src/internal.ts",
+      ),
     },
   },
   test: {

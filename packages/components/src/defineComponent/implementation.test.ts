@@ -3,6 +3,9 @@ import {
   signal,
   templateEffect
 } from "@dathomir/reactivity";
+import { atom, createAtomStore, withStore } from "@dathomir/store";
+
+import { bindStoreToHost } from "./internal";
 import { describe, expect, it, vi } from "vitest";
 
 import { css } from "../css/implementation";
@@ -87,7 +90,7 @@ describe("defineComponent", () => {
 
     defineComponent(
       tag,
-      ({ title }) => document.createTextNode(title.value || "empty"),
+      ({ props }) => document.createTextNode(props.title.value || "empty"),
       { props: { title: { type: String } } },
     );
 
@@ -232,7 +235,7 @@ describe("defineComponent", () => {
 
     defineComponent(
       tag,
-      ({ dataVal }) => document.createTextNode(dataVal.value || "empty"),
+      ({ props }) => document.createTextNode(props.dataVal.value || "empty"),
       { props: { dataVal: { type: String, attribute: "data-val" } } },
     );
 
@@ -291,7 +294,7 @@ describe("defineComponent", () => {
 
     defineComponent(
       tag,
-      (props) => {
+      ({ props }) => {
         capturedProps = props;
         return document.createTextNode("test");
       },
@@ -317,7 +320,7 @@ describe("defineComponent", () => {
 
     defineComponent(
       tag,
-      (props) => {
+      ({ props }) => {
         capturedProps = props;
         return document.createTextNode("test");
       },
@@ -342,7 +345,7 @@ describe("defineComponent", () => {
 
     defineComponent(
       tag,
-      (props) => {
+      ({ props }) => {
         capturedProps = props;
         return document.createTextNode("test");
       },
@@ -372,7 +375,7 @@ describe("defineComponent", () => {
 
     defineComponent(
       tag,
-      (props) => {
+      ({ props }) => {
         capturedProps = props;
         return document.createTextNode("test");
       },
@@ -413,7 +416,7 @@ describe("defineComponent", () => {
 
     defineComponent(
       tag,
-      (props) => {
+      ({ props }) => {
         capturedProps = props;
         return document.createTextNode("test");
       },
@@ -429,6 +432,99 @@ describe("defineComponent", () => {
     expect(capturedProps.count.value).toBe(42);
 
     el.remove();
+  });
+
+  it("should pass host element to the component context", async () => {
+    const tag = uniqueTag();
+    let capturedHost: HTMLElement | undefined;
+
+    defineComponent(tag, ({ host }) => {
+      capturedHost = host;
+      return document.createTextNode(host.tagName.toLowerCase());
+    });
+
+    const el = document.createElement(tag);
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(capturedHost).toBe(el);
+    expect(el.shadowRoot!.textContent).toBe(tag);
+
+    el.remove();
+  });
+
+  it("should resolve ctx.store from withStore for the created custom element", async () => {
+    const tag = uniqueTag();
+    const countAtom = atom("count", 1);
+    const appStore = createAtomStore({ appId: `app-${tag}` });
+    let capturedStore: ReturnType<typeof createAtomStore> | undefined;
+
+    defineComponent(tag, ({ store }) => {
+      capturedStore = store;
+      return document.createTextNode(String(store.ref(countAtom).value));
+    });
+
+    const host = withStore(appStore, () => document.createElement(tag));
+    document.body.appendChild(host);
+    await waitForMicrotask();
+
+    expect(capturedStore).toBe(appStore);
+    expect(host.shadowRoot!.textContent).toBe("1");
+
+    host.remove();
+  });
+
+  it("should prefer the inner withStore boundary for nested custom element creation", async () => {
+    const tag = uniqueTag();
+    const themeAtom = atom("theme", "light");
+    const rootStore = createAtomStore({ appId: `root-${tag}` });
+    const childStore = rootStore.fork({ values: [[themeAtom, "dark"]] });
+
+    defineComponent(tag, ({ store }) => {
+      return document.createTextNode(store.ref(themeAtom).value);
+    });
+
+    const host = withStore(rootStore, () => {
+      return withStore(childStore, () => document.createElement(tag));
+    });
+
+    document.body.appendChild(host);
+    await waitForMicrotask();
+
+    expect(host.shadowRoot!.textContent).toBe("dark");
+
+    host.remove();
+  });
+
+  it("should retry hydrate when store binding arrives after connectedCallback", async () => {
+    const tag = uniqueTag();
+    const countAtom = atom("count", 12);
+    const store = createAtomStore({ appId: `late-store-${tag}` });
+    let capturedStore: ReturnType<typeof createAtomStore> | undefined;
+
+    defineComponent(tag, ({ store: ctxStore }) => {
+      capturedStore = ctxStore;
+      return document.createTextNode(String(ctxStore.ref(countAtom).value));
+    }, {
+      hydrate: ({ host, store: ctxStore }) => {
+        capturedStore = ctxStore;
+        host.setAttribute("data-hydrated", "true");
+      },
+    });
+
+    const host = document.createElement(tag);
+    const template = document.createElement("template");
+    template.setAttribute("shadowrootmode", "open");
+    template.innerHTML = "<div>SSR</div>";
+    host.appendChild(template);
+
+    document.body.appendChild(host);
+    bindStoreToHost(host, store);
+    await waitForMicrotask();
+
+    expect(capturedStore).toBe(store);
+
+    host.remove();
   });
 
   // Test case #19: setup throwing an error leaves #dispose undefined; reconnect is safe

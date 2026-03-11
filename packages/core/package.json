@@ -53,6 +53,11 @@
       "require": "./dist/runtime/index.cjs",
       "types": "./dist/runtime/index.d.mts"
     },
+    "./store": {
+      "import": "./dist/store/index.mjs",
+      "require": "./dist/store/index.cjs",
+      "types": "./dist/store/index.d.mts"
+    },
     "./shared": {
       "import": "./dist/shared/index.mjs",
       "require": "./dist/shared/index.cjs",
@@ -83,6 +88,7 @@
     "@dathomir/components": "workspace:*",
     "@dathomir/reactivity": "workspace:*",
     "@dathomir/runtime": "workspace:*",
+    "@dathomir/store": "workspace:*",
     "@dathomir/shared": "workspace:*"
   }
 }

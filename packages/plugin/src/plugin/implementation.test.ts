@@ -21,6 +21,11 @@ import {
   dathomirWebpackPlugin,
 } from "./implementation";
 
+type RollupLikePlugin = {
+  transformInclude: (id: string) => boolean;
+  transform: (this: { environment?: { name: string } }, code: string, id: string) => unknown;
+};
+
 describe("plugin", () => {
   describe("exports", () => {
     it("should export dathomir unplugin factory", () => {
@@ -238,7 +243,7 @@ describe("plugin", () => {
     it("should return undefined map when transformer returns no source map", () => {
       vi.mocked(transform).mockImplementationOnce(() => ({
         code: "transformed",
-        map: null,
+        map: undefined,
       }));
 
       const plugin = dathomirVitePlugin();
@@ -250,6 +255,49 @@ describe("plugin", () => {
 
       expect(result).toBeDefined();
       expect(result.map).toBeUndefined();
+    });
+
+    it("should resolve package-local @/ imports using the nearest tsconfig paths", async () => {
+      const plugin = dathomirVitePlugin();
+      const resolveId = plugin.resolveId as Function;
+
+      const resolved = await resolveId.call(
+        {},
+        "@/css/implementation",
+        "/home/kcatt/dev/dathomir/packages/components/src/index.ts",
+      );
+
+      expect(resolved).toBe(
+        "/home/kcatt/dev/dathomir/packages/components/src/css/implementation.ts",
+      );
+    });
+
+    it("should resolve directory aliases to index.ts using tsconfig paths", async () => {
+      const plugin = dathomirVitePlugin();
+      const resolveId = plugin.resolveId as Function;
+
+      const resolved = await resolveId.call(
+        {},
+        "@/ssr",
+        "/home/kcatt/dev/dathomir/packages/runtime/src/index.ts",
+      );
+
+      expect(resolved).toBe(
+        "/home/kcatt/dev/dathomir/packages/runtime/src/ssr/index.ts",
+      );
+    });
+
+    it("should ignore aliases when no matching tsconfig path mapping exists", async () => {
+      const plugin = dathomirVitePlugin();
+      const resolveId = plugin.resolveId as Function;
+
+      const resolved = await resolveId.call(
+        {},
+        "#internal/foo",
+        "/home/kcatt/dev/dathomir/packages/runtime/src/index.ts",
+      );
+
+      expect(resolved).toBeNull();
     });
   });
 
@@ -295,42 +343,22 @@ describe("plugin", () => {
 
   describe("unplugin rollup factory (non-Vite bundlers)", () => {
     it("should include JSX/TSX files via transformInclude", () => {
-      const plugin = dathomirRollupPlugin();
+      const plugin = dathomirRollupPlugin({}) as unknown as RollupLikePlugin;
 
-      expect(
-        (plugin as unknown as { transformInclude: (id: string) => boolean }).transformInclude(
-          "component.tsx",
-        ),
-      ).toBe(true);
-      expect(
-        (plugin as unknown as { transformInclude: (id: string) => boolean }).transformInclude(
-          "component.jsx",
-        ),
-      ).toBe(true);
+      expect(plugin.transformInclude("component.tsx")).toBe(true);
+      expect(plugin.transformInclude("component.jsx")).toBe(true);
     });
 
     it("should exclude non-JSX/TSX files via transformInclude", () => {
-      const plugin = dathomirRollupPlugin();
+      const plugin = dathomirRollupPlugin({}) as unknown as RollupLikePlugin;
 
-      expect(
-        (plugin as unknown as { transformInclude: (id: string) => boolean }).transformInclude(
-          "module.ts",
-        ),
-      ).toBe(false);
-      expect(
-        (plugin as unknown as { transformInclude: (id: string) => boolean }).transformInclude(
-          "styles.css",
-        ),
-      ).toBe(false);
+      expect(plugin.transformInclude("module.ts")).toBe(false);
+      expect(plugin.transformInclude("styles.css")).toBe(false);
     });
 
     it("should transform JSX/TSX files via transform hook", () => {
-      const plugin = dathomirRollupPlugin();
-      const transformHook = (
-        plugin as unknown as {
-          transform: (code: string, id: string) => unknown;
-        }
-      ).transform;
+      const plugin = dathomirRollupPlugin({}) as unknown as RollupLikePlugin;
+      const transformHook = plugin.transform;
 
       const result = transformHook.call(
         {},
@@ -343,12 +371,8 @@ describe("plugin", () => {
     });
 
     it("should detect SSR mode from ssr environment name in unplugin transform", () => {
-      const plugin = dathomirRollupPlugin();
-      const transformHook = (
-        plugin as unknown as {
-          transform: (code: string, id: string) => unknown;
-        }
-      ).transform;
+      const plugin = dathomirRollupPlugin({}) as unknown as RollupLikePlugin;
+      const transformHook = plugin.transform;
 
       transformHook.call(
         { environment: { name: "ssr" } },
@@ -363,12 +387,8 @@ describe("plugin", () => {
     });
 
     it("should detect SSR mode from edge environment name in unplugin transform", () => {
-      const plugin = dathomirRollupPlugin();
-      const transformHook = (
-        plugin as unknown as {
-          transform: (code: string, id: string) => unknown;
-        }
-      ).transform;
+      const plugin = dathomirRollupPlugin({}) as unknown as RollupLikePlugin;
+      const transformHook = plugin.transform;
 
       transformHook.call(
         { environment: { name: "edge" } },

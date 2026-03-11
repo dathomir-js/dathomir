@@ -101,6 +101,50 @@ function insert(
   // Track new nodes for future cleanup
   const newNodes: Node[] = [];
 
+  function appendIterableChild(value: unknown, fragment: DocumentFragment): void {
+    if (value === null || value === undefined || typeof value === "boolean") {
+      return;
+    }
+
+    if (value instanceof DocumentFragment) {
+      const children = Array.from(value.childNodes);
+      newNodes.push(...children);
+      fragment.appendChild(value);
+      return;
+    }
+
+    if (value instanceof Node) {
+      newNodes.push(value);
+      fragment.appendChild(value);
+      return;
+    }
+
+    if (typeof value === "function") {
+      appendIterableChild((value as () => unknown)(), fragment);
+      return;
+    }
+
+    if (typeof value === "string" || typeof value === "number") {
+      const textNode = document.createTextNode(String(value));
+      newNodes.push(textNode);
+      fragment.appendChild(textNode);
+      return;
+    }
+
+    const textNode = document.createTextNode(String(value));
+    newNodes.push(textNode);
+    fragment.appendChild(textNode);
+  }
+
+  function isIterableValue(value: unknown): value is Iterable<unknown> {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      Symbol.iterator in value &&
+      !(value instanceof Node)
+    );
+  }
+
   // Handle different types of child nodes
   if (child instanceof DocumentFragment) {
     // DocumentFragment: collect all children before insertion
@@ -116,6 +160,12 @@ function insert(
     const fragment = (child as () => DocumentFragment)();
     const children = Array.from(fragment.childNodes);
     newNodes.push(...children);
+    parent.insertBefore(fragment, anchor);
+  } else if (isIterableValue(child)) {
+    const fragment = document.createDocumentFragment();
+    for (const item of child) {
+      appendIterableChild(item, fragment);
+    }
     parent.insertBefore(fragment, anchor);
   } else {
     // Unexpected type - log error in development

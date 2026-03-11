@@ -7,6 +7,9 @@
 import { templateEffect } from "@dathomir/reactivity";
 import type { RuntimeJSX } from "@dathomir/runtime";
 import {
+  bindCurrentStoreToSubtree,
+} from "@dathomir/components/internal";
+import {
   event,
   firstChild,
   fromTree,
@@ -16,6 +19,24 @@ import {
 } from "@dathomir/runtime";
 
 export { Fragment } from "./Fragment";
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements extends RuntimeJSX.IntrinsicElements {
+      [K: `${string}-${string}`]: Record<string, unknown>;
+    }
+
+    interface Element extends Node {}
+
+    interface ElementAttributesProperty {
+      props: Record<string, unknown>;
+    }
+
+    interface ElementChildrenAttribute {
+      children: unknown;
+    }
+  }
+}
 
 /** Narrowed type for a reactive value with a .value property. */
 interface ReactiveValue {
@@ -32,10 +53,30 @@ type JSXChild =
   | (() => unknown)
   | ReactiveValue;
 type JSXChildren = JSXChild | JSXChild[];
+type JSXAttributeValue = JSXChildren | ReactiveValue;
+
+type AdaptIntrinsicPropValue<T> =
+  T extends (...args: never[]) => unknown ? T :
+  T extends never ? never :
+  T | ReactiveValue;
+
+type AdaptIntrinsicProps<T> = {
+  [K in keyof T]: K extends "children"
+    ? T[K] extends never
+      ? never
+      : JSXChildren
+    : AdaptIntrinsicPropValue<T[K]>;
+};
+
+type AdaptedIntrinsicElements = {
+  [K in keyof RuntimeJSX.IntrinsicElements]: AdaptIntrinsicProps<
+    RuntimeJSX.IntrinsicElements[K]
+  >;
+};
 
 interface JSXProps {
   children?: JSXChildren;
-  [key: string]: unknown;
+  [key: string]: JSXAttributeValue;
 }
 
 /**
@@ -149,6 +190,7 @@ function createElement(
   // Create DOM
   const factory = fromTree(tree, 0);
   const fragment = factory();
+  bindCurrentStoreToSubtree(fragment);
   const firstEl = firstChild(fragment);
   if (!firstEl) {
     // A non-void element must always produce at least one child node
@@ -227,26 +269,9 @@ export function jsxs(
  */
 export const jsxDEV = jsx;
 
-/**
- * JSX type definitions.
- * Enables TypeScript support for JSX elements.
- * Uses detailed HTML element types from @dathomir/runtime.
- * IntrinsicElements is an interface (not type) to allow module augmentation
- * via declaration merging for custom elements defined with defineComponent.
- */
 export namespace JSX {
-  export interface IntrinsicElements extends RuntimeJSX.IntrinsicElements {
-    /** Custom elements (tag names with hyphens) - fallback for unregistered custom elements */
-    [K: `${string}-${string}`]: Record<string, unknown>;
-  }
-
-  export interface Element extends Node {}
-
-  export interface ElementAttributesProperty {
-    props: Record<string, unknown>;
-  }
-
-  export interface ElementChildrenAttribute {
-    children: unknown;
-  }
+  export interface IntrinsicElements extends AdaptedIntrinsicElements {}
+  export interface Element extends globalThis.JSX.Element {}
+  export interface ElementAttributesProperty extends globalThis.JSX.ElementAttributesProperty {}
+  export interface ElementChildrenAttribute extends globalThis.JSX.ElementChildrenAttribute {}
 }

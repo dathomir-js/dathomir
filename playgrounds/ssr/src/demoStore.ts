@@ -1,8 +1,9 @@
 import { atom, createAtomStore } from "@dathomir/core";
 
 const countAtom = atom("count", 3);
+const appId = "playground-ssr";
 
-function createDemoStore(appId: string) {
+function createDemoStore() {
   return createAtomStore({
     appId,
     values: [[countAtom, 3]],

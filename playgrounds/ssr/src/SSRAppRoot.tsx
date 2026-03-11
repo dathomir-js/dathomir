@@ -4,5 +4,7 @@ import { App } from "./App";
 
 export const SSRAppRoot = defineComponent(
   "playground-ssr-app",
-  () => App(),
+  () => {
+    return <App />
+  },
 );

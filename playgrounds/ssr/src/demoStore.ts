@@ -1,13 +1,24 @@
 import { atom, createAtomStore } from "@dathomir/core";
 
-const countAtom = atom("count", 3);
-const appId = "playground-ssr";
+type DemoTheme = "light" | "mint" | "amber" | "night";
 
-function createDemoStore() {
-  return createAtomStore({
-    appId,
-    values: [[countAtom, 3]],
-  });
+const countAtom = atom<number>("count", 3);
+const themeAtom = atom<DemoTheme>("theme", "light");
+
+function createDemoStore(options: {
+	appId: string;
+	count?: number;
+	theme?: DemoTheme;
+}) {
+	return createAtomStore({
+		appId: options.appId,
+		values: [
+			[countAtom, options.count ?? 3],
+			[themeAtom, options.theme ?? "light"],
+		],
+	});
 }
 
-export { countAtom, createDemoStore };
+export { countAtom, createDemoStore, themeAtom };
+export type { DemoTheme };
+

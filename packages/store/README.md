@@ -10,6 +10,8 @@ This package is currently in a specification-first scaffolding stage. The initia
 
 The current public work in this package is the initial specification under `src/*/SPEC.typ`.
 
+- `getCurrentStore()` for reading the active synchronous store boundary
+
 ## License
 
 MPL-2.0

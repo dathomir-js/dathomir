@@ -24,4 +24,4 @@ export type {
   InferPrimitiveAtomValue,
 } from "./defineAtomStoreSnapshot/implementation";
 
-export { withStore } from "./withStore/implementation";
+export { getCurrentStore, withStore } from "./withStore/implementation";

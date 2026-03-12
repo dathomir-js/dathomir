@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { atom, createAtomStore, withStore } from "./index";
+import { atom, createAtomStore, getCurrentStore, withStore } from "./index";
 
 describe("core store re-exports", () => {
-  it("re-exports atom, createAtomStore, and withStore", () => {
+  it("re-exports atom, createAtomStore, getCurrentStore, and withStore", () => {
     const countAtom = atom("count", 1);
     const store = createAtomStore({ appId: "core-store" });
 
-    const result = withStore(store, () => store.ref(countAtom).value);
+    const result = withStore(store, () => {
+      expect(getCurrentStore()).toBe(store);
+      return store.ref(countAtom).value;
+    });
 
     expect(result).toBe(1);
+    expect(getCurrentStore()).toBeUndefined();
   });
 });

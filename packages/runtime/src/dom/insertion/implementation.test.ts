@@ -189,6 +189,34 @@ describe("insert", () => {
     expect(parent.childNodes[0].textContent).toBe("42");
   });
 
+  it("should clean up SSR content on first insert, then use WeakMap on re-insert", () => {
+    const parent = document.createElement("div");
+    const anchor = document.createComment("dh:i:0");
+    const ssrText = document.createTextNode("server rendered");
+    const nextMarker = document.createComment("dh:t:1");
+    parent.append(anchor, ssrText, nextMarker);
+
+    // First insert: SSR cleanup removes ssrText between dh: markers
+    const child1 = document.createElement("span");
+    child1.textContent = "first";
+    insert(parent, child1, anchor);
+
+    expect(parent.contains(ssrText)).toBe(false);
+    expect(parent.childNodes[0]).toBe(child1);
+    expect(parent.childNodes[1]).toBe(anchor);
+    expect(parent.childNodes[2]).toBe(nextMarker);
+
+    // Second insert: WeakMap-based cleanup removes child1
+    const child2 = document.createElement("p");
+    child2.textContent = "second";
+    insert(parent, child2, anchor);
+
+    expect(parent.contains(child1)).toBe(false);
+    expect(parent.childNodes[0]).toBe(child2);
+    expect(parent.childNodes[1]).toBe(anchor);
+    expect(parent.childNodes[2]).toBe(nextMarker);
+  });
+
   it("should no-op when parent is null", () => {
     vi.stubGlobal("__DEV__", true);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});

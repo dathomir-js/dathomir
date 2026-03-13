@@ -45,20 +45,21 @@
     - 同じ値を設定 = 通知なし
     - effect 内で読み取り = 依存関係が登録される
     - effect 外で読み取り = 追跡なし
+    - `.value` への直接代入は TypeScript の `readonly` により静的にエラーとなる（ランタイムテスト対象外）
   ],
   test_cases: [
     - 初期値を正しく設定する
     - `.value` 経由で読み取る
-    - `.value` への直接代入が TypeScript でエラーになる
+    - `.set()` で値を書き込む
     - `set()` で直接値を更新する
     - `set()` で関数を使って更新する
     - effect 内で `.value` を読み取ると依存関係を登録する
     - computed 内で `.value` を読み取ると依存関係を登録する
     - `peek()` を使用すると依存関係を登録しない
+    - `__type__` が `"signal"` であることを確認する
     - 値が変更されたときのみ effect が再実行される
     - 同じ値を設定しても effect は再実行されない
     - `Object.is` を使用して NaN を正しく扱う
-    - `__type__` が `"signal"` であることを確認する
     - 同じ値を設定しても downstream computed が再評価されない
   ],
 )

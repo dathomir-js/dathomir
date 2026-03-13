@@ -13,7 +13,10 @@ import type { ESTNode } from "@/transform/ast/implementation";
 import { generateNavigation } from "@/transform/navigation/implementation";
 import { createTemplateId } from "@/transform/state/implementation";
 import type { TransformState } from "@/transform/state/implementation";
-import { jsxToTree } from "@/transform/tree/implementation";
+import {
+  containsReactiveAccess,
+  jsxToTree,
+} from "@/transform/tree/implementation";
 import type { NestedTransformers } from "@/transform/tree/implementation";
 import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
 
@@ -90,7 +93,7 @@ function transformJSXNode(
           ]),
         );
 
-        if (part.expression.type === "MemberExpression") {
+        if (containsReactiveAccess(part.expression)) {
           state.runtimeImports.add("templateEffect");
           updateStatements.push(
             nExprStmt(

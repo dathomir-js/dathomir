@@ -183,6 +183,23 @@ describe("fromTree", () => {
     expect(circle.namespaceURI).toBe("http://www.w3.org/2000/svg");
   });
 
+  it("should produce independent cache entries for different flags on same structure", () => {
+    const tree: Tree[] = [["circle", { cx: "50" }]];
+    const htmlFactory = fromTree(tree, 0); // Namespace.HTML
+    const svgFactory = fromTree(tree, 1); // Namespace.SVG
+
+    expect(htmlFactory).not.toBe(svgFactory);
+
+    const htmlFragment = htmlFactory();
+    const svgFragment = svgFactory();
+
+    // HTML factory produces HTMLUnknownElement, SVG factory produces SVGElement
+    const htmlEl = htmlFragment.firstChild as Element;
+    const svgEl = svgFragment.firstChild as Element;
+    expect(svgEl.namespaceURI).toBe("http://www.w3.org/2000/svg");
+    expect(htmlEl.namespaceURI).not.toBe("http://www.w3.org/2000/svg");
+  });
+
   it("should auto-detect MathML namespaces", () => {
     const tree: Tree[] = [["div", null, ["math", null, ["mi", null, "x"]]]];
     const factory = fromTree(tree);

@@ -1,7 +1,7 @@
 import { onCleanup, signal, templateEffect } from "@dathomir/reactivity";
 import { atom, createAtomStore, withStore } from "@dathomir/store";
 
-import { bindStoreToHost } from "./internal";
+import { bindStoreToHost, peekStoreFromHost } from "./internal";
 import { describe, expect, it, vi } from "vitest";
 
 import { css } from "../css/implementation";
@@ -443,9 +443,9 @@ describe("defineComponent", () => {
 
     expect(el.title).toBe("hello");
     expect(el.querySelector("span")?.textContent).toBe("child");
-    expect(el.shadowRoot?.querySelector("div")?.getAttribute("data-title")).toBe(
-      "hello",
-    );
+    expect(
+      el.shadowRoot?.querySelector("div")?.getAttribute("data-title"),
+    ).toBe("hello");
 
     el.remove();
   });
@@ -634,5 +634,125 @@ describe("defineComponent", () => {
 
     el.remove();
     consoleError.mockRestore();
+  });
+
+  it("should call hydrate (not setup) when DSD content is present in shadowRoot", async () => {
+    const tag = uniqueTag();
+    const hydrateFn = vi.fn();
+    const setupFn = vi.fn(() => document.createTextNode("from-setup"));
+
+    defineComponent(tag, setupFn, { hydrate: hydrateFn });
+
+    // Use innerHTML parsing so the browser natively creates a declarative shadow root
+    // (document.createElement cannot produce a pre-existing shadowRoot)
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><p>SSR content</p></template></${tag}>`;
+    const el = container.firstElementChild!;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    // hydrate should be called, not setup
+    expect(hydrateFn).toHaveBeenCalled();
+    expect(setupFn).not.toHaveBeenCalled();
+
+    el.remove();
+  });
+
+  it("should expand DSD <template shadowrootmode> into real shadowRoot on fallback", async () => {
+    const tag = uniqueTag();
+    const setupFn = vi.fn(() => document.createTextNode("re-rendered"));
+
+    defineComponent(tag, setupFn);
+
+    // Use innerHTML parsing so the browser natively creates a declarative shadow root
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><div>SSR fallback content</div></template></${tag}>`;
+    const el = container.firstElementChild!;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    // The template element should be removed by native DSD parsing
+    expect(el.querySelector("template")).toBeNull();
+    // ShadowRoot should exist
+    expect(el.shadowRoot).not.toBeNull();
+    // Without hydrate option, setup runs and clears DSD content, then re-renders
+    expect(setupFn).toHaveBeenCalled();
+    expect(el.shadowRoot!.textContent).toBe("re-rendered");
+
+    el.remove();
+  });
+
+  it("should exclude attribute: false prop from observedAttributes and only allow JS property setter", async () => {
+    const tag = uniqueTag();
+    let capturedProps: any;
+
+    const Comp = defineComponent(
+      tag,
+      ({ props }) => {
+        capturedProps = props;
+        return document.createTextNode("test");
+      },
+      {
+        props: {
+          internal: { type: Number, default: 42, attribute: false },
+          visible: { type: String },
+        },
+      },
+    ) as any;
+
+    // observedAttributes should NOT contain "internal" but should contain "visible"
+    const observed = Comp.webComponent.observedAttributes as string[];
+    expect(observed).not.toContain("internal");
+    expect(observed).toContain("visible");
+
+    const el = document.createElement(tag) as any;
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    // Default value should be applied (not from attribute)
+    expect(capturedProps.internal.value).toBe(42);
+
+    // setAttribute should NOT update the signal (attribute is not observed)
+    el.setAttribute("internal", "99");
+    expect(capturedProps.internal.value).toBe(42);
+
+    // JS property setter should update the signal
+    el.internal = 99;
+    expect(capturedProps.internal.value).toBe(99);
+    expect(el.internal).toBe(99);
+
+    el.remove();
+  });
+
+  it("should propagate store to nested custom elements in JSX subtree", async () => {
+    const childTag = uniqueTag();
+    const parentTag = uniqueTag();
+
+    defineComponent(childTag, () => {
+      return document.createTextNode("child");
+    });
+
+    const Parent = defineComponent(parentTag, () => {
+      const slot = document.createElement("slot");
+      return slot;
+    });
+
+    const appStore = createAtomStore({ appId: `store-prop-${parentTag}` });
+
+    // Create parent via JSX helper within a store boundary, with a child custom element
+    const childEl = document.createElement(childTag);
+    const parentEl = withStore(appStore, () =>
+      Parent({ children: childEl }),
+    ) as HTMLElement;
+
+    document.body.appendChild(parentEl);
+    await waitForMicrotask();
+
+    // The child should have the store bound via bindCurrentStoreToSubtree
+    expect(peekStoreFromHost(childEl)).toBe(appStore);
+
+    parentEl.remove();
   });
 });

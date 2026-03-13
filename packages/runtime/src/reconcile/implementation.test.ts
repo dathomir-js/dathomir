@@ -537,6 +537,109 @@ describe("reconcile", () => {
   });
 
   // ===========================================
+  // Unkeyed Mode Shrink/Grow
+  // ===========================================
+  describe("unkeyed shrink and grow", () => {
+    it("should remove excess nodes when shrinking: [a,b,c] → [x]", () => {
+      const parent = document.createElement("ul");
+      const createFn = (item: string) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        return li;
+      };
+      const updateFn = vi.fn((node: Node, item: string) => {
+        (node as HTMLElement).textContent = item;
+      });
+
+      reconcile(parent, ["a", "b", "c"], undefined, createFn, updateFn);
+      expect(parent.children.length).toBe(3);
+      const firstNode = parent.children[0];
+
+      reconcile(parent, ["x"], undefined, createFn, updateFn);
+
+      expect(parent.children.length).toBe(1);
+      // First node is reused and updated
+      expect(parent.children[0]).toBe(firstNode);
+      expect(parent.children[0].textContent).toBe("x");
+    });
+
+    it("should create new nodes when growing: [a] → [x,y,z]", () => {
+      const parent = document.createElement("ul");
+      const createFn = (item: string) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        return li;
+      };
+      const updateFn = vi.fn((node: Node, item: string) => {
+        (node as HTMLElement).textContent = item;
+      });
+
+      reconcile(parent, ["a"], undefined, createFn, updateFn);
+      expect(parent.children.length).toBe(1);
+      const firstNode = parent.children[0];
+
+      reconcile(parent, ["x", "y", "z"], undefined, createFn, updateFn);
+
+      expect(parent.children.length).toBe(3);
+      // First node is reused and updated
+      expect(parent.children[0]).toBe(firstNode);
+      expect(parent.children[0].textContent).toBe("x");
+      // New nodes are created
+      expect(parent.children[1].textContent).toBe("y");
+      expect(parent.children[2].textContent).toBe("z");
+    });
+  });
+
+  // ===========================================
+  // Null/Undefined Key Warning
+  // ===========================================
+  describe("null and undefined key warning", () => {
+    it("should warn on null key in development mode", () => {
+      const parent = document.createElement("ul");
+      const items = [{ id: null as unknown as number, text: "a" }];
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      reconcile(
+        parent,
+        items,
+        (item) => item.id,
+        (item) => {
+          const li = document.createElement("li");
+          li.textContent = item.text;
+          return li;
+        },
+      );
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("null"));
+
+      warnSpy.mockRestore();
+    });
+
+    it("should warn on undefined key in development mode", () => {
+      const parent = document.createElement("ul");
+      const items = [{ text: "a" }];
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      reconcile(
+        parent,
+        items,
+        (item) => (item as Record<string, unknown>).id,
+        (item) => {
+          const li = document.createElement("li");
+          li.textContent = item.text;
+          return li;
+        },
+      );
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("undefined"),
+      );
+
+      warnSpy.mockRestore();
+    });
+  });
+
+  // ===========================================
   // Legacy tests (preserved from original)
   // ===========================================
   describe("legacy tests", () => {

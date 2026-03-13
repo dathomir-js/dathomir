@@ -15,7 +15,8 @@ function generateNavigation(
   let expr: ESTNode = nCall(nId("firstChild"), [fragmentId]);
 
   for (let i = 0; i < path.length; i++) {
-    const index = path[i]!;
+    const index = path[i];
+    if (index === undefined) continue;
 
     if (i === 0 && index === 0) {
       continue;

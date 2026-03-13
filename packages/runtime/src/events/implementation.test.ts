@@ -188,4 +188,18 @@ describe("event", () => {
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(receivedKey).toBe("Escape");
   });
+
+  it("should register listener even outside createRoot scope", () => {
+    const button = document.createElement("button");
+    const handler = vi.fn();
+
+    // Call event() outside createRoot — should still work
+    event("click", button, handler);
+
+    button.click();
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    button.click();
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
 });

@@ -92,6 +92,14 @@ describe("SSR Mode Transformation", () => {
     expect(result.code).toContain("Map");
   });
 
+  it("inserts SSR markers for dynamic text content", () => {
+    const code = `const element = <div>{name}</div>;`;
+    const result = transform(code, { mode: "ssr" });
+
+    // The tree should contain a {text} marker placeholder for the dynamic text child
+    expect(result.code).toContain("{text}");
+  });
+
   it("handles attributes in SSR mode", () => {
     const code = `const element = <div class="container">Content</div>;`;
     const result = transform(code, { mode: "ssr" });
@@ -307,5 +315,22 @@ describe("generateStateObject", () => {
     );
     expect(propNames).toContain("count");
     expect(propNames).toContain("name");
+  });
+
+  it("composes with generateSSRRender to produce state in renderToString call", () => {
+    const signals = new Map<string, ESTNode>([
+      ["count", { type: "Literal", value: 0, raw: "0" }],
+    ]);
+    const stateExpr = generateStateObject(signals);
+    const tree: ESTNode = { type: "ArrayExpression", elements: [] };
+    const result = generateSSRRender(tree, [], stateExpr);
+
+    const call = result as CallExpression;
+    // Second argument (state) should be the ObjectExpression from generateStateObject
+    expect(call.arguments[1]?.type).toBe("ObjectExpression");
+    const stateArg = call.arguments[1] as ObjectExpression;
+    expect(stateArg.properties).toHaveLength(1);
+    const prop = stateArg.properties[0] as Property;
+    expect((prop.key as Identifier).name).toBe("count");
   });
 });

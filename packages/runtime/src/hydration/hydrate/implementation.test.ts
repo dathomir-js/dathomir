@@ -15,9 +15,11 @@ import {
   handleMismatch,
   hydrate,
   hydrateRoot,
+  hydrateTextMarker,
   isHydrated,
   markHydrated,
 } from "@/hydration/hydrate/implementation";
+import { HydrationMarkerType } from "@/hydration/walker/implementation";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -282,5 +284,59 @@ describe("hydrate", () => {
     } as never);
 
     expect(store.ref(countAtom).value).toBe(9);
+  });
+});
+
+describe("hydrateRoot with closed ShadowRoot", () => {
+  it("returns null and warns for closed ShadowRoot", () => {
+    vi.stubGlobal("__DEV__", true);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const host = document.createElement("div");
+    const closedRoot = host.attachShadow({ mode: "closed" });
+    document.body.appendChild(host);
+
+    const setup = vi.fn();
+    const result = hydrateRoot(closedRoot, setup);
+
+    expect(result).toBeNull();
+    expect(setup).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("closed"));
+
+    warnSpy.mockRestore();
+    document.body.removeChild(host);
+  });
+});
+
+describe("hydrateTextMarker", () => {
+  it("updates text node after marker reactively", async () => {
+    const count = signal(10);
+
+    // Build a DOM with a comment marker and a text node after it
+    const container = document.createElement("div");
+    const marker = document.createComment("dh:t:0");
+    const textNode = document.createTextNode("initial");
+    container.append(marker, textNode);
+
+    const markerInfo = {
+      type: HydrationMarkerType.Text,
+      id: 0,
+      node: marker,
+    };
+
+    // hydrateTextMarker must run inside a createRoot for templateEffect
+    const { createRoot } = await import("@dathomir/reactivity");
+    createRoot(() => {
+      hydrateTextMarker(markerInfo, () => count.value);
+    });
+
+    // Wait for effect
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(textNode.textContent).toBe("10");
+
+    // Update signal
+    count.set(42);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(textNode.textContent).toBe("42");
   });
 });

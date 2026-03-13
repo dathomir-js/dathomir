@@ -8,90 +8,154 @@
 
 構造化配列（Tree）を SSR 用の HTML 文字列にレンダリングする。
 
-== 関数
+== 機能仕様
 
-=== `renderTree`
+#feature_spec(
+  name: "renderTree",
+  summary: [
+    構造化配列を HTML 文字列にレンダリングする。マーカーを自動挿入し、Hydration に対応した出力を生成する。
+  ],
+  api: [
+    ```typescript
+    function renderTree(tree: Tree\[\], options?: RenderOptions): string
+    ```
 
-```typescript
-function renderTree(tree: Tree[], options?: RenderOptions): string
-```
+    - `tree`: レンダリング対象の構造化配列
+    - `options`: レンダリングオプション（任意）
 
-構造化配列を HTML 文字列にレンダリングする。マーカーを自動挿入し、Hydration に対応した出力を生成する。
+    *RenderContext*:
+    ```typescript
+    interface RenderContext {
+      markerId: number;
+      state: StateObject;
+      dynamicValues: Map<number, unknown>;
+      componentRenderer?: ComponentRenderer;
+      store?: AtomStore;
+      storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
+    }
+    ```
 
-=== `renderToString`
+    `ComponentRenderer` は Web Components の Declarative Shadow DOM (DSD) 内容を生成する関数。
 
-```typescript
-function renderToString(
-  tree: Tree[],
-  state?: StateObject,
-  dynamicValues?: Map<number, unknown>,
-  componentRenderer?: ComponentRenderer,
-  store?: AtomStore,
-): string
+    - 引数: `tagName` (カスタム要素名), `attrs` (属性オブジェクト)
+    - 第3引数で request-scoped `store` を受け取れる
+    - 戻り値: DSD の HTML 文字列、または `null`（登録されていない場合）
 
-function renderToString(
-  tree: Tree[],
-  options?: RenderOptions,
-): string
-```
+    `RenderOptions` は必要に応じて `store?: AtomStore` と `storeSnapshotSchema?: AtomStoreSnapshot<...>` を受け取り、SSR render 全体を request-scoped store boundary 内で評価できる。
 
-状態付きの完全な HTML 文字列を生成する便利メソッド。`renderTree` + 状態スクリプトの挿入を行う。
+    - render 実行中に nested `withStore()` boundary が作られた場合、`ComponentRenderer` にはその時点で active な store を優先して渡す
+    - `storeSnapshotSchema` が指定された場合、SSR 出力へ `<script type="application/json" data-dh-store>...</script>` を挿入する
+    - `storeSnapshotSchema` を使う場合は `store` も必須とする
+    - `data-dh-store` の payload は `storeSnapshotSchema.serialize(store)` を `serializeState()` でシリアライズした plain object とする
+    - 既存の `data-dh-state` とは別 script として扱う
+  ],
+  test_cases: [
+    - 単純な要素をレンダリング
+    - ネストされた要素をレンダリング
+    - void 要素を正しくレンダリング
+    - boolean 属性をレンダリング
+    - 属性のイベントハンドラをスキップ
+    - テキストコンテンツの HTML をエスケープ
+    - 属性値の HTML をエスケープ
+    - テキストプレースホルダーをマーカー付きでレンダリング
+    - each プレースホルダーをブロックマーカー付きでレンダリング
+    - 複数の動的値をレンダリング
+    - request-scoped store を render option 経由で ComponentRenderer に渡す
+    - nested render で active store boundary を render option の store より優先する
+    - storeSnapshotSchema 指定時に store snapshot script を出力する
+    - style オブジェクトを CSS 文字列にシリアライズして SSR 出力に含める
+    - setComponentRenderer で設定したグローバル componentRenderer を使用する
+    - storeSnapshotSchema を store なしで指定するとエラーをスローする
+  ],
+  edge_cases: [
+    - `storeSnapshotSchema` 指定時に `store` が未指定の場合はエラーをスローする
+    - `ComponentRenderer` が `null` を返した場合は通常の要素として扱う
+  ],
+  impl_notes: [
+    - `escapeHtml`: XSS 防止のための HTML エスケープ
+    - `escapeAttr`: 属性値のエスケープ
+    - `camelToKebab`: CSS プロパティ名を camelCase → kebab-case に変換
+    - `serializeStyleObject`: style オブジェクトを CSS 文字列に変換
+    - `renderAttrs`: 属性のレンダリング（boolean 属性、style オブジェクト対応）
+    - Void 要素（`<br>`、`<img>` 等）の閉じタグ省略
+    - Boolean 属性（`disabled`, `checked` 等）の判定
+    - Declarative Shadow DOM の生成（カスタム要素向け）
+    - store snapshot schema がある場合の `<script data-dh-store>` 生成
+    - Web 標準 API のみ使用（Node.js 依存ゼロ）
+    - HTML エスケープは最小限の置換で実装（バンドルサイズ考慮）
+    - プレースホルダーはマーカーに変換し、動的値があれば埋め込む
+  ],
+)
 
-=== `setComponentRenderer`
+#feature_spec(
+  name: "renderToString",
+  summary: [
+    状態付きの完全な HTML 文字列を生成する便利メソッド。`renderTree` + 状態スクリプトの挿入を行う。
+  ],
+  api: [
+    ```typescript
+    function renderToString(
+      tree: Tree\[\],
+      state?: StateObject,
+      dynamicValues?: Map<number, unknown>,
+      componentRenderer?: ComponentRenderer,
+      store?: AtomStore,
+    ): string
 
-```typescript
-function setComponentRenderer(renderer: ComponentRenderer | undefined): void
-```
+    function renderToString(
+      tree: Tree\[\],
+      options?: RenderOptions,
+    ): string
+    ```
 
-グローバルな ComponentRenderer を設定する。SSR 時に Web Components の Declarative Shadow DOM を生成するために使用する。
+    - `tree`: レンダリング対象の構造化配列
+    - `state`: Signal の初期値オブジェクト（任意）
+    - `dynamicValues`: 動的値のマップ（任意）
+    - `componentRenderer`: コンポーネントレンダラー関数（任意）
+    - `store`: request-scoped AtomStore（任意）
+    - `options`: RenderOptions オブジェクト形式のオーバーロード（任意）
+  ],
+  test_cases: [
+    - 状態付きでレンダリング
+    - 状態が空の場合 state script をスキップ
+    - 第5引数として request-scoped store を受け付ける
+    - オブジェクトオーバーロードで storeSnapshotSchema をサポート
+  ],
+)
 
-=== `createContext`
+#feature_spec(
+  name: "setComponentRenderer",
+  summary: [
+    グローバルな ComponentRenderer を設定する。SSR 時に Web Components の Declarative Shadow DOM を生成するために使用する。
+  ],
+  api: [
+    ```typescript
+    function setComponentRenderer(renderer: ComponentRenderer | undefined): void
+    ```
 
-```typescript
-function createContext(options?: RenderOptions): RenderContext
-```
+    - `renderer`: 設定するレンダラー関数、または `undefined` で解除
+  ],
+  impl_notes: [
+    - 個別の `RenderOptions` でもオーバーライド可能
+  ],
+)
 
-レンダリングコンテキストを生成する。マーカー ID のカウンターや状態を管理する。
+#feature_spec(
+  name: "createContext",
+  summary: [
+    レンダリングコンテキストを生成する。マーカー ID のカウンターや状態を管理する。
+  ],
+  api: [
+    ```typescript
+    function createContext(options?: RenderOptions): RenderContext
+    ```
 
-== 型定義
-
-```typescript
-interface RenderContext {
-  markerId: number;
-  state: StateObject;
-  dynamicValues: Map<number, unknown>;
-  componentRenderer?: ComponentRenderer;
-  store?: AtomStore;
-  storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
-}
-```
-
-`ComponentRenderer` は Web Components の Declarative Shadow DOM (DSD) 内容を生成する関数。
-
-- 引数: `tagName` (カスタム要素名), `attrs` (属性オブジェクト)
-- 第3引数で request-scoped `store` を受け取れる
-- 戻り値: DSD の HTML 文字列、または `null`（登録されていない場合）
-
-`RenderOptions` は必要に応じて `store?: AtomStore` と `storeSnapshotSchema?: AtomStoreSnapshot<...>` を受け取り、SSR render 全体を request-scoped store boundary 内で評価できる。
-
-- render 実行中に nested `withStore()` boundary が作られた場合、`ComponentRenderer` にはその時点で active な store を優先して渡す
-
-- `storeSnapshotSchema` が指定された場合、SSR 出力へ `<script type="application/json" data-dh-store>...</script>` を挿入する
-- `storeSnapshotSchema` を使う場合は `store` も必須とする
-- `data-dh-store` の payload は `storeSnapshotSchema.serialize(store)` を `serializeState()` でシリアライズした plain object とする
-- 既存の `data-dh-state` とは別 script として扱う
-
-== 内部処理
-
-- `escapeHtml`: XSS 防止のための HTML エスケープ
-- `escapeAttr`: 属性値のエスケープ
-- `camelToKebab`: CSS プロパティ名を camelCase → kebab-case に変換
-- `serializeStyleObject`: style オブジェクトを CSS 文字列に変換
-- `renderAttrs`: 属性のレンダリング（boolean 属性、style オブジェクト対応）
-- Void 要素（`<br>`、`<img>` 等）の閉じタグ省略
-- Boolean 属性（`disabled`, `checked` 等）の判定
-- Declarative Shadow DOM の生成（カスタム要素向け）
-- store snapshot schema がある場合の `<script data-dh-store>` 生成
+    - `options`: レンダリングオプション（任意）
+  ],
+  impl_notes: [
+    - `state` と `dynamicValues` は null 非許容で、`createContext` で `options.state ?? {}` のように初期化
+  ],
+)
 
 == 設計判断
 
@@ -203,7 +267,3 @@ interface RenderContext {
     - hydration 側で store snapshot だけを独立に復元できる
   ],
 )
-
-- Web 標準 API のみ使用（Node.js 依存ゼロ）
-- HTML エスケープは最小限の置換で実装（バンドルサイズ考慮）
-- プレースホルダーはマーカーに変換し、動的値があれば埋め込む

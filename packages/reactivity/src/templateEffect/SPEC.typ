@@ -44,10 +44,18 @@
     - owner が破棄 → effect の実行が停止する
   ],
   test_cases: [
+    - 初回実行時に同期的に実行される
+    - 依存する signal 変更時に再実行される
+    - createRoot.dispose() 呼び出しで停止する
+    - signal.value の読み取りで依存関係を登録する
+    - computed.value の読み取りで依存関係を登録する
+    - peek() 使用時は依存関係を登録しない
+    - batch 内で複数 signal 更新時に effect は 1 回だけ実行される
+    - batch の終了時にフラッシュされる
+    - createRoot 外で呼ばれても effect は登録されるが自動 dispose されない
     - effect のように動作する
     - 現在の owner によって追跡される
     - 現在のスコープに自動的に登録される
     - スコープ外で呼び出されたときは登録されない
-    - dispose 後は effect が実行されない
   ],
 )

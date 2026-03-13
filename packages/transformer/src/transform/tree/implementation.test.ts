@@ -262,4 +262,91 @@ describe("transform/tree", () => {
     expect(textPart).toBeDefined();
     expect(textPart?.expression).toEqual(nId("modeLabel"));
   });
+
+  it("jsxToTree treats .map() call expression as insert dynamic part", () => {
+    const state = createInitialState("csr");
+    const tree = div([
+      expr({
+        type: "CallExpression",
+        callee: {
+          type: "MemberExpression",
+          object: nId("items"),
+          property: nId("map"),
+          computed: false,
+          optional: false,
+        },
+        arguments: [nId("renderItem")],
+        optional: false,
+      }),
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(
+      true,
+    );
+  });
+
+  it("jsxToTree treats ConditionalExpression as insert dynamic part", () => {
+    const state = createInitialState("csr");
+    const tree = div([
+      expr({
+        type: "ConditionalExpression",
+        test: nId("active"),
+        consequent: nLit("yes"),
+        alternate: nLit("no"),
+      }),
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(
+      true,
+    );
+  });
+
+  it("jsxToTree treats generic CallExpression as insert dynamic part", () => {
+    const state = createInitialState("csr");
+    const tree = div([
+      expr({
+        type: "CallExpression",
+        callee: nId("renderContent"),
+        arguments: [],
+        optional: false,
+      }),
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(
+      true,
+    );
+  });
+
+  it("processAttributes classifies event handler as event dynamic part", () => {
+    const state = createInitialState("csr");
+    const element: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "button" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "onClick" },
+            value: expr(nId("handleClick")),
+          },
+        ],
+        selfClosing: false,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = jsxToTree(element, state, nested);
+
+    const eventPart = result.dynamicParts.find((part) => part.type === "event");
+    expect(eventPart).toBeDefined();
+    expect(eventPart?.key).toBe("click");
+  });
 });

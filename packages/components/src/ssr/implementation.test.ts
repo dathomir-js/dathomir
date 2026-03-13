@@ -1,23 +1,23 @@
 import {
-    atom,
-    createAtomStore,
-    defineAtomStoreSnapshot,
-    withStore,
+  atom,
+  createAtomStore,
+  defineAtomStoreSnapshot,
+  withStore,
 } from "@dathomir/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
-    ComponentClass,
-    ComponentContext,
+  ComponentClass,
+  ComponentContext,
 } from "@/defineComponent/implementation";
 import { defineComponent } from "@/defineComponent/implementation";
 import { clearRegistry, registerComponent } from "@/registry/implementation";
 import {
-    _resetRendererState,
-    createComponentRenderer,
-    ensureComponentRenderer,
-    renderDSD,
-    renderDSDContent,
+  _resetRendererState,
+  createComponentRenderer,
+  ensureComponentRenderer,
+  renderDSD,
+  renderDSDContent,
 } from "./implementation";
 
 describe("ssr", () => {

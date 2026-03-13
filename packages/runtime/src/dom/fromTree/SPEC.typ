@@ -1,5 +1,6 @@
 = fromTree API
 
+#import "/SPEC/functions.typ": *
 #import "/SPEC/settings.typ": *
 #show: apply-settings
 
@@ -7,32 +8,59 @@
 
 構造化配列（Tree）から DOM フラグメントを生成するファクトリ関数を提供する。Svelte 5 の `from_tree` アプローチに基づく。
 
-== 関数
+== 機能仕様
 
-=== `fromTree`
+#feature_spec(
+  name: "fromTree",
+  summary: [
+    構造化配列から DOM を生成するファクトリ関数を返す。
+  ],
+  api: [
+    ```typescript
+    function fromTree(
+      structure: readonly Tree[],
+      flags?: Namespace
+    ): () => DocumentFragment
+    ```
 
-```typescript
-function fromTree(
-  structure: readonly Tree[],
-  flags?: Namespace
-): () => DocumentFragment
-```
+    - `WeakMap` によるテンプレートキャッシュで、2回目以降は `cloneNode(true)` による高速クローン
+    - プレースホルダー（`{text}`、`{insert}`、`{each}` 等）はスキップし、静的部分のみ生成
+    - `flags` で名前空間を指定（HTML=0、SVG=1、MathML=2）
+    - キャッシュキーは `structure` 配列参照と `flags` の組み合わせ（異なる `flags` は独立したキャッシュエントリ）
 
-構造化配列から DOM を生成するファクトリ関数を返す。
+    *型定義*:
 
-- `WeakMap` によるテンプレートキャッシュで、2回目以降は `cloneNode(true)` による高速クローン
-- プレースホルダー（`{text}`、`{insert}`、`{each}` 等）はスキップし、静的部分のみ生成
-- `flags` で名前空間を指定（HTML=0、SVG=1、MathML=2）
-- キャッシュキーは `structure` 配列参照と `flags` の組み合わせ（異なる `flags` は独立したキャッシュエントリ）
+    構造化配列の型は `@/types/tree` で定義：
 
-== 型定義
-
-構造化配列の型は `@/types/tree` で定義：
-
-- `Tree`: `TreeNode | TextContent | Placeholder`
-- `TreeNode`: `[tag: string, attrs: Attrs | null, ...children: Tree[]]`
-- `Placeholder`: `[type: PlaceholderType, id: number | null]`
-- `Namespace`: `enum { HTML = 0, SVG = 1, MathML = 2 }`
+    - `Tree`: `TreeNode | TextContent | Placeholder`
+    - `TreeNode`: `[tag: string, attrs: Attrs | null, ...children: Tree[]]`
+    - `Placeholder`: `[type: PlaceholderType, id: number | null]`
+    - `Namespace`: `enum { HTML = 0, SVG = 1, MathML = 2 }`
+  ],
+  test_cases: [
+    - 単純な要素の生成
+    - 属性付き要素の生成
+    - style オブジェクトを CSS テキストにシリアライズ
+    - 空の style オブジェクトの省略
+    - テキストノードの生成
+    - ネストした要素の生成
+    - \{text\} プレースホルダー用テキストノードの生成
+    - \{insert\} プレースホルダー用コメントノードの生成
+    - 空配列の処理
+    - プレースホルダー混在の子要素処理
+    - 複数のルート要素
+    - 深くネストした要素
+    - テンプレートファクトリのキャッシュ
+    - クローンされたフラグメントを返す
+    - SVG 要素を正しい名前空間で生成
+    - 異なる flags で独立したキャッシュエントリを生成
+    - MathML 名前空間の自動検出
+  ],
+  impl_notes: [
+    - テンプレートキャッシュに `WeakMap` を使用し、GC によるメモリ解放を保証
+    - `cloneNode(true)` による DOM クローンは、`innerHTML` パースより高速かつ予測可能
+  ],
+)
 
 == 設計判断
 
@@ -68,6 +96,3 @@ function fromTree(
     JSX の自然なスタイル記法をそのまま使えるため、別途 CSS 文字列を組み立てる必要がない。
   ],
 )
-
-- テンプレートキャッシュに `WeakMap` を使用し、GC によるメモリ解放を保証
-- `cloneNode(true)` による DOM クローンは、`innerHTML` パースより高速かつ予測可能

@@ -42,8 +42,8 @@
     - プレーン ESTree オブジェクトは追加依存なしで構築でき、`esrap` 出力と直接互換である
   ],
   consequences: [
-    - ローカルの ESTree ビルダーヘルパーで必要なノードを組み立てる
-    - 関数シグネチャの型はローカル定義の `ESTNode` 群で表現する
+    - 共有 ESTree ビルダー（`@/transform/ast`）から `nLit`, `nId`, `nCall` 等をインポートして使用する
+    - 関数シグネチャの型は `@/transform/ast` の `ESTNode` 型で表現する
   ],
 )
 

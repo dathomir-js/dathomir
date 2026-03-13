@@ -14,6 +14,28 @@ import { buildComponentCall } from "@/transform/tree/implementation";
 
 import type { TransformOptions, TransformResult } from "../types";
 
+/**
+ * Adapt an oxc-parser Program to our internal ESTNode representation.
+ *
+ * oxc-parser outputs `@oxc-project/types.Program` which is structurally
+ * compatible with `ESTNode` at runtime but lacks the index signature
+ * `[key: string]: unknown`.  We validate the structural contract and
+ * return the same object typed as `ESTNode`.
+ */
+function adaptParsedProgram(
+  program: ReturnType<typeof parseSync>["program"],
+): ESTNode {
+  if (typeof program !== "object" || program === null || !("type" in program)) {
+    throw new TypeError("Expected an ESTree-compatible Program node");
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- boundary between oxc-parser types and internal ESTNode
+  return program as any;
+}
+
+function toPrintableProgram(program: Program): Parameters<typeof print>[0] {
+  return program as Parameters<typeof print>[0];
+}
+
 function isJSXElement(node: ESTNode): node is JSXElement {
   return node.type === "JSXElement";
 }
@@ -45,7 +67,7 @@ function transform(
   };
 
   const transformedProgram = walk(
-    parsed.program as unknown as ESTNode,
+    adaptParsedProgram(parsed.program),
     { inJSX: false },
     {
       JSXElement(
@@ -104,7 +126,8 @@ function transform(
   if (state.templates.length > 0) {
     let insertIndex = 0;
     for (let i = 0; i < transformedProgram.body.length; i++) {
-      if (transformedProgram.body[i]!.type === "ImportDeclaration") {
+      const statement = transformedProgram.body[i];
+      if (statement?.type === "ImportDeclaration") {
         insertIndex = i + 1;
       } else {
         break;
@@ -116,9 +139,8 @@ function transform(
 
   addRuntimeImports(transformedProgram, state.runtimeImports, runtimeModule);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { code: outputCode, map: outputMap } = print(
-    transformedProgram as any,
+    toPrintableProgram(transformedProgram),
     ts(),
     sourceMap
       ? { sourceMapSource: filename, sourceMapContent: code }

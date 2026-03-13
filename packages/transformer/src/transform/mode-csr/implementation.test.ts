@@ -100,7 +100,10 @@ describe("transform/mode-csr", () => {
     const output = transformJSXNode(node, state, nested) as unknown as {
       callee: {
         body: {
-          body: Array<{ type: string; expression?: { callee?: { name?: string } } }>;
+          body: Array<{
+            type: string;
+            expression?: { callee?: { name?: string } };
+          }>;
         };
       };
     };

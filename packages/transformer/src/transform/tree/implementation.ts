@@ -219,8 +219,9 @@ function buildComponentCall(
       }
     }
 
-    if (childExprs.length === 1) {
-      propsProperties.push(nProp(nId("children"), childExprs[0]!));
+    const onlyChild = childExprs[0];
+    if (childExprs.length === 1 && onlyChild !== undefined) {
+      propsProperties.push(nProp(nId("children"), onlyChild));
     } else if (childExprs.length > 1) {
       propsProperties.push(nProp(nId("children"), nArr(childExprs)));
     }
@@ -385,7 +386,9 @@ function jsxElementToTree(
 
   return {
     tree: nArr(treeElements),
-    dynamicParts: children.flatMap((c) => c.dynamicParts),
+    // Dynamic parts are collected via the `dynamicParts` parameter (by reference).
+    // The returned array is unused by callers; kept empty for TreeResult conformance.
+    dynamicParts: [],
   };
 }
 

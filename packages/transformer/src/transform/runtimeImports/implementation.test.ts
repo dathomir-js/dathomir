@@ -51,4 +51,30 @@ describe("transform/runtimeImports", () => {
     expect(decl.source.value).toBe("@dathomir/runtime");
     expect(decl.specifiers).toHaveLength(2);
   });
+
+  it("includes all specified import names as specifiers", () => {
+    const program: Program = {
+      type: "Program",
+      body: [],
+    };
+
+    addRuntimeImports(
+      program,
+      new Set(["fromTree", "setText", "insert"]),
+      "@dathomir/runtime",
+    );
+
+    const decl = program.body[0] as unknown as {
+      specifiers: Array<{
+        type: string;
+        imported: { name: string };
+        local: { name: string };
+      }>;
+    };
+    const names = decl.specifiers.map((s) => s.imported.name);
+    expect(names).toContain("fromTree");
+    expect(names).toContain("setText");
+    expect(names).toContain("insert");
+    expect(decl.specifiers).toHaveLength(3);
+  });
 });

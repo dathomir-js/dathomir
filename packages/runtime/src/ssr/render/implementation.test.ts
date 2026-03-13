@@ -10,7 +10,13 @@ import {
 } from "@dathomir/store";
 import { describe, expect, it } from "vitest";
 
-import { MarkerType, createMarker, renderToString, renderTree } from "@/ssr";
+import {
+  MarkerType,
+  createMarker,
+  renderToString,
+  renderTree,
+  setComponentRenderer,
+} from "@/ssr";
 import type { Tree } from "@/types/tree";
 
 describe("SSR Markers", () => {
@@ -166,6 +172,41 @@ describe("SSR Render", () => {
     expect(html).toContain("uiTheme");
     expect(html).toContain("dark");
     expect(html).toContain("<div>Hello</div>");
+  });
+
+  it("serializes style objects to CSS strings in SSR output", () => {
+    const tree: Tree[] = [
+      [
+        "div",
+        {
+          style: {
+            paddingTop: "10px",
+            borderRadius: "8px",
+            display: null,
+            opacity: "",
+          },
+        },
+        "Styled",
+      ],
+    ];
+    const html = renderTree(tree);
+    expect(html).toContain('style="padding-top: 10px; border-radius: 8px"');
+    expect(html).toContain("Styled");
+  });
+
+  it("uses global componentRenderer set via setComponentRenderer", () => {
+    setComponentRenderer((tagName) => {
+      return `<div>rendered by global: ${tagName}</div>`;
+    });
+
+    const tree: Tree[] = [["my-widget", null]];
+    const html = renderTree(tree);
+
+    expect(html).toContain("rendered by global: my-widget");
+    expect(html).toContain("shadowrootmode");
+
+    // Clean up global renderer
+    setComponentRenderer(undefined);
   });
 
   it("throws when storeSnapshotSchema is provided without a store", () => {

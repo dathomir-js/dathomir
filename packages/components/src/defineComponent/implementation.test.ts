@@ -267,6 +267,7 @@ describe("defineComponent", () => {
     const tag = uniqueTag();
     const Comp = defineComponent(tag, () => document.createTextNode("test"));
     expect(typeof Comp).toBe("function");
+    expect(typeof Comp.webComponent).toBe("function");
   });
 
   // Test case #5: observedAttributes is auto-generated from props schema
@@ -279,7 +280,7 @@ describe("defineComponent", () => {
         active: { type: Boolean },
       },
     }) as any;
-    const observed = Comp.observedAttributes as string[];
+    const observed = Comp.webComponent.observedAttributes as string[];
     expect(observed).toContain("count");
     expect(observed).toContain("label");
     expect(observed).toContain("active");
@@ -395,8 +396,8 @@ describe("defineComponent", () => {
     el.remove();
   });
 
-  // Test case #15: __tagName__ and __propsSchema__ are attached to the returned class
-  it("should attach __tagName__ and __propsSchema__ to the returned class", () => {
+  // Test case #16: __tagName__ and __propsSchema__ are attached to the returned definition
+  it("should attach __tagName__ and __propsSchema__ to the returned definition", () => {
     const tag = uniqueTag();
     const schema = { count: { type: Number } } as const;
     const Comp = defineComponent(tag, () => document.createTextNode("test"), {
@@ -405,6 +406,78 @@ describe("defineComponent", () => {
 
     expect(Comp.__tagName__).toBe(tag);
     expect(Comp.__propsSchema__).toBe(schema);
+    expect(Comp.webComponent.__tagName__).toBe(tag);
+    expect(Comp.webComponent.__propsSchema__).toBe(schema);
+  });
+
+  it("should expose the JSX helper on the returned definition", () => {
+    const tag = uniqueTag();
+    const Comp = defineComponent(tag, () => document.createTextNode("test"));
+
+    expect(Comp.jsx).toBe(Comp);
+    const el = Comp({}) as HTMLElement;
+    expect(el.tagName.toLowerCase()).toBe(tag);
+  });
+
+  it("should support JSX helper props and children", async () => {
+    const tag = uniqueTag();
+    const Comp = defineComponent(
+      tag,
+      ({ props }) => {
+        const slot = document.createElement("slot");
+        const wrapper = document.createElement("div");
+        wrapper.setAttribute("data-title", props.title.value);
+        wrapper.append(slot);
+        return wrapper;
+      },
+      { props: { title: { type: String, default: "empty" } } },
+    );
+
+    const child = document.createElement("span");
+    child.textContent = "child";
+    const el = Comp({ title: "hello", children: child }) as HTMLElement & {
+      title: string;
+    };
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.title).toBe("hello");
+    expect(el.querySelector("span")?.textContent).toBe("child");
+    expect(el.shadowRoot?.querySelector("div")?.getAttribute("data-title")).toBe(
+      "hello",
+    );
+
+    el.remove();
+  });
+
+  it("should support reactive JSX helper props", async () => {
+    const tag = uniqueTag();
+    const title = signal("before");
+    const Comp = defineComponent(
+      tag,
+      ({ props }) => {
+        const text = document.createTextNode(props.title.value);
+        templateEffect(() => {
+          text.data = props.title.value;
+        });
+        return text;
+      },
+      { props: { title: { type: String } } },
+    );
+
+    const el = Comp({ title }) as HTMLElement & { title: string };
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.title).toBe("before");
+
+    title.set("after");
+    await waitForMicrotask();
+
+    expect(el.title).toBe("after");
+    expect(el.shadowRoot?.textContent).toBe("after");
+
+    el.remove();
   });
 
   // Test case #18: Number prop: null attribute uses default value (not Number(null) = 0)

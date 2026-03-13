@@ -18,7 +18,7 @@
       tagName: string,
       component: FunctionComponent<S>,
       options?: ComponentOptions<S>,
-    ): ComponentConstructor<S>
+    ): DefinedComponent<S>
     ```
 
     *主要型*:
@@ -69,14 +69,35 @@
       readonly prototype: HTMLElement;
     } & ComponentClass<S>;
 
-    interface ComponentClass<S extends PropsSchema = PropsSchema> extends Function {
+    interface ComponentMetadata<S extends PropsSchema = PropsSchema> {
       readonly __tagName__: string;
       readonly __propsSchema__?: S;
     }
 
+    interface ComponentClass<S extends PropsSchema = PropsSchema> extends Function, ComponentMetadata<S> {}
+
+    type JSXPropValue<T> = T | { readonly value: T };
+
+    type JSXComponentProps<S extends PropsSchema = PropsSchema> = {
+      readonly [K in keyof S]?: JSXPropValue<InferPropType<S[K]>>;
+    } & {
+      readonly children?: unknown;
+    };
+
+    type JSXComponent<S extends PropsSchema = PropsSchema> = (
+      props: JSXComponentProps<S> | null,
+    ) => Node;
+
+    interface DefinedComponent<S extends PropsSchema = PropsSchema>
+      extends ComponentMetadata<S> {
+      (props: JSXComponentProps<S> | null): Node;
+      readonly webComponent: ComponentConstructor<S>;
+      readonly jsx: JSXComponent<S>;
+    }
+
     type ComponentElement<C> =
-      C extends ComponentClass<infer S>
-        ? { [K in keyof S]?: InferPropType<S[K]> } & { children?: unknown }
+      C extends ComponentMetadata<infer S>
+        ? JSXComponentProps<S>
         : Record<string, unknown>;
 
     type HydrateSetupFunction<S extends PropsSchema = PropsSchema> = (
@@ -87,7 +108,8 @@
   constraints: [
     - `tagName` は custom element 規約に従いハイフンを含む
     - `component` は `host` / `props` / `store` を持つ単一 context object を受け取る関数コンポーネントである
-    - CSR では登録済み `HTMLElement` クラス、SSR では `__tagName__` / `__propsSchema__` を持つプレースホルダークラスを返す
+    - 返り値は callable な `DefinedComponent` であり、`<Counter />` のように JSX 関数コンポーネントとして使える
+    - `DefinedComponent.webComponent` は CSR では登録済み `HTMLElement` クラス、SSR では `__tagName__` / `__propsSchema__` を持つプレースホルダークラスを返す
     - コンストラクタで props シグナルを型変換付きで初期化し、各 prop に JS property getter / setter を定義する
     - CSR の custom element constructor では current store boundary を host に捕捉する
     - JSX runtime が生成した subtree 内の custom element に対しても current store boundary が伝播する
@@ -215,6 +237,21 @@
 )
 
 #adr(
+  header("defineComponent は callable definition object を返す", Status.Accepted, "2026-03-11"),
+  [
+    custom element class だけを返すと `<my-counter>` 用の module augmentation が別途必要になり、TSX で `Counter` をそのまま書けないため DX が落ちる。
+  ],
+  [
+    `defineComponent` は `webComponent` と `jsx` を持つ callable な `DefinedComponent` を返し、返り値自体を JSX 関数コンポーネントとして使えるようにする。
+  ],
+  [
+    - `const Counter = defineComponent(...)` のまま `<Counter initial={1} />` が書ける
+    - SSR では同じ返り値を `renderDSD(Counter, ...)` に渡せる
+    - custom element class が必要な場面では `Counter.webComponent` から明示的に参照できる
+  ],
+)
+
+#adr(
   header("関数コンポーネントのリアクティブ props サポート", Status.Accepted, "2026-03-09"),
   [
     既存の関数コンポーネントを Web Component 化しつつ、props の継続的な変化にも反応できる必要がある。
@@ -338,13 +375,15 @@
     12. DSD が存在する場合にハイドレーションモードで動作する
     13. DSD 非対応ブラウザで `<template>` がフォールバック展開される
     14. SSR 環境でレジストリに登録される
-    15. `__tagName__` と `__propsSchema__` が返されるクラスに付与される
-    16. Component Class を `renderDSD` の引数として使用できる
-    17. `ComponentElement<typeof MyComp>` でカスタム要素の props 型が推論される
-    18. Number 型の prop: `null` 属性値はデフォルト値を使用する（`Number(null)` = 0 を使わない）
-    19. `setup` 関数がエラーを投げても `#dispose` が安全に扱われる（再接続時も動作）
-    20. `withStore()` 内で生成された custom element が `ctx.store` から同じ store instance を受け取る
-    21. nested `withStore()` で生成された custom element は内側の store instance を受け取る
-    22. `withStore()` 内の JSX subtree に含まれる nested custom element も store instance を受け取る
+    15. `defineComponent()` の返り値が `webComponent` と `jsx` を持つ callable object になる
+    16. `__tagName__` と `__propsSchema__` が返り値に付与される
+    17. `DefinedComponent.webComponent` を `renderDSD` の引数として使用できる
+    18. `ComponentElement<typeof MyComp>` で JSX props 型が推論される
+    19. 返り値自体を JSX 関数コンポーネントとして使うと host props / children が custom element に渡る
+    20. Number 型の prop: `null` 属性値はデフォルト値を使用する（`Number(null)` = 0 を使わない）
+    21. `setup` 関数がエラーを投げても `#dispose` が安全に扱われる（再接続時も動作）
+    22. `withStore()` 内で生成された custom element が `ctx.store` から同じ store instance を受け取る
+    23. nested `withStore()` で生成された custom element は内側の store instance を受け取る
+    24. `withStore()` 内の JSX subtree に含まれる nested custom element も store instance を受け取る
   ],
 )

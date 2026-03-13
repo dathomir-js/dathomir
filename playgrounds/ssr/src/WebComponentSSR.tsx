@@ -46,6 +46,33 @@ const counterStyles = css`
     margin: 8px 0 16px;
   }
 
+  .meta {
+    margin: 0 0 8px;
+    color: #345449;
+    font-size: 0.95rem;
+  }
+
+  .slot-content {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(33, 71, 60, 0.16);
+  }
+
+  section[data-accent="mint"] .mode-badge {
+    background: #d5f0e1;
+    color: #0f5b3a;
+  }
+
+  section[data-accent="amber"] .mode-badge {
+    background: #ffe4b8;
+    color: #8c4d00;
+  }
+
+  section[data-accent="night"] .mode-badge {
+    background: #203247;
+    color: #dbe9f7;
+  }
+
   button {
     border: none;
     border-radius: 999px;
@@ -58,19 +85,41 @@ const counterStyles = css`
 
 export const SSRStoreCounter = defineComponent(
   "dathomir-ssr-store-counter",
-  ({ store }) => {
+  ({ props, store }) => {
     const count = store.ref(countAtom);
     const mode = typeof document === "undefined" ? "SSR" : "CSR";
 
     return (
-      <section>
+      <section data-accent={props.accent.value}>
         <div class="mode-badge">{mode}</div>
-        <h2>SSR Store Counter</h2>
-        <p>Server-rendered Web Component using a scoped atom store.</p>
+        <h2>{props.headline.value}</h2>
+        <p>{props.note.value}</p>
+        <p class="meta">
+          Mirrored count prop: <strong>{props.count.value}</strong>
+        </p>
+        <p class="meta">
+          Accent prop: <strong>{props.accent.value}</strong>
+        </p>
         <div class="count">{count.value}</div>
-        <button onClick={() => count.set((value) => value + 1)}>Increment</button>
+        <button onClick={() => count.set((value) => value + 1)}>
+          Increment shared store
+        </button>
+        <div class="slot-content">
+          <slot />
+        </div>
       </section>
     );
   },
-  { styles: [counterStyles] },
+  {
+    styles: [counterStyles],
+    props: {
+      headline: { type: String, default: "SSR Store Counter" },
+      note: {
+        type: String,
+        default: "Server-rendered Web Component using a scoped atom store.",
+      },
+      count: { type: Number, default: 0 },
+      accent: { type: String, default: "light" },
+    },
+  },
 );

@@ -6,37 +6,138 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dathomir SSR Playground</title>
   <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
+    :root {
+      color-scheme: light;
+      --page-bg: radial-gradient(circle at top, #f8fbf9 0%, #eef4f0 52%, #e3ece7 100%);
+      --panel-bg: rgba(255, 255, 255, 0.82);
+      --panel-border: rgba(28, 58, 47, 0.12);
+      --text: #173127;
+      --muted: #476257;
+      --button-bg: #21473c;
+      --button-fg: #f6fbf8;
+      --code-bg: rgba(33, 71, 60, 0.08);
+      font-family: "Iowan Old Style", "Palatino Linotype", serif;
     }
 
-    .counter {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 20px 0;
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--page-bg);
+      color: var(--text);
+    }
+
+    #app {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    main {
+      display: grid;
+      gap: 24px;
+    }
+
+    section,
+    article {
+      padding: 24px;
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 18px 40px rgba(34, 59, 48, 0.08);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      letter-spacing: -0.04em;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.45rem;
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.6;
     }
 
     button {
-      padding: 8px 16px;
-      font-size: 16px;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      background: var(--button-bg);
+      color: var(--button-fg);
+      font: inherit;
+      font-size: 0.95rem;
       cursor: pointer;
+      transition: transform 160ms ease, opacity 160ms ease;
     }
 
-    .count {
-      font-size: 24px;
-      min-width: 50px;
-      text-align: center;
+    button:hover {
+      transform: translateY(-1px);
+      opacity: 0.96;
     }
 
-    .info {
-      background: #f0f0f0;
-      padding: 10px;
-      border-radius: 4px;
-      margin: 10px 0;
+    code {
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--code-bg);
+      font-size: 0.92em;
+    }
+
+    .counter-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .ssr-markup-preview {
+      margin-top: 16px;
+    }
+
+    .ssr-markup-code {
+      margin: 16px 0 0;
+      overflow-x: auto;
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(17, 36, 29, 0.92);
+      color: #e0f1e8;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.5;
+      font-family: "Berkeley Mono", "SFMono-Regular", monospace;
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 720px) {
+      #app {
+        padding: 20px 14px 40px;
+      }
+
+      section,
+      article {
+        padding: 18px;
+        border-radius: 18px;
+      }
     }
   </style>
 </head>

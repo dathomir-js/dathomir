@@ -28,8 +28,8 @@ const styles = css`
   }
 `;
 
-defineComponent('my-counter', (_host, ctx) => {
-  const count = signal(ctx.props.initial.value);
+const Counter = defineComponent('my-counter', ({ props }) => {
+  const count = signal(props.initial.value);
 
   return (
     <button onClick={() => count.update(v => v + 1)}>
@@ -40,6 +40,8 @@ defineComponent('my-counter', (_host, ctx) => {
   styles: [styles],
   props: { initial: { type: Number, default: 0 } },
 });
+
+const app = <Counter initial={1} />;
 ```
 
 ```html
@@ -50,7 +52,7 @@ defineComponent('my-counter', (_host, ctx) => {
 
 ### `defineComponent(tagName, setup, options?)`
 
-Define and register a custom element.
+Define and register a custom element, and get back a JSX-ready component definition.
 
 - **tagName**: Custom element name (must contain a hyphen)
 - **setup**: Function that creates the component's DOM content
@@ -58,6 +60,7 @@ Define and register a custom element.
   - `styles`: Array of CSSStyleSheet or string styles
   - `props`: PropsSchema object defining observed attributes with type coercion
   - `hydrate`: Hydration setup function for SSR
+- **returns**: Callable definition with `webComponent` and `jsx` helpers
 
 ### `css`
 

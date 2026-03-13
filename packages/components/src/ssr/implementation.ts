@@ -7,8 +7,8 @@
  */
 
 import type {
-  ComponentClass,
   ComponentContext,
+  ComponentMetadata,
   PropDefinition,
   PropsSchema,
 } from "@/defineComponent/implementation";
@@ -202,8 +202,8 @@ function escapeAttr(value: string): string {
  * ```
  */
 function renderDSDContent(
-  target: string | ComponentClass,
-  attrs: Record<string, string> = {},
+  target: string | ComponentMetadata,
+  attrs: Record<string, unknown> = {},
   options: SSRStoreOptions = {},
 ): string {
   const tagName = typeof target === "string" ? target : target.__tagName__;
@@ -239,8 +239,8 @@ function renderDSDContent(
  * ```
  */
 function renderDSD(
-  target: string | ComponentClass,
-  attrs: Record<string, string> = {},
+  target: string | ComponentMetadata,
+  attrs: Record<string, unknown> = {},
   options: SSRStoreOptions = {},
 ): string {
   const tagName = typeof target === "string" ? target : target.__tagName__;
@@ -249,7 +249,16 @@ function renderDSD(
   // Build attribute string
   let attrStr = "";
   for (const [key, value] of Object.entries(attrs)) {
-    attrStr += ` ${key}="${escapeAttr(value)}"`;
+    if (value === null || value === undefined || value === false) {
+      continue;
+    }
+
+    if (value === true) {
+      attrStr += ` ${key}`;
+      continue;
+    }
+
+    attrStr += ` ${key}="${escapeAttr(String(value))}"`;
   }
 
   return `<${tagName}${attrStr}>${dsdTemplate}</${tagName}>`;

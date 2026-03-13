@@ -1653,7 +1653,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
       tagName: string,
       setup: SetupFunction<S>,
       options?: ComponentOptions<S>,
-    ): ComponentConstructor<S>
+    ): DefinedComponent<S>
     ```
 
     *Props 定義（ランタイム型）*:
@@ -1709,9 +1709,24 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
       readonly prototype: HTMLElement;
     \} & ComponentClass<S>;
 
-    interface ComponentClass<S extends PropsSchema = PropsSchema> \{
+    interface ComponentMetadata<S extends PropsSchema = PropsSchema> \{
       readonly __tagName__: string;
       readonly __propsSchema__?: S;
+    \}
+
+    interface ComponentClass<S extends PropsSchema = PropsSchema> extends ComponentMetadata<S> \{
+    \}
+
+    type JSXPropValue<T> = T | \{ readonly value: T \};
+
+    type JSXComponentProps<S extends PropsSchema = PropsSchema> = \{
+      readonly [K in keyof S]?: JSXPropValue<InferPropType<S[K]>>;
+    \} & \{ children?: unknown \};
+
+    interface DefinedComponent<S extends PropsSchema = PropsSchema> extends ComponentMetadata<S> \{
+      (props: JSXComponentProps<S> | null): Node;
+      readonly webComponent: ComponentConstructor<S>;
+      readonly jsx: (props: JSXComponentProps<S> | null) => Node;
     \}
     ```
 
@@ -1719,9 +1734,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     ```typescript
     type ComponentElement<C> =
       C extends \{ __propsSchema__?: infer S \} ?
-        (S extends PropsSchema ? \{
-          [K in keyof S]?: InferPropType<S[K]>;
-        \} & \{ children?: unknown \} : Record<string, unknown>) :
+        (S extends PropsSchema ? JSXComponentProps<S> : Record<string, unknown>) :
         Record<string, unknown>;
     ```
 
@@ -1732,6 +1745,7 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     - `tagName` はハイフンを含む有効なカスタム要素名であること
     - Shadow DOM は `open` モードのみ
     - DSD が存在する場合は `attachShadow` をスキップ
+    - `defineComponent` の返り値は callable な `DefinedComponent` であり、TSX では `<Counter />` のように直接使える
     - `connectedCallback` で `createRoot` → `setup` 実行 → Fragment を `shadowRoot.append`
     - `disconnectedCallback` で `dispose()` により全 effect/event を cleanup
     - `attributeChangedCallback` で型変換を行い、内部 Signal を更新
@@ -1767,7 +1781,10 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
       \},
     \});
 
-    // JSX 型補完の登録
+    // JSX 関数コンポーネントとして直接使える
+    <Counter count=\{5\} label="Items" />
+
+    // custom element tag 用の JSX 型補完の登録
     declare module '@dathomir/core/jsx-runtime' \{
       namespace JSX \{
         interface IntrinsicElements \{

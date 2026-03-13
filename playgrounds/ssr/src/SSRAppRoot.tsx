@@ -15,4 +15,9 @@ export const SSRAppRoot = defineComponent(
 
     return withStore(store, () => <App />);
   },
+  {
+    props: {
+      headline: { type: String, default: "Dathomir SSR Playground" },
+    },
+  },
 );

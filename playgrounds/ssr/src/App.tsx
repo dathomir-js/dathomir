@@ -1,4 +1,6 @@
+import { signal } from "@dathomir/core";
 import { getCurrentStore, withStore } from "@dathomir/core";
+import { renderDSD } from "@dathomir/components/ssr";
 
 import type { DemoTheme } from "./demoStore";
 import {
@@ -6,7 +8,7 @@ import {
   createDemoStore,
   themeAtom,
 } from "./demoStore";
-import "./WebComponentSSR";
+import { SSRStoreCounter } from "./WebComponentSSR";
 
 const themeOrder: readonly DemoTheme[] = ["light", "mint", "amber", "night"];
 
@@ -51,6 +53,7 @@ function ScopeCard(props: {
 }
 
 function App() {
+  const isServer = typeof document === "undefined";
   const isolatedLeftStore = createDemoStore({
     appId: "playground-ssr-isolated-left",
     count: 10,
@@ -62,6 +65,17 @@ function App() {
     theme: "night",
   });
   const rootStore = requireCurrentStore();
+  const playgroundHeadline = signal("Callable defineComponent return");
+  const playgroundCount = signal(7);
+  const playgroundAccent = signal<DemoTheme>("mint");
+  const ssrMarkup = isServer
+    ? renderDSD(SSRStoreCounter, {
+        headline: "renderDSD(SSRStoreCounter, ...) sample",
+        note: "This markup is generated on the server from the same return value used in JSX.",
+        count: 12,
+        accent: "amber",
+      })
+    : "";
 
   return (
     <main>
@@ -112,7 +126,54 @@ function App() {
       <section>
         <h2>Custom element under the root boundary</h2>
         <p>This counter reads ctx.store, so it follows the active withStore boundary too.</p>
-        <dathomir-ssr-store-counter />
+        <SSRStoreCounter
+          headline={playgroundHeadline}
+          note="Rendered by writing the defineComponent return value directly in JSX."
+          count={playgroundCount}
+          accent={playgroundAccent}
+        >
+          <p>
+            This slotted content proves the callable return can pass children into
+            the host element.
+          </p>
+        </SSRStoreCounter>
+        <div class="counter-actions">
+          <button onClick={() => playgroundCount.set((value) => value + 5)}>
+            Bump mirrored prop
+          </button>
+          <button
+            onClick={() => playgroundAccent.set(nextTheme(playgroundAccent.peek()))}
+          >
+            Cycle accent prop
+          </button>
+          <button
+            onClick={() => {
+              playgroundHeadline.set(
+                playgroundHeadline.peek() === "Callable defineComponent return"
+                  ? "JSX helper updates live"
+                  : "Callable defineComponent return",
+              );
+            }}
+          >
+            Toggle headline prop
+          </button>
+        </div>
+      </section>
+
+      <section>
+        <h2>SSR markup generated from the same value</h2>
+        <p>
+          The box below is produced by calling <code>renderDSD(SSRStoreCounter, ...)</code>
+          with the callable object returned by <code>defineComponent()</code>.
+        </p>
+        {isServer ? (
+          <pre class="ssr-markup-code">{ssrMarkup}</pre>
+        ) : (
+          <p>
+            This preview is server-only. Inspect the initial HTML response to see the
+            rendered DSD markup.
+          </p>
+        )}
       </section>
     </main>
   );

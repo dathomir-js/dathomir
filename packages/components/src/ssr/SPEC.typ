@@ -18,8 +18,8 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
   format: [
     ```typescript
     function renderDSD(
-      target: string | ComponentClass,
-      attrs?: Record<string, string>,
+      target: string | ComponentMetadata,
+      attrs?: Record<string, unknown>,
       options?: {
         store?: AtomStore;
         storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
@@ -27,8 +27,8 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     ): string
 
     function renderDSDContent(
-      target: string | ComponentClass,
-      attrs?: Record<string, string>,
+      target: string | ComponentMetadata,
+      attrs?: Record<string, unknown>,
       options?: {
         store?: AtomStore;
         storeSnapshotSchema?: AtomStoreSnapshot<Record<string, PrimitiveAtom<unknown>>>;
@@ -44,7 +44,7 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
 
     function escapeAttr(value: string): string
 
-    interface ComponentClass extends Function {
+    interface ComponentMetadata {
       readonly __tagName__: string;
     }
     ```

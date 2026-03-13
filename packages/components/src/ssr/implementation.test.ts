@@ -10,6 +10,7 @@ import type {
     ComponentClass,
     ComponentContext,
 } from "@/defineComponent/implementation";
+import { defineComponent } from "@/defineComponent/implementation";
 import { clearRegistry, registerComponent } from "@/registry/implementation";
 import {
     _resetRendererState,
@@ -51,6 +52,23 @@ describe("ssr", () => {
 
       expect(html).toContain("<class-test");
       expect(html).toContain("<div>Component Class Test</div>");
+    });
+
+    it("should accept a defineComponent return value as first argument", () => {
+      const Comp = defineComponent("defined-component-test", () => {
+        return "<div>Defined Component Test</div>";
+      });
+
+      registerComponent(
+        Comp.__tagName__,
+        () => "<div>Defined Component Test</div>",
+        [],
+      );
+
+      const html = renderDSD(Comp, {});
+
+      expect(html).toContain("<defined-component-test");
+      expect(html).toContain("<div>Defined Component Test</div>");
     });
 
     it("should accept tag name string as first argument (legacy)", () => {
@@ -190,6 +208,23 @@ describe("ssr", () => {
 
       expect(html).toContain('<template shadowrootmode="open">');
       expect(html).toContain("<div>Class Template</div>");
+    });
+
+    it("should accept a defineComponent return value", () => {
+      const Comp = defineComponent("defined-template-test", () => {
+        return "<div>Defined Template</div>";
+      });
+
+      registerComponent(
+        Comp.__tagName__,
+        () => "<div>Defined Template</div>",
+        [],
+      );
+
+      const html = renderDSDContent(Comp, {});
+
+      expect(html).toContain('<template shadowrootmode="open">');
+      expect(html).toContain("<div>Defined Template</div>");
     });
 
     it("should include CSS in template", () => {

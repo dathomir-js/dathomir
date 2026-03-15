@@ -12,6 +12,7 @@ import type {
 } from "@/transform/jsx/implementation";
 
 import {
+  buildComponentCall,
   containsReactiveAccess,
   jsxToTree,
   processAttributes,
@@ -348,5 +349,271 @@ describe("transform/tree", () => {
     const eventPart = result.dynamicParts.find((part) => part.type === "event");
     expect(eventPart).toBeDefined();
     expect(eventPart?.key).toBe("click");
+  });
+
+  it("buildComponentCall injects island metadata for client:visible", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "visible" },
+            },
+            value: null,
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = buildComponentCall(component, state, nested) as {
+      arguments: Array<{
+        type: "ObjectExpression";
+        properties: Array<{ key: { type: string; value?: unknown } }>;
+      }>;
+    };
+
+    const props = result.arguments[0];
+    expect(props?.type).toBe("ObjectExpression");
+    expect(
+      props?.properties.some(
+        (property) =>
+          property.key.type === "Literal" &&
+          property.key.value === "data-dh-island",
+      ),
+    ).toBe(true);
+  });
+
+  it("buildComponentCall defaults bare client:interaction to click metadata", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "interaction" },
+            },
+            value: null,
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = buildComponentCall(component, state, nested) as {
+      arguments: Array<{
+        type: "ObjectExpression";
+        properties: Array<{
+          key: { type: string; value?: unknown };
+          value: { type: string; value?: unknown };
+        }>;
+      }>;
+    };
+
+    const props = result.arguments[0];
+    const interactionValue = props?.properties.find(
+      (property) =>
+        property.key.type === "Literal" &&
+        property.key.value === "data-dh-island-value",
+    );
+
+    expect(interactionValue?.value.type).toBe("Literal");
+    expect(interactionValue?.value.value).toBe("click");
+  });
+
+  it("jsxToTree throws when client directive is used on html element", () => {
+    const state = createInitialState("csr");
+    const element: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "div" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "visible" },
+            },
+            value: null,
+          },
+        ],
+        selfClosing: false,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => jsxToTree(element, state, nested)).toThrow(
+      "client:* directives are only supported on component elements",
+    );
+  });
+
+  it("jsxToTree throws for unknown client directives on html elements", () => {
+    const state = createInitialState("csr");
+    const element: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "div" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "visibile" },
+            },
+            value: null,
+          },
+        ],
+        selfClosing: false,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => jsxToTree(element, state, nested)).toThrow(
+      "Unknown client:* directive",
+    );
+  });
+
+  it("buildComponentCall throws for invalid media directive values", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "media" },
+            },
+            value: null,
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "client:media requires a string literal media query",
+    );
+  });
+
+  it("buildComponentCall throws when valueless directives receive a value", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "visible" },
+            },
+            value: { type: "Literal", value: "later", raw: '"later"' },
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "client:visible does not accept a value",
+    );
+  });
+
+  it("buildComponentCall throws for unknown client directives", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "visibile" },
+            },
+            value: null,
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "Unknown client:* directive",
+    );
+  });
+
+  it("buildComponentCall throws for explicit reserved metadata collisions", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "visible" },
+            },
+            value: null,
+          },
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "data-dh-island" },
+            value: { type: "Literal", value: "manual", raw: '"manual"' },
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "cannot be combined with explicit data-dh-island metadata",
+    );
   });
 });

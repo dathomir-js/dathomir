@@ -7,28 +7,28 @@
 == 設計判断
 
 #adr(
-	header: header("コンポーネント判定は JSX 慣例に従う", Status.Accepted, "2026-03-09"),
-	context: [
+	header("コンポーネント判定は JSX 慣例に従う", Status.Accepted, "2026-03-09"),
+	[
 		transform はタグ名だけで DOM 要素とコンポーネントを判定する必要がある。
 	],
-	decision: [
+	[
 		タグ名先頭が大文字、または `JSXMemberExpression` はコンポーネントとして判定する。
 	],
-	rationale: [
+	[
 		- React / SolidJS などの慣例と一致し、直感的である
 		- コンパイル時にランタイム情報なしで判定可能である
 	],
 )
 
 #adr(
-	header: header("JSXNamespacedName の式化はローカル規則で行う", Status.Accepted, "2026-03-09"),
-	context: [
+	header("JSXNamespacedName の式化はローカル規則で行う", Status.Accepted, "2026-03-09"),
+	[
 		namespaced name はそのままでは JavaScript 識別子にできない。
 	],
-	decision: [
+	[
 		`ns:name` は `ns_name` 識別子に変換する。
 	],
-	rationale: [
+	[
 		- ESTree の Identifier として扱いやすい
 		- 既存 transform 実装との互換を保つ
 	],
@@ -45,6 +45,7 @@
 		- JSX 型定義（`JSXElement`, `JSXFragment`, `JSXChild` など）
 		- タグ判定（`isComponentTag`）
 		- 名前変換（`jsxNameToExpression`, `getTagName`）
+		- islands directive 判定（`isClientDirectiveNamespace`, `getIslandsDirectiveName`, `normalizeIslandsDirectiveValue`）
 		- 識別子妥当性判定（`isValidIdentifier`）
 	],
 	test_cases: [
@@ -52,6 +53,10 @@
 		- 小文字タグを false と判定する
 		- `jsxNameToExpression` が Identifier / MemberExpression を生成する
 		- `getTagName` がネストしたメンバー名を文字列化する
+		- `isClientDirectiveNamespace` が `client:*` namespace を検出する
+		- `getIslandsDirectiveName` が `client:visible` 等を strategy 名へ正規化する
+		- `normalizeIslandsDirectiveValue` が bare `client:interaction` を `click` に補完する
+		- `normalizeIslandsDirectiveValue` が不正な directive value を例外にする
 		- `isValidIdentifier` が `data-foo` を false と判定する
 	],
 )

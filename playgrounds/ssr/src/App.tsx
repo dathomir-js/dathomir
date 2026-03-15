@@ -3,6 +3,7 @@ import { ALSPage } from "./pages/ALSPage";
 import { ComponentSSRPage } from "./pages/ComponentSSRPage";
 import { StoreBoundariesPage } from "./pages/StoreBoundariesPage";
 import { GlobalStylesPage } from "./pages/GlobalStylesPage";
+import { IslandsDirectivePage } from "./pages/IslandsDirectivePage";
 import { OverviewPage } from "./pages/OverviewPage";
 import {
   getPlaygroundRouteOrDefault,
@@ -39,6 +40,10 @@ function renderPlaygroundPage(props: {
 
     case "/global-styles":
       pageContent = <GlobalStylesPage />;
+      break;
+
+    case "/islands-directive":
+      pageContent = <IslandsDirectivePage pagePayloadJson={props.pagePayloadJson} />;
       break;
 
     case "/":

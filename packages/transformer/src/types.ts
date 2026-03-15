@@ -5,7 +5,7 @@ interface TransformOptions {
   /**
    * Transformation mode.
    * - 'csr': Client-side rendering (default)
-   * - 'ssr': Server-side rendering (Phase 2)
+   * - 'ssr': Server-side rendering
    */
   mode?: "csr" | "ssr";
 

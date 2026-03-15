@@ -382,6 +382,97 @@ describe("transform", () => {
       expect(result.code).toContain("props");
       expect(result.code).toContain("...");
     });
+
+    it("should normalize client:visible directive into island metadata", () => {
+      const code = `
+        const element = <Counter client:visible initialCount={5} />;
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('"data-dh-island": "visible"');
+      expect(result.code).not.toContain("client:visible");
+    });
+
+    it("should preserve client:interaction values as island metadata", () => {
+      const code = `
+        const element = <Counter client:interaction="mouseenter" />;
+      `;
+
+      const result = transform(code, { mode: "ssr" });
+
+      expect(result.code).toContain('"data-dh-island": "interaction"');
+      expect(result.code).toContain('"data-dh-island-value": "mouseenter"');
+    });
+
+    it("should default bare client:interaction to click metadata", () => {
+      const code = `
+        const element = <Counter client:interaction />;
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('"data-dh-island": "interaction"');
+      expect(result.code).toContain('"data-dh-island-value": "click"');
+    });
+
+    it("should throw when client:media is missing a string literal value", () => {
+      const code = `
+        const element = <Counter client:media />;
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "client:media requires a string literal media query",
+      );
+    });
+
+    it("should throw when valueless directives receive a value", () => {
+      const code = `
+        const element = <Counter client:visible=\"later\" />;
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "client:visible does not accept a value",
+      );
+    });
+
+    it("should throw for client directives on html elements", () => {
+      const code = `
+        const element = <div client:visible>bad</div>;
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "client:* directives are only supported on component elements",
+      );
+    });
+
+    it("should throw for multiple client directives on one component", () => {
+      const code = `
+        const element = <Counter client:visible client:idle />;
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "Multiple client:* directives are not allowed",
+      );
+    });
+
+    it("should throw for unknown client directives", () => {
+      const code = `
+        const element = <Counter client:visibile />;
+      `;
+
+      expect(() => transform(code)).toThrow("Unknown client:* directive");
+    });
+
+    it("should throw when client directives collide with reserved island metadata props", () => {
+      const code = `
+        const element = <Counter client:visible data-dh-island="manual" />;
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "client:* directives cannot be combined with explicit data-dh-island metadata",
+      );
+    });
   });
 
   describe("Fragment dynamic content", () => {

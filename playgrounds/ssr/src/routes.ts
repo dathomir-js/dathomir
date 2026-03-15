@@ -34,6 +34,13 @@ const playgroundRoutes = [
     description:
       "Shows how adoptGlobalStyles() can share typography and surface styles across multiple Shadow DOM components.",
   },
+  {
+    path: "/islands-directive",
+    label: "Islands Directive",
+    title: "client:* Directive Contract",
+    description:
+      "Shows how transformer-level client:* directives normalize into reserved island metadata before runtime strategy execution exists.",
+  },
 ] as const;
 
 type PlaygroundRoute = (typeof playgroundRoutes)[number];

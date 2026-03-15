@@ -1,4 +1,4 @@
-import { nId, nMember } from "@/transform/ast/implementation";
+import { nId, nLit, nMember } from "@/transform/ast/implementation";
 import type { ESTNode } from "@/transform/ast/implementation";
 
 interface JSXIdentifier {
@@ -19,6 +19,12 @@ interface JSXNamespacedName {
 }
 
 type JSXName = JSXIdentifier | JSXMemberExpression | JSXNamespacedName;
+type IslandsDirectiveName =
+  | "load"
+  | "visible"
+  | "idle"
+  | "interaction"
+  | "media";
 
 interface JSXOpeningElement {
   type: "JSXOpeningElement";
@@ -123,8 +129,87 @@ function getTagName(name: JSXName): string {
   return `${name.namespace.name}:${name.name.name}`;
 }
 
-export { getTagName, isComponentTag, isValidIdentifier, jsxNameToExpression };
+function isClientDirectiveNamespace(name: JSXAttribute["name"]): boolean {
+  return name.type === "JSXNamespacedName" && name.namespace.name === "client";
+}
+
+function getIslandsDirectiveName(
+  name: JSXAttribute["name"],
+): IslandsDirectiveName | null {
+  if (!isClientDirectiveNamespace(name)) {
+    return null;
+  }
+
+  switch (name.name.name) {
+    case "load":
+    case "visible":
+    case "idle":
+    case "interaction":
+    case "media":
+      return name.name.name;
+    default:
+      return null;
+  }
+}
+
+function normalizeIslandsDirectiveValue(
+  directive: IslandsDirectiveName,
+  value: JSXAttribute["value"],
+): ESTNode | null {
+  const invalidValueError = (message: string) => {
+    throw new Error(`[dathomir] ${message}`);
+  };
+
+  if (value === null) {
+    if (directive === "interaction") {
+      return nLit("click");
+    }
+
+    if (directive === "media") {
+      invalidValueError("client:media requires a string literal media query");
+    }
+
+    return null;
+  }
+
+  if (directive === "load" || directive === "visible" || directive === "idle") {
+    invalidValueError(`client:${directive} does not accept a value`);
+  }
+
+  const normalizedValue =
+    value.type === "Literal"
+      ? value
+      : value.type === "JSXExpressionContainer"
+        ? value.expression.type === "JSXEmptyExpression"
+          ? null
+          : value.expression
+        : null;
+
+  if (
+    normalizedValue?.type === "Literal" &&
+    typeof normalizedValue.value === "string"
+  ) {
+    return normalizedValue;
+  }
+
+  if (directive === "interaction") {
+    invalidValueError("client:interaction accepts only string literal event types");
+  }
+
+  invalidValueError("client:media requires a string literal media query");
+}
+
+export {
+  isClientDirectiveNamespace,
+  getIslandsDirectiveName,
+  getTagName,
+  isComponentTag,
+  isValidIdentifier,
+  jsxNameToExpression,
+  normalizeIslandsDirectiveValue,
+};
 export type {
+  IslandsDirectiveName,
   JSXAttribute,
   JSXChild,
   JSXElement,

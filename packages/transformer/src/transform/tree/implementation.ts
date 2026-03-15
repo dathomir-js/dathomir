@@ -14,12 +14,16 @@ import {
 } from "@/transform/ast/implementation";
 import type { CallExpression, ESTNode } from "@/transform/ast/implementation";
 import {
+  getIslandsDirectiveName,
   getTagName,
+  isClientDirectiveNamespace,
   isComponentTag,
   isValidIdentifier,
   jsxNameToExpression,
+  normalizeIslandsDirectiveValue,
 } from "@/transform/jsx/implementation";
 import type {
+  IslandsDirectiveName,
   JSXAttribute,
   JSXChild,
   JSXElement,
@@ -48,6 +52,26 @@ interface ProcessedAttributes {
   attrs: ESTNode;
   events: { type: string; handler: ESTNode }[];
   spreads: ESTNode[];
+}
+
+interface IslandsDirectiveMetadata {
+  strategy: IslandsDirectiveName;
+  value: ESTNode | null;
+}
+
+const RESERVED_ISLAND_METADATA_KEYS = new Set([
+  "data-dh-island",
+  "data-dh-island-value",
+]);
+
+function throwUnknownClientDirective(name: JSXAttribute["name"]): never {
+  if (name.type !== "JSXNamespacedName") {
+    throw new Error("[dathomir] Unknown client:* directive");
+  }
+
+  throw new Error(
+    `[dathomir] Unknown client:* directive: client:${name.name.name}`,
+  );
 }
 
 interface NestedTransformers {
@@ -103,6 +127,8 @@ function buildComponentCall(
   const componentRef = jsxNameToExpression(opening.name);
 
   const propsProperties: ESTNode[] = [];
+  let islandsDirective: IslandsDirectiveMetadata | null = null;
+  let hasExplicitReservedIslandMetadata = false;
 
   for (const attr of opening.attributes) {
     if (attr.type === "JSXSpreadAttribute") {
@@ -110,8 +136,32 @@ function buildComponentCall(
       continue;
     }
 
+    const directiveName = getIslandsDirectiveName(attr.name);
+    if (directiveName !== null) {
+      if (islandsDirective !== null) {
+        throw new Error(
+          `[dathomir] Multiple client:* directives are not allowed on a single component: <${getTagName(opening.name)}>`,
+        );
+      }
+
+      islandsDirective = {
+        strategy: directiveName,
+        value: normalizeIslandsDirectiveValue(directiveName, attr.value),
+      };
+      continue;
+    }
+
+    if (isClientDirectiveNamespace(attr.name)) {
+      throwUnknownClientDirective(attr.name);
+    }
+
     const key = getAttributeName(attr.name);
     if (key === null) continue;
+
+    if (RESERVED_ISLAND_METADATA_KEYS.has(key)) {
+      hasExplicitReservedIslandMetadata = true;
+    }
+
     const keyNode = isValidIdentifier(key) ? nId(key) : nLit(key);
     const computed = !isValidIdentifier(key);
     let value: ESTNode;
@@ -130,6 +180,24 @@ function buildComponentCall(
     }
 
     propsProperties.push(nProp(keyNode, value, computed));
+  }
+
+  if (islandsDirective !== null) {
+    if (hasExplicitReservedIslandMetadata) {
+      throw new Error(
+        `[dathomir] client:* directives cannot be combined with explicit data-dh-island metadata on <${getTagName(opening.name)}>`,
+      );
+    }
+
+    propsProperties.push(
+      nProp(nLit("data-dh-island"), nLit(islandsDirective.strategy)),
+    );
+
+    if (islandsDirective.value !== null) {
+      propsProperties.push(
+        nProp(nLit("data-dh-island-value"), islandsDirective.value),
+      );
+    }
   }
 
   const significantChildren = node.children.filter((child) => {
@@ -299,6 +367,16 @@ function processAttributes(
     if (attr.type === "JSXSpreadAttribute") {
       spreads.push(attr.argument);
       continue;
+    }
+
+    if (getIslandsDirectiveName(attr.name) !== null) {
+      throw new Error(
+        "[dathomir] client:* directives are only supported on component elements",
+      );
+    }
+
+    if (isClientDirectiveNamespace(attr.name)) {
+      throwUnknownClientDirective(attr.name);
     }
 
     const key = getAttributeName(attr.name);

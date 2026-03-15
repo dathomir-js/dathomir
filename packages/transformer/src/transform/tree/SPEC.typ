@@ -86,6 +86,21 @@
 	],
 )
 
+#adr(
+	header: header("component 上の client:* directive は島 metadata に正規化する", Status.Accepted, "2026-03-15"),
+	context: [
+		Phase 0 では islands directive の宣言面だけを先に固定し、後続 runtime が読める internal metadata 形式へ落とし込む必要がある。
+	],
+	decision: [
+		component 要素上の `client:*` directive は user props に残さず、`data-dh-island` と `data-dh-island-value` に正規化して `buildComponentCall()` へ注入する。HTML 要素上の directive は transform error にする。`data-dh-island*` の明示 props と islands directive が同居する場合も transform error にする。
+	],
+	rationale: [
+		- CSR / SSR の両モードで同一 metadata key を共有できる
+		- runtime 側は JSX 名前空間ルールを知らずに済む
+		- user props と compiler-internal metadata を分離できる
+	],
+)
+
 == 機能仕様
 
 #feature_spec(
@@ -112,5 +127,12 @@
 		- `JSXSpreadChild` が insert dynamic part になる
 		- namespaced 属性（`xlink:href`）が文字列キーとして保持される
 		- Fragment 内の動的テキスト・コンポーネント insert を取りこぼさない
+		- component の `client:visible` が `data-dh-island="visible"` metadata として props に注入される
+		- bare `client:interaction` が `data-dh-island-value="click"` を補完する
+		- `client:media` が string literal 以外では例外を投げる
+		- `client:visible="foo"` のような値付き valueless directive が例外を投げる
+		- HTML 要素上の `client:*` directive は例外を投げる
+		- 未知の `client:*` directive 名は例外を投げる
+		- islands directive と `data-dh-island*` 明示 props の衝突は例外を投げる
 	],
 )

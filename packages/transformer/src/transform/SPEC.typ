@@ -22,6 +22,8 @@
     - HTML 要素は構造化配列 tree と dynamic part 群へ分解する
     - `options.mode` に応じて CSR / SSR の生成結果を切り替える
     - 必要なランタイムインポートを自動的に追加する
+    - `client:*` directive はコンポーネント要素でのみ許可し、HTML 要素では transform error にする
+    - `client:*` directive は 1 要素につき 1 つまでとし、内部 metadata は予約属性 `data-dh-island` / `data-dh-island-value` に正規化する
   ],
 )
 
@@ -100,6 +102,26 @@
   postconditions: [
     - 走査不要なサブツリーは `next()` を呼ばず自然にスキップされる
     - ノード置換は visitor の戻り値として新ノードを返す immutable 変換で行う
+  ],
+)
+
+#behavior_spec(
+  name: "islands directive handling",
+  summary: [
+    `client:*` directive を component call 用の内部 metadata へ正規化し、後続 runtime が strategy を読めるようにする。
+  ],
+  steps: [
+    1. `client:load`, `client:visible`, `client:idle`, `client:interaction`, `client:media` を islands directive として認識する。
+    2. `client:*` namespace の未知 directive 名は例外を投げる。
+    3. directive はコンポーネント要素でのみ許可し、HTML 要素上では例外を投げる。
+    4. 1 つのコンポーネント要素に複数 directive がある場合は例外を投げる。
+    5. `client:load`, `client:visible`, `client:idle` は bare 指定のみ許可し、値付き指定は例外を投げる。
+    6. directive 自体は user props に残さず、`data-dh-island` と必要なら `data-dh-island-value` へ変換して component props に付与する。
+    7. `client:interaction` は bare 指定時に `click` を補完し、値を与える場合は string literal event type のみ許可する。`client:media` は string literal media query を必須とする。
+  ],
+  postconditions: [
+    - transform 後の出力から `client:*` 属性は消える
+    - CSR / SSR の両モードで同じ metadata key を使う
   ],
 )
 
@@ -331,5 +353,14 @@
     - 関数スコープ内ローカル識別子を属性に渡しても hoist によるスコープ破壊が起きない
     - SSR モードの条件付きレンダリングで各 JSX 分岐が `renderToString()` に変換される
     - SSR モードの logical expression で JSX 分岐が `renderToString()` に変換される
-  ],
-)
+    - `client:visible` 付き component を `data-dh-island="visible"` metadata 付き function call へ変換する
+    - `client:interaction="mouseenter"` を `data-dh-island-value` 付き metadata へ変換する
+    - bare `client:interaction` を `data-dh-island-value="click"` へ変換する
+     - `client:media` に string literal がない場合を transform error にする
+     - `client:visible="foo"` のような値付き valueless directive を transform error にする
+     - HTML 要素上の `client:*` directive を transform error にする
+     - 複数の `client:*` directive 組み合わせを transform error にする
+     - 未知の `client:*` directive 名を transform error にする
+     - islands directive と `data-dh-island*` 明示 props の衝突を transform error にする
+   ],
+ )

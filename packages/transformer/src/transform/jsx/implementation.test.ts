@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { nId } from "@/transform/ast/implementation";
+import { nId, nLit } from "@/transform/ast/implementation";
 
 import {
+  getIslandsDirectiveName,
   getTagName,
+  isClientDirectiveNamespace,
   isComponentTag,
   isValidIdentifier,
   jsxNameToExpression,
+  normalizeIslandsDirectiveValue,
 } from "./implementation";
 
 describe("transform/jsx", () => {
@@ -62,6 +65,45 @@ describe("transform/jsx", () => {
     });
 
     expect(name).toBe("A.B.C");
+  });
+
+  it("getIslandsDirectiveName detects client directives", () => {
+    expect(
+      getIslandsDirectiveName({
+        type: "JSXNamespacedName",
+        namespace: { type: "JSXIdentifier", name: "client" },
+        name: { type: "JSXIdentifier", name: "visible" },
+      }),
+    ).toBe("visible");
+  });
+
+  it("isClientDirectiveNamespace detects client namespace", () => {
+    expect(
+      isClientDirectiveNamespace({
+        type: "JSXNamespacedName",
+        namespace: { type: "JSXIdentifier", name: "client" },
+        name: { type: "JSXIdentifier", name: "idle" },
+      }),
+    ).toBe(true);
+  });
+
+  it("normalizeIslandsDirectiveValue defaults bare client:interaction to click", () => {
+    expect(normalizeIslandsDirectiveValue("interaction", null)).toEqual(
+      nLit("click"),
+    );
+  });
+
+  it("normalizeIslandsDirectiveValue throws for invalid directive values", () => {
+    expect(() => normalizeIslandsDirectiveValue("media", null)).toThrow(
+      "client:media requires a string literal media query",
+    );
+    expect(() =>
+      normalizeIslandsDirectiveValue("visible", {
+        type: "Literal",
+        value: "soon",
+        raw: '"soon"',
+      }),
+    ).toThrow("client:visible does not accept a value");
   });
 
   it("isValidIdentifier validates JS identifiers", () => {

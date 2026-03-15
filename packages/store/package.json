@@ -29,14 +29,28 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.mts"
+      "node": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.node.mjs",
+        "require": "./dist/index.node.cjs"
+      },
+      "default": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.cjs"
+      }
     },
     "./internal": {
-      "import": "./dist/internal.mjs",
-      "require": "./dist/internal.cjs",
-      "types": "./dist/internal.d.mts"
+      "node": {
+        "types": "./dist/internal.d.mts",
+        "import": "./dist/internal.node.mjs",
+        "require": "./dist/internal.node.cjs"
+      },
+      "default": {
+        "types": "./dist/internal.d.mts",
+        "import": "./dist/internal.mjs",
+        "require": "./dist/internal.cjs"
+      }
     }
   },
   "files": [

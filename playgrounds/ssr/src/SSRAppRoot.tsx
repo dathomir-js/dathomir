@@ -1,23 +1,38 @@
 import { defineComponent } from "@dathomir/components";
 
-import { withStore } from "@dathomir/core";
-import { App } from "./App";
+import { getCurrentStore, withStore } from "@dathomir/core";
+import { renderPlaygroundPage } from "./App";
 import { createDemoStore } from "./demoStore";
+import type { PlaygroundRoutePath } from "./routes";
 
 export const SSRAppRoot = defineComponent(
   "playground-ssr-app",
-  () => {
-    const store = createDemoStore({
-      appId: "playground-ssr-root",
+  ({ props }) => {
+    const inheritedStore = getCurrentStore();
+    const store = inheritedStore ?? createDemoStore({
+      appId: props.requestStoreAppId.value,
       count: 3,
       theme: "light",
     });
 
-    return withStore(store, () => <App />);
+    return withStore(store, () =>
+      renderPlaygroundPage({
+        requestId: props.requestId.value,
+        requestStoreAppId: props.requestStoreAppId.value,
+        routePath: props.routePath.value as PlaygroundRoutePath,
+        pagePayloadJson: props.pagePayloadJson.value,
+      }),
+    );
   },
   {
     props: {
-      headline: { type: String, default: "Dathomir SSR Playground" },
+      requestId: { type: String, default: "client-hydration" },
+      requestStoreAppId: {
+        type: String,
+        default: "playground-ssr-root",
+      },
+      routePath: { type: String, default: "/" },
+      pagePayloadJson: { type: String, default: "" },
     },
   },
 );

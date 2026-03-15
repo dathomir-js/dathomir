@@ -6,496 +6,114 @@
 
 == 目的
 
-VNode ベースアーキテクチャから *SolidJS スタイルの Fine-grained Reactivity + Direct DOM* への全面移行。
+VNode ベースの構成から、Compiler-First / Fine-grained Reactivity / Direct DOM /
+Web Components を中核とする構成へ移行する。
 
-TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでどこよりも高速・軽量・独自性のあるフレームワークを構築する。
+この文書は repository 全体の *umbrella spec* として、
+全体方針・責務分担・横断原則のみを定義する。
+詳細な API 署名、詳細な振る舞い、詳細なデータ形式、package 固有の設計判断は
+各 package の `SPEC.typ` と `implementation.test.ts` を正とする。
 
-*破壊的変更度* : 100% (完全な書き直し)
-
-*期待パフォーマンス向上* : 3-5x
-
-*目標バンドルサイズ* : < 2KB (現在 3.08KB)
-
-
-== Architecture Decision (2025-12-01)
-
-*採用するアプローチ*: SolidJS ベースの Fine-grained Reactivity
-- VNode システムを完全削除
-- JSX → Direct DOM compilation
-- 構造化配列方式（Svelte 5 の `from_tree` アプローチを参考）
-- Compiler-assisted SSR state serialization
-
-*独自性*:
-1. TC39 Signals API (`.value` アクセス)
-2. alien-signals (50% 高速)
-3. 自動 Signal シリアライズ (SSR→CSR)
-4. Web Components first-class support
-5. Edge runtime 最適化
-6. より明示的なコンパイル出力
-
+- VNode システムは repository 全体の前提として廃止する
+- JSX は compiler が静的/動的に分解し、各 mode に適した出力へ変換する
+- runtime は最小限の原語を提供し、複雑さは compiler 側へ寄せる
+- reactivity は TC39 Signals に整合した読み取りモデルを採用する
+- Web Components は主要な公開コンポーネントモデルとして扱う
+- client / ssr / edge の環境差は package specs で吸収する
 
 == インターフェース仕様
 
 #interface_spec(
-  name: "SSR マーカープロトコル",
+  name: "リポジトリ全体アーキテクチャ",
   summary: [
-    SSR で生成した HTML を Hydration で再利用するためのマーカー仕様。
-    *混在方式* を採用し、境界はコメント、要素は `data-*` 属性で表現する。
+    Transformer, Runtime, Reactivity, Components, Store, Plugin, Core の各層が
+    明確な責務境界を持って協調する。
   ],
   format: [
-    *コメントマーカー*（境界用）:
-    - `<!--dh:t:ID-->`: 動的テキストノードの位置
-    - `<!--dh:i:ID-->`: 子の挿入点（0/1/複数ノード）
-    - `<!--dh:b:ID-->` ... `<!--/dh:b-->`: 制御フロー（if/each）の開始・終了
-
-    *属性マーカー*（要素用、必要時のみ）:
-    - `data-dh="ID"`: 要素への紐付け
-    - `data-dh-hydrated`: Hydration 済みフラグ（*開発モードのみ*、本番では WeakMap で管理）
-
-    *状態転送マーカー*:
-    - `<script type="application/json" data-dh-state>`: Web Component の初期状態（Shadow DOM 内に配置）
+    - `packages/transformer/**/SPEC.typ`: JSX/TSX の解析、IR、CSR/SSR 変換
+    - `packages/runtime/**/SPEC.typ`: DOM 原語、SSR 出力、Hydration、serialize/deserialize
+    - `packages/reactivity/**/SPEC.typ`: signal / computed / effect / batch / createRoot
+    - `packages/components/**/SPEC.typ`: defineComponent、CSS、DSD SSR、component registry
+    - `packages/store/**/SPEC.typ`: atom store と snapshot 契約
+    - `packages/plugin/**/SPEC.typ`: build tool 統合と mode 伝播
+    - `packages/core/**/SPEC.typ`: 公開 API 集約と JSX runtime
   ],
   constraints: [
-    - 基本は *コメント境界＋順序* で復元する
-    - `data-*` は以下の場合のみ使用：
-      - 復元が壊れやすい箇所の補強
-      - 機能コンポーネントの適用先の明示
-      - デバッグ可視化
-    - SSR と CSR の出力順序が一致することが前提
-  ],
-  examples: [
-    ```html
-    <div>
-      <!--dh:t:1-->Hello<!--dh:i:2-->
-      <!--dh:b:3--><span>conditional</span><!--/dh:b-->
-    </div>
-    ```
+    - top-level spec は package 間の境界と全体方針のみを扱う
+    - マーカー文字列、API 署名、変換規則、アルゴリズム詳細は担当 package spec に置く
   ],
 )
 
 #interface_spec(
-  name: "構造化配列形式（IR）",
+  name: "仕様の正本",
   summary: [
-    Transformer が生成し、Runtime が消費する中間表現（IR）の形式。
-    DOM 構造を配列で表現し、静的部分と動的部分を明確に分離する。
+    repository 内の仕様は責務単位で分割管理し、詳細仕様の正本を一意にする。
   ],
   format: [
-    *基本形式*: `[tag, attrs, ...children]`
-    - `tag`: 要素名（文字列）
-    - `attrs`: 属性オブジェクト または `null`
-    - `children`: 文字列（静的テキスト）または ネストした配列
-
-    *プレースホルダー*（動的箇所）:
-    - `['\{text\}', null]`: 動的テキストノードの位置
-    - `['\{insert\}', null]`: 子の挿入点（0/1/複数ノード）
-    - `['\{each\}', null]`: リストの挿入点
-
-    *flags*（第2引数）:
-    - `1`: SVG 名前空間
-    - `2`: MathML 名前空間
-    - `0`: HTML（デフォルト）
+    - `SPEC/SPEC.typ`: 全体方針、責務境界、横断原則、repo-wide ADR 運用
+    - `packages/**/SPEC.typ`: package / feature ごとの詳細仕様と設計判断
+    - `packages/**/implementation.test.ts`: 期待される挙動の検証基準
   ],
   constraints: [
-    - 配列は不変（イミュータブル）として扱う
-    - プレースホルダーは必ず `['\{type\}', null]` 形式
-    - IR のバージョンは Transformer と Runtime で厳密に一致すること
-  ],
-  examples: [
-    ```javascript
-    // JSX: <button class="btn">Count: {count}</button>
-    // 構造化配列:
-    ['button', \{ class: 'btn' \}, 'Count: ', ['\{text\}', null]]
-
-    // JSX: <ul>{items.map(item => <li>{item}</li>)}</ul>
-    // 構造化配列:
-    ['ul', null, ['\{each\}', null]]
-
-    // \{each\} から reconcile への変換例:
-    // Transformer が生成するコード:
-    const ul = firstChild(fragment);
-    // reconcile は ul の子要素を管理する（アンカー不要、全子要素を対象）
-    templateEffect(() => reconcile(
-      ul,
-      items.value,
-      item => item.id,  // keyFn
-      item => \{         // createFn
-        const li = fromTree([['li', null, ['\{text\}', null]]], 0);
-        templateEffect(() => setText(firstChild(li, true), item.name));
-        return li;
-      \}
-    ));
-    ```
+    - 実装変更時は担当 package の `SPEC.typ` と `implementation.test.ts` を先に更新する
+    - top-level spec に package 詳細を再掲しない
+    - top-level spec は詳細挙動の正本にならない
   ],
 )
-
-#interface_spec(
-  name: "Runtime API",
-  summary: [
-    Runtime が提供する 14 個の関数の署名と契約。
-    Compiler-First 哲学に基づき、最小限の関数セットで構成される。
-  ],
-  format: [
-    *DOM 生成*:
-    - `fromTree(structure: Tree, flags?: number): DocumentFragment`
-    - `firstChild(node: Node, isText?: boolean): Node`
-    - `nextSibling(node: Node): Node`
-
-    *DOM 操作*:
-    - `setText(node: Text, value: string): void`
-    - `setAttr(element: Element, name: string, value: any): void`
-    - `setProp(element: Element, name: string, value: any): void`
-    - `spread(element: Element, prev: object | null, next: object): object`
-    - `append(parent: Node, child: Node): void`
-    - `insert(parent: Node, child: Node, anchor: Node | null): void`
-
-    *リスト*:
-    - `reconcile(parent: Node, items: T[], keyFn: (item: T) => any, createFn: (item: T) => Node): void`
-
-    *リアクティビティ*:
-    - `templateEffect(fn: () => void): void`
-    - `createRoot(fn: () => void): () => void`
-
-    *イベント*:
-    - `event(type: string, element: Element, handler: EventListener): void`
-  ],
-  constraints: [
-    - `spread` は前回の props を返し、次回の呼び出しで差分更新に使用
-    - `spread` の差分検出: `Object.keys(next)` を走査し、`prev[key] !== next[key]` なら更新
-    - `spread` でイベントハンドラ（`on` で始まるキー、例: `onClick`, `onInput`）は `setAttr` ではなく `event` として処理
-    - イベントハンドラ判定: `key.startsWith('on') && key.length > 2 && typeof value === 'function'`
-    - `createRoot` は dispose 関数を返す
-    - `templateEffect` 内の effect は `createRoot` のスコープに自動登録
-    - `event` で登録したリスナーは `createRoot` の dispose で自動解除
-  ],
-  examples: [
-    ```javascript
-    // Transformer が生成するコード例
-    const _t1 = fromTree([['button', null, 'Count: ', ['\{text\}', null]]], 0);
-
-    class MyCounter extends HTMLElement \{
-      #dispose;
-      connectedCallback() \{
-        this.#dispose = createRoot(() => \{
-          const fragment = _t1();
-          const button = firstChild(fragment);
-          const text = firstChild(button, true);
-          templateEffect(() => setText(text, this.count.value));
-          event('click', button, () => this.count.update(v => v + 1));
-          this.shadowRoot.append(fragment);
-        \});
-      \}
-      disconnectedCallback() \{ this.#dispose?.(); \}
-    \}
-    ```
-  ],
-)
-
-
-#interface_spec(
-  name: "Reactivity API",
-  summary: [
-    ユーザー向けに公開するリアクティビティ API。
-    TC39 Signals 仕様に準拠し、`.value` プロパティでアクセスする。
-  ],
-  format: [
-    *Signal 操作*:
-    - `signal<T>(initial: T): Signal<T>`: リアクティブな値を作成
-    - `computed<T>(fn: () => T): ReadonlySignal<T>`: 依存関係から派生値を計算
-    - `effect(fn: () => void): () => void`: 副作用を登録し、dispose 関数を返す
-    - `batch(fn: () => void): void`: 複数の更新を一括で実行
-    - `createRoot(fn: () => void): () => void`: cleanup スコープを作成
-
-    *型定義*:
-    ```typescript
-    interface Signal<T> \{
-      readonly value: T;  // 読み取り専用（書き込みは set()/update() を使用）
-      set(update: T | ((prev: T) => T)): void;
-      update(updater: (prev: T) => T): void;
-      peek(): T;
-    \}
-
-    interface ReadonlySignal<T> \{
-      readonly value: T;  // 読み取り専用
-      peek(): T;
-    \}
-    ```
-  ],
-  constraints: [
-    - Signal の値は `.value` プロパティで読み取る（TC39 Signals 準拠）
-    - `.value` は読み取り専用。書き込みは `set()` / `update()` メソッドを使用する
-    - 関数呼び出し形式 `count()` は非サポート（SolidJS とは異なる）
-    - `computed` は遅延評価（依存関係が変化するまで再計算しない）
-    - `effect` は同期的に初回実行される
-    - `batch` 内の更新は、batch 終了時に一度だけ effect を実行
-    - `createRoot` 内で作成した effect は、dispose 時に自動解除される
-  ],
-  examples: [
-    ```javascript
-    import \{ signal, computed, effect, batch \} from '@dathomir/core';
-
-    // 基本的な使用例
-    const count = signal(0);
-    const doubled = computed(() => count.value * 2);
-
-    effect(() => \{
-      console.log(`Count: $\{count.value\}, Doubled: $\{doubled.value\}`);
-    \});
-
-    // 値の更新
-    count.update(v => v + 1);  // "Count: 1, Doubled: 2"
-
-    // バッチ更新
-    batch(() => \{
-      count.set(10);
-      count.set(20);  // effect は一度だけ実行される
-    \});  // "Count: 20, Doubled: 40"
-    ```
-  ],
-)
-
-#interface_spec(
-  name: "Plugin API",
-  summary: [
-    Vite/webpack 等のビルドツール向けプラグイン API。
-    unplugin を使用して複数バンドラーに対応する。
-  ],
-  format: [
-    *エクスポート*:
-    - `dathomirPlugin(options?: PluginOptions): UnpluginInstance`
-    - `dathomirVitePlugin(options?: PluginOptions): VitePlugin`
-    - `dathomirWebpackPlugin(options?: PluginOptions): WebpackPlugin`
-
-    *オプション*:
-    ```typescript
-    interface PluginOptions \{
-      // 変換対象のファイル拡張子（デフォルト: ['.tsx', '.jsx']）
-      include?: string[];
-      // 除外パターン
-      exclude?: string[];
-    \}
-    ```
-  ],
-  constraints: [
-    - JSX/TSX ファイルのみを変換対象とする
-    - `@dathomir/transformer` を内部で使用
-    - SSR モード検出は Vite Environment API（Vite 6+）を優先
-    - フォールバック順序: `environment.name` → `options.ssr` → `import.meta.env.SSR`
-  ],
-  examples: [
-    ```javascript
-    // vite.config.js
-    import \{ dathomirVitePlugin \} from '@dathomir/plugin';
-
-    export default \{
-      plugins: [dathomirVitePlugin()],
-    \};
-    ```
-  ],
-)
-
-#interface_spec(
-  name: "Transformer API",
-  summary: [
-    JSX を構造化配列（IR）に変換し、Runtime 呼び出しコードを生成するトランスフォーマー。
-  ],
-  format: [
-    *エクスポート*:
-    - `transform(code: string, options?: TransformOptions): TransformResult`
-
-    *オプション*:
-    ```typescript
-    interface TransformOptions \{
-      // SSR モードで変換するか
-      mode?: 'csr' | 'ssr';
-      // ソースマップを生成するか
-      sourceMap?: boolean;
-      // ファイル名（ソースマップ用）
-      filename?: string;
-    \}
-
-    interface TransformResult \{
-      code: string;
-      map?: SourceMap;
-    \}
-    ```
-  ],
-  constraints: [
-    - 入力は JSX を含む JavaScript/TypeScript コード
-    - 構造化配列形式（IR）で DOM 構造を表現
-    - 静的部分と動的部分を分離し、動的部分は `templateEffect` で更新
-    - ES モジュール形式の出力
-  ],
-  examples: [
-    ```javascript
-    // 入力:
-    <button class=\{count.value > 0 ? 'active' : ''\} onClick=\{handler\}>
-      Count: \{count.value\}
-    </button>
-
-    // 出力（CSR モード）:
-    const _t1 = fromTree([['button', null, 'Count: ', ['\{text\}', null]]], 0);
-    const _f = _t1();
-    const _n0 = firstChild(_f);
-    const _n0_3 = firstChild(_n0, true);
-    event('click', _n0, handler);
-    templateEffect(() => setAttr(_n0, 'class', count.value > 0 ? 'active' : ''));
-    templateEffect(() => setText(_n0_3, count.value));
-    ```
-  ],
-)
-
 
 == 振る舞い仕様
 
 #behavior_spec(
-  name: "Hydration",
+  name: "仕様変更フロー",
   summary: [
-    SSR で生成された DOM を再利用し、イベントとリアクティビティを接続する処理。
-    Web Component が自分の ShadowRoot を担当する。
+    仕様変更は責務を持つ package を起点に行い、top-level spec は境界変更がある場合のみ更新する。
   ],
   preconditions: [
-    - SSR で生成された HTML がブラウザに存在する
-    - マーカー（コメント/属性）が正しく埋め込まれている
-    - ShadowRoot は `open` モードである
-    - 対象の ShadowRoot が未 Hydration である（WeakMap で管理）
+    - 変更対象の機能に対応する package / feature が特定できる
   ],
   steps: [
-    1. Hydration 対象の root（ShadowRoot）を特定
-    2. WeakMap で Hydration 済みかチェック。済みならスキップ（冪等性保証）
-    3. `<script data-dh-state>` から初期状態を読み込み、Signal を初期化（devalue で parse）
-    4. 状態スクリプト要素を DOM から削除
-    5. `createRoot()` で cleanup スコープを作成
-    6. TreeWalker でコメントマーカーを線形走査
-    7. 各マーカーに対して effect とイベントを *同時に* 接続：
-      - `<!--dh:t:ID-->`: テキストノードの effect を接続
-      - `<!--dh:i:ID-->`: 挿入点の effect を接続
-      - `<!--dh:b:ID-->`: ブロックの effect + イベントを接続
-    8. `data-dh` 属性がある要素にはイベント/属性バインディングを接続
-    9. WeakMap に Hydration 済みとして登録
-    10. `createRoot()` の dispose 関数を Web Component に保存
+    1. 変更の主担当 package を特定する
+    2. 該当 package の `SPEC.typ` と `implementation.test.ts` を更新する
+    3. package 間の責務境界や repo-wide 原則に変化がある場合のみ `SPEC/SPEC.typ` を更新する
+    4. 複数 package に影響する場合は、影響を受ける各 package spec を整合させる
   ],
   postconditions: [
-    - すべての動的箇所に effect/イベントが接続されている
-    - Signal の更新が DOM に反映される状態になっている
-    - 二重初期化が防止されている（WeakMap で管理）
+    - 仕様変更の正本が担当 package に集約されている
+    - top-level spec と package specs の役割分担が維持されている
   ],
   errors: [
-    - *マーカー不一致*: 開発環境では例外、本番では警告 + CSR フォールバック
-    - *ShadowRoot が closed*: Hydration 対象外、警告を出力
+    - package detail を top-level spec に直接追加しない
   ],
 )
 
 #behavior_spec(
-  name: "Shadow DOM 生成戦略",
+  name: "横断整合性の維持",
   summary: [
-    Web Components の Shadow DOM を SSR → Hydration する際の生成方式。
-    *Declarative Shadow DOM (DSD) を第一候補* とする。
-  ],
-  preconditions: [
-    - Web Component が定義されている
-    - SSR 環境で HTML を生成している
+    各 package の仕様は end-to-end で接続され、単体で正しくても隣接層と矛盾してはならない。
   ],
   steps: [
-    1. SSR 時に `<template shadowrootmode="open">` を出力に含める
-    2. ブラウザがDSD対応の場合: 自動的に ShadowRoot が生成される
-    3. ブラウザがDSD非対応の場合:
-      - クライアントで `attachShadow()` を呼び出す
-      - template 内容を ShadowRoot に移動
-      - Hydration を実行
+    1. transformer は runtime が解釈できる出力のみを生成する
+    2. SSR / Hydration / state transfer は同じ構造モデルと状態モデルを共有する
+    3. components は runtime / reactivity / store の契約に従う
+    4. plugin は build tool 上の mode を transformer へ正しく伝播する
   ],
   postconditions: [
-    - ShadowRoot が存在し、内容が正しく構築されている
-    - Hydration が完了している
-  ],
-  errors: [
-    - *DSD 非対応環境*: フォールバック処理が実行される（初期表示が遅れる可能性）
+    - 層をまたぐ責務境界が明確である
+    - 詳細仕様の所在を package 単位で追跡できる
+    - repo-wide の判断は top-level spec から把握できる
   ],
 )
-
-#behavior_spec(
-  name: "Cleanup ライフサイクル",
-  summary: [
-    `createRoot` によるリソース管理とコンポーネントのライフサイクル統合。
-    Owner/Root ベースの自動 cleanup を実現する。
-  ],
-  preconditions: [
-    - Web Component が定義されている
-    - `connectedCallback` が呼び出された
-  ],
-  steps: [
-    1. `connectedCallback` で `createRoot(fn)` を呼び出す
-    2. `createRoot` は現在の「オーナー」をスタックにプッシュ
-    3. `fn` 内で呼ばれた `templateEffect` / `event` は自動的にオーナーに登録
-    4. `fn` 実行完了後、オーナーをスタックからポップ
-    5. `createRoot` は `dispose` 関数を返す
-    6. `disconnectedCallback` で `dispose()` を呼び出す
-    7. `dispose` は登録された全ての effect を停止し、イベントリスナーを解除
-  ],
-  postconditions: [
-    - 全ての effect が停止している
-    - 全てのイベントリスナーが解除されている
-    - メモリリークが発生しない
-  ],
-  errors: [
-    - *dispose 呼び忘れ*: メモリリークが発生（開発モードで警告を検討）
-  ],
-)
-
-#behavior_spec(
-  name: "Effect 実行",
-  summary: [
-    Signal 更新から DOM 更新までのリアクティブな実行フロー。
-    batched flush により効率的な更新を実現する。
-  ],
-  preconditions: [
-    - `templateEffect` で effect が登録されている
-    - effect 内で Signal の `.value` が読み取られている
-  ],
-  steps: [
-    1. Signal の `.value` に新しい値を代入
-    2. Signal は依存する effect を「ダーティ」としてマーク
-    3. `batch()` 内の場合: batch 終了まで実行を遅延
-    4. `batch()` 外の場合: 同期的に effect を実行
-    5. effect 内の DOM 操作（`setText`, `setAttr` 等）が実行される
-    6. DOM が更新される
-  ],
-  postconditions: [
-    - 全てのダーティな effect が実行されている
-    - DOM が最新の Signal 値を反映している
-    - 同じ effect は1回のフラッシュで1度だけ実行される
-  ],
-  errors: [
-    - *無限ループ*: effect 内で自身の依存 Signal を更新すると発生（開発モードで検出・警告）
-  ],
-)
-
 
 == 決定の優先順位
 
-以下の順序で設計の意思決定を進めることを推奨する。
+以下の順序で設計判断を行う。
 
-1. *SSR → Hydration: マーカー方式/粒度/探索戦略*（全設計の前提）
-  - Hydration 探索戦略
-
-2. *SSR → Hydration: ミスマッチ方針/診断情報*（運用とDXの前提）
-  - Hydration ミスマッチ方針
-  - 診断情報の詳細度
-
-3. *Runtime ↔ Transformer: 出力形（IR）とruntime原語*（実装量の上限を決める）
-  - Transformer 出力形式
-  - IR の安定性方針
-  - Runtime 原語の最小セット
-
-4. *イベントシステム: 直付け/委譲とcleanup契約*（APIとSSR互換に直結）
-  - イベントシステム方針
-  - イベントハンドラ表現
-  - Cleanup 契約
-
-5. *状態転送（SSR → CSR）: 何を/どこまで転送するか*（必要最小を決める）
-  - 状態転送の範囲
-  - 状態転送の注入形式
-  - 状態転送のエスケープ規約
-  - 状態転送の信頼境界
+1. *責務境界と仕様の所有者*
+2. *compiler と runtime の契約*
+3. *SSR / Hydration / state transfer の整合*
+4. *公開 API の最小化*
+5. *client / ssr / edge の環境制約*
+6. *上記を崩さない範囲での DX 改善*
 
 
 == ADR
@@ -506,6 +124,35 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
 - `Status.Accepted` になった ADR は、採用済み判断として扱い、意味内容を直接書き換えない
 - `Status.Accepted` の ADR に判断変更が必要な場合は、新しい ADR を追加し、既存 ADR を supersede する関係を明示する
 - 既存 ADR に直接加えてよい修正は、誤字脱字、リンク修正、表現明確化など、判断内容を変えない変更に限る
+- package 固有の詳細 ADR は、以後は担当 package の `SPEC.typ` に記録する
+- `SPEC/SPEC.typ` には repo-wide な判断と document boundary に関する ADR のみを新規追加する
+- 以下の historical ADR は履歴保持のため残し、意味内容を変更しない
+- historical ADR 内の参照先が旧 top-level section 名を含む場合でも、現行の正本は各 package spec とする
+
+#adr(
+  header("トップレベル SPEC の境界", Status.Accepted, "2026-03-13"),
+  [
+    `SPEC/SPEC.typ` に package-level の API 詳細、Hydration 手順、IR 形式、runtime 契約などが蓄積し、
+    各 package の `SPEC.typ` と重複・乖離が発生していた。
+  ],
+  [
+    `SPEC/SPEC.typ` は umbrella spec とし、全体方針・責務境界・横断原則のみを定義する。
+    詳細な API、詳細な振る舞い、詳細なデータ形式、package 固有の設計判断は
+    担当 package の `SPEC.typ` と `implementation.test.ts` を正とする。
+    既存の詳細 ADR は履歴として保持するが、継続的な詳細更新は担当 package 側で行う。
+  ],
+  [
+    - top-level spec と package specs の重複を減らせる
+    - 詳細仕様の変更箇所を担当 package に局所化できる
+    - repo-wide の意図と package-level の正本を分離できる
+  ],
+  alternatives: [
+    1. *top-level に詳細を残す*: 全体像は見やすいが、重複と乖離が起きやすい
+    2. *単一の巨大 SPEC に集約する*: 正本は一つになるが、責務境界が不明瞭になり変更コストが高い
+  ],
+)
+
+=== Historical ADRs
 
 #adr(
   header("SSR Hydration マーカー設計", Status.Accepted, "2026-01-19"),
@@ -1638,178 +1285,6 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
   ),
 )
 
-#interface_spec(
-  name: "Web Components 高レベル API",
-  summary: [
-    Web Components を簡潔に定義するための `defineComponent` 関数と `css` ヘルパー。
-    Shadow DOM セットアップ、`createRoot` による cleanup 管理、DSD Hydration 検出、
-    `adoptedStyleSheets` による CSS 適用、*型付き Props システム* による属性/プロパティの
-    リアクティブ管理、および TSX 型補完を自動化する。
-  ],
-  format: [
-    *defineComponent*:
-    ```typescript
-    function defineComponent<const S extends PropsSchema = \{\}>(
-      tagName: string,
-      setup: SetupFunction<S>,
-      options?: ComponentOptions<S>,
-    ): DefinedComponent<S>
-    ```
-
-    *Props 定義（ランタイム型）*:
-    ```typescript
-    type PropType =
-      | StringConstructor
-      | NumberConstructor
-      | BooleanConstructor
-      | ((value: string | null) => unknown);
-
-    interface PropDefinition \{
-      type: PropType;
-      default?: unknown;
-      attribute?: string | false;
-    \}
-
-    type PropsSchema = Record<string, PropDefinition>;
-    ```
-
-    *型推論ユーティリティ*:
-    ```typescript
-    type InferPropType<D extends PropDefinition> =
-      D extends \{ type: StringConstructor \} ? string :
-      D extends \{ type: NumberConstructor \} ? number :
-      D extends \{ type: BooleanConstructor \} ? boolean :
-      D extends \{ type: (v: string | null) => infer R \} ? R :
-      unknown;
-
-    type InferProps<S extends PropsSchema> = \{
-      readonly [K in keyof S]: Computed<InferPropType<S[K]>>;
-    \};
-    ```
-
-    *コンポーネント型*:
-    ```typescript
-    type SetupFunction<S extends PropsSchema = PropsSchema> = (
-      host: HTMLElement,
-      ctx: ComponentContext<S>,
-    ) => Node | DocumentFragment | string;
-
-    interface ComponentContext<S extends PropsSchema = PropsSchema> \{
-      readonly props: Readonly<InferProps<S>>;
-    \}
-
-    interface ComponentOptions<S extends PropsSchema = PropsSchema> \{
-      styles?: readonly (CSSStyleSheet | string)[];
-      props?: S;
-      hydrate?: (host: HTMLElement, ctx: ComponentContext<S>) => void;
-    \}
-
-    type ComponentConstructor<S extends PropsSchema = PropsSchema> = \{
-      new(): HTMLElement & \{ [K in keyof S]: InferPropType<S[K]> \};
-      readonly prototype: HTMLElement;
-    \} & ComponentClass<S>;
-
-    interface ComponentMetadata<S extends PropsSchema = PropsSchema> \{
-      readonly __tagName__: string;
-      readonly __propsSchema__?: S;
-    \}
-
-    interface ComponentClass<S extends PropsSchema = PropsSchema> extends ComponentMetadata<S> \{
-    \}
-
-    type JSXPropValue<T> = T | \{ readonly value: T \};
-
-    type JSXComponentProps<S extends PropsSchema = PropsSchema> = \{
-      readonly [K in keyof S]?: JSXPropValue<InferPropType<S[K]>>;
-    \} & \{ children?: unknown \};
-
-    interface DefinedComponent<S extends PropsSchema = PropsSchema> extends ComponentMetadata<S> \{
-      (props: JSXComponentProps<S> | null): Node;
-      readonly webComponent: ComponentConstructor<S>;
-      readonly jsx: (props: JSXComponentProps<S> | null) => Node;
-    \}
-    ```
-
-    *JSX 型ヘルパー*:
-    ```typescript
-    type ComponentElement<C> =
-      C extends \{ __propsSchema__?: infer S \} ?
-        (S extends PropsSchema ? JSXComponentProps<S> : Record<string, unknown>) :
-        Record<string, unknown>;
-    ```
-
-    *css ヘルパー*:
-    - `css(strings: TemplateStringsArray, ...values: unknown[]): CSSStyleSheet`
-  ],
-  constraints: [
-    - `tagName` はハイフンを含む有効なカスタム要素名であること
-    - Shadow DOM は `open` モードのみ
-    - DSD が存在する場合は `attachShadow` をスキップ
-    - `defineComponent` の返り値は callable な `DefinedComponent` であり、TSX では `<Counter />` のように直接使える
-    - `connectedCallback` で `createRoot` → `setup` 実行 → Fragment を `shadowRoot.append`
-    - `disconnectedCallback` で `dispose()` により全 effect/event を cleanup
-    - `attributeChangedCallback` で型変換を行い、内部 Signal を更新
-    - Hydration パス: DSD コンテンツ存在 かつ `hydrate` 定義済みなら `setup` ではなく `hydrate` を実行
-    - 再接続時は再度 `setup` が呼ばれる（状態リセット）
-    - Props は `Computed<T>` として `ctx.props` から公開（読み取り専用）
-    - 要素に property getter/setter を自動定義（JS からの直接アクセス対応）
-    - 属性名のデフォルトマッピング: camelCase → kebab-case（`@dathomir/shared` の `kebabCase` を使用）
-    - `attribute: false` の場合は属性観測をスキップ（プロパティ専用）
-    - *Boolean 属性規約*: 属性の存在 = `true`、不在 = `false`
-    - *Number 属性変換*: `Number(attrValue)`、属性削除時は `default` にフォールバック
-    - *String 属性変換*: そのまま使用、属性削除時は `default` にフォールバック
-    - プロパティ → 属性の自動反映は行わない（片方向: 属性 → プロパティのみ）
-  ],
-  examples: [
-    ```javascript
-    import \{ defineComponent, signal, css \} from '@dathomir/core';
-    import type \{ ComponentElement \} from '@dathomir/components';
-
-    const styles = css`button \{ padding: 8px 16px; \}`;
-
-    // Props 付きコンポーネント定義
-    const Counter = defineComponent('my-counter', (host, \{ props \}) => \{
-      // props.count: Computed<number> — 型安全・リアクティブ
-      // props.label: Computed<string> — 型安全・リアクティブ
-      const doubled = computed(() => props.count.value * 2);
-      return <button>\{props.label.value\}: \{props.count.value\} (x2: \{doubled.value\})</button>;
-    \}, \{
-      styles: [styles],
-      props: \{
-        count: \{ type: Number, default: 0 \},
-        label: \{ type: String, default: 'Count' \},
-      \},
-    \});
-
-    // JSX 関数コンポーネントとして直接使える
-    <Counter count=\{5\} label="Items" />
-
-    // custom element tag 用の JSX 型補完の登録
-    declare module '@dathomir/core/jsx-runtime' \{
-      namespace JSX \{
-        interface IntrinsicElements \{
-          'my-counter': ComponentElement<typeof Counter>;
-        \}
-      \}
-    \}
-
-    // TSX で型補完が効く
-    <my-counter count=\{5\} label="Items" />
-    // ✅ count: number, label: string を認識
-    // ❌ <my-counter count="abc" /> は型エラー
-
-    // HTML 属性からも動作
-    // <my-counter count="5" label="Items">
-    // → Number("5") = 5, String("Items") = "Items"
-
-    // JS プロパティからも動作
-    const el = document.querySelector('my-counter');
-    el.count = 10;  // setter → Signal.set(10)
-    el.count;       // getter → Signal.peek() = 10
-    ```
-  ],
-)
-
 #adr(
   header("Web Components 高レベル API 方式", Status.Accepted, "2026-02-09"),
   [
@@ -2018,61 +1493,4 @@ TC39 Signals (alien-signals) を活用し、Compiler-First アプローチでど
     link("https://www.typescriptlang.org/docs/handbook/declaration-merging.html")[TypeScript - Declaration Merging],
     link("https://lit.dev/docs/frameworks/react/#typed-jsx")[Lit - Typed JSX],
   ),
-)
-
-#behavior_spec(
-  name: "Props 属性/プロパティ同期",
-  summary: [
-    `defineComponent` の Props システムにおける属性（HTML attribute）とプロパティ（JS property）の
-    同期フロー。外部からの入力を内部 Signal に変換し、リアクティブに伝播させる。
-  ],
-  preconditions: [
-    - `defineComponent` で `options.props` が定義されている
-    - Props スキーマに少なくとも1つの `PropDefinition` が存在する
-  ],
-  steps: [
-    *初期化（コンストラクタ）*:
-    1. Props スキーマの各エントリに対して内部 `Signal<T>` を作成
-    2. 各 prop の `attribute` 設定に基づき `observedAttributes` を構築:
-      - `attribute: false` → スキップ
-      - `attribute: 'custom-name'` → カスタム名を使用
-      - 未指定 → `kebabCase(propName)` をデフォルトとして使用
-    3. 初期値を決定: `getAttribute(attrName)` が存在すれば型変換、なければ `default`
-    4. 要素インスタンスに property getter/setter を `Object.defineProperty` で定義:
-      - `get`: `signal.peek()`（追跡なし — プロパティアクセスは非リアクティブ）
-      - `set`: `signal.set(value)`（Signal 更新 → effect が再実行）
-
-    *connectedCallback*:
-    5. 各内部 Signal に対して `Computed<T>` ライクなラッパーを作成（`ctx.props` 用）:
-      - `value` → `signal.value`（追跡付き読み取り）
-      - `peek()` → `signal.peek()`（追跡なし読み取り）
-    6. `ctx.props` を構築し、`setup(host, ctx)` を呼び出す
-
-    *attributeChangedCallback*:
-    7. 変更された属性名から対応する prop 名を逆引き
-    8. `PropDefinition.type` に基づき属性値を型変換:
-      - `newValue === null` の場合: Boolean → `false`、その他 → `default`
-      - `newValue !== null` の場合: コンストラクタで変換
-    9. 内部 `Signal.set(coerced)` → 依存する effect が再実行
-
-    *JS プロパティ設定*:
-    10. `element.count = 5` → setter → `Signal.set(5)`（型変換なし）
-    11. 依存する effect が再実行
-
-    *注意*: プロパティ → 属性の自動反映は行わない。
-    `element.count = 5` は属性を更新しない。
-    属性に反映が必要な場合はユーザーが `element.setAttribute()` を併用する。
-  ],
-  postconditions: [
-    - すべての Props が `Signal<T>` でバッキングされている
-    - 属性変更 → Signal 更新 → effect 再実行のパイプラインが接続されている
-    - プロパティ変更 → Signal 更新 → effect 再実行のパイプラインが接続されている
-    - `ctx.props` は `Computed<T>` として読み取り専用で公開されている
-    - 要素に property getter/setter が定義されている
-  ],
-  errors: [
-    - *Number 変換で NaN*: `Number('abc')` = `NaN`。現状はそのまま Signal に設定（v2 でバリデーション検討）
-    - *未定義の属性変更*: Props スキーマにない属性の `attributeChangedCallback` は無視
-    - *`__DEV__` 警告*: `attribute: false` の prop に対して `setAttribute` が呼ばれた場合、開発モードで警告
-  ],
 )

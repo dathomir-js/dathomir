@@ -33,6 +33,74 @@ function makeElement(
 }
 
 describe("transform/mode-ssr", () => {
+  it("generates empty Map when no dynamic parts exist", () => {
+    const state = createInitialState("ssr");
+    const output = transformJSXForSSRNode(
+      makeElement([{ type: "JSXText", value: "Hello" }]),
+      state,
+      nested,
+    ) as unknown as {
+      arguments: Array<{
+        type: string;
+        callee?: { name: string };
+        arguments?: Array<{ type: string; elements: unknown[] }>;
+      }>;
+    };
+
+    // Third argument should be new Map([])
+    expect(output.arguments[2]?.type).toBe("NewExpression");
+    expect(output.arguments[2]?.callee?.name).toBe("Map");
+    const mapArg = output.arguments[2]?.arguments?.[0] as {
+      type: string;
+      elements: unknown[];
+    };
+    expect(mapArg.type).toBe("ArrayExpression");
+    expect(mapArg.elements.length).toBe(0);
+  });
+
+  it("excludes event dynamic parts from the dynamic Map", () => {
+    const state = createInitialState("ssr");
+    const output = transformJSXForSSRNode(
+      {
+        type: "JSXElement",
+        openingElement: {
+          type: "JSXOpeningElement",
+          name: { type: "JSXIdentifier", name: "button" },
+          attributes: [
+            {
+              type: "JSXAttribute",
+              name: { type: "JSXIdentifier", name: "onClick" },
+              value: {
+                type: "JSXExpressionContainer",
+                expression: { type: "Identifier", name: "handleClick" },
+              },
+            },
+          ],
+          selfClosing: false,
+        },
+        children: [
+          {
+            type: "JSXExpressionContainer",
+            expression: { type: "Identifier", name: "label" },
+          },
+        ],
+        closingElement: null,
+      },
+      state,
+      nested,
+    ) as unknown as {
+      arguments: Array<{ type: string; arguments?: unknown[] }>;
+    };
+
+    const mapArg = output.arguments[2]?.arguments?.[0] as {
+      type: string;
+      elements: Array<{ type: string; elements: Array<{ value?: unknown }> }>;
+    };
+    expect(mapArg.type).toBe("ArrayExpression");
+    // Only the text dynamic part (label) should be in the Map, not the event (onClick)
+    expect(mapArg.elements.length).toBe(1);
+  });
+
   it("registers renderToString runtime import", () => {
     const state = createInitialState("ssr");
     const output = transformJSXForSSRNode(makeElement(), state, nested);

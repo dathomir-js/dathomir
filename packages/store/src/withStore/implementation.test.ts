@@ -76,7 +76,7 @@ describe("withStore", () => {
     expect(getCurrentStore()).toBeUndefined();
   });
 
-  it("does not implicitly propagate the store boundary to async callbacks", async () => {
+  it("propagates the store boundary to async callbacks within the same context (Node.js / Edge)", async () => {
     const store = createAtomStore({ appId: "app-1" });
     const seen: Array<string | undefined> = [];
     let resolveTask!: () => void;
@@ -94,8 +94,7 @@ describe("withStore", () => {
 
     await task;
 
-    expect(seen).toEqual(["app-1", undefined]);
-    expect(getCurrentStore()).toBeUndefined();
+    expect(seen).toEqual(["app-1", "app-1"]);
   });
 
   it("works with forked child stores for nested subtree overrides", () => {
@@ -133,5 +132,40 @@ describe("withStore", () => {
     });
 
     expect(seen).toEqual(["light", "dark", "light"]);
+  });
+
+  it("isolates concurrent withStore calls so parallel requests do not leak stores", async () => {
+    const storeA = createAtomStore({ appId: "request-A" });
+    const storeB = createAtomStore({ appId: "request-B" });
+    const seenA: Array<string | undefined> = [];
+    const seenB: Array<string | undefined> = [];
+
+    const delay = (ms: number) =>
+      new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+    const requestA = withStore(storeA, async () => {
+      seenA.push(getCurrentStore()?.appId);
+      await delay(50);
+      seenA.push(getCurrentStore()?.appId);
+      await delay(50);
+      seenA.push(getCurrentStore()?.appId);
+    });
+
+    const requestB = withStore(storeB, async () => {
+      seenB.push(getCurrentStore()?.appId);
+      await delay(30);
+      seenB.push(getCurrentStore()?.appId);
+      await delay(30);
+      seenB.push(getCurrentStore()?.appId);
+    });
+
+    await Promise.all([requestA, requestB]);
+
+    expect(seenA).toEqual(["request-A", "request-A", "request-A"]);
+    expect(seenB).toEqual(["request-B", "request-B", "request-B"]);
+  });
+
+  it("returns undefined outside any store boundary", () => {
+    expect(getCurrentStore()).toBeUndefined();
   });
 });

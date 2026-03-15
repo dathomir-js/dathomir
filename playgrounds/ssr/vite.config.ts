@@ -73,9 +73,38 @@ const workspacePackages = [
   "@dathomir/shared",
 ];
 
+function storeNodeInternalSwap() {
+  const withStoreDir = workspacePath("../../packages/store/src/withStore");
+  const storeSrcDir = workspacePath("../../packages/store/src");
+
+  return {
+    name: "playground-store-node-internal-swap",
+    enforce: "pre" as const,
+    resolveId(source: string, importer?: string, options?: { ssr?: boolean }) {
+      if (!options?.ssr || importer === undefined) {
+        return;
+      }
+
+      const importerPath = importer.split("?")[0] ?? importer;
+      const importerDir = path.dirname(importerPath);
+
+      if (source === "./internal" && importerDir === withStoreDir) {
+        return path.join(withStoreDir, "internal.node.ts");
+      }
+
+      if (
+        source === "./withStore/internal" &&
+        importerDir === storeSrcDir
+      ) {
+        return path.join(withStoreDir, "internal.node.ts");
+      }
+    },
+  };
+}
+
 export default defineConfig({
   root: projectRoot,
-  plugins: [dathomirVitePlugin()],
+  plugins: [storeNodeInternalSwap(), dathomirVitePlugin()],
   resolve: {
     alias: workspaceAliases,
   },

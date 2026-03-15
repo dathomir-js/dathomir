@@ -14,6 +14,23 @@ import { createServer as createViteServer } from "vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isPreview = process.argv.includes("--preview");
+let pageRequestCount = 0;
+
+const routedPages = new Set([
+  "/",
+  "/index.html",
+  "/als",
+  "/store-boundaries",
+  "/component-ssr",
+]);
+
+function resolveRoutePath(pathname: string): string | undefined {
+  if (pathname === "/index.html") {
+    return "/";
+  }
+
+  return routedPages.has(pathname) ? pathname : undefined;
+}
 
 async function createServer() {
   const port = 3090;
@@ -34,37 +51,50 @@ async function createServer() {
   const { createServer: createHttpServer } = await import("node:http");
 
   const server = createHttpServer(async (req, res) => {
-    const url = req.url || "/";
+    const requestUrl = new URL(req.url || "/", "http://localhost");
+    const pathname = requestUrl.pathname;
+    const routePath = resolveRoutePath(pathname);
 
     try {
-      // Handle static assets via Vite
-      if (url !== "/" && !url.startsWith("/@") && !url.startsWith("/src")) {
-        vite.middlewares(req, res, () => {
-          res.statusCode = 404;
-          res.end("Not found");
+      if (pathname === "/api/als/parallel") {
+        const diagnosticsModule = await vite.ssrLoadModule("/src/alsDiagnostics.ts");
+        const payload = await diagnosticsModule.runParallelIsolationProbe();
+
+        res.writeHead(200, {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
         });
+        res.end(JSON.stringify(payload));
         return;
       }
 
-      // For root path, serve the index.html with SSR content
-      if (url === "/" || url === "/index.html") {
+      if (routePath !== undefined) {
         let template = fs.readFileSync(
           path.resolve(__dirname, "index.html"),
           "utf-8"
         );
 
         // Apply Vite HTML transforms
-        template = await vite.transformIndexHtml(url, template);
+        template = await vite.transformIndexHtml(pathname, template);
 
         // Load and execute SSR module
         try {
+          const requestId =
+            requestUrl.searchParams.get("requestId") ??
+            `page-${++pageRequestCount}`;
           const ssrModule = await vite.ssrLoadModule("/src/entry-server.tsx");
-          const appHtml = ssrModule.render();
+          const appHtml = await ssrModule.render({
+            requestId,
+            routePath,
+          });
 
           // Replace the SSR outlet with rendered content
           const html = template.replace("<!--ssr-outlet-->", appHtml);
 
-          res.writeHead(200, { "Content-Type": "text/html" });
+          res.writeHead(200, {
+            "Content-Type": "text/html",
+            "X-Playground-Request-Id": requestId,
+          });
           res.end(html);
         } catch (ssrError) {
           console.error("SSR Error:", ssrError);
@@ -75,7 +105,6 @@ async function createServer() {
         return;
       }
 
-      // Let Vite handle everything else
       vite.middlewares(req, res, () => {
         res.statusCode = 404;
         res.end("Not found");

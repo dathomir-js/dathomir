@@ -5,7 +5,11 @@
  * adoptedStyleSheets, and props reflection with reactive signals and type coercion.
  * @module
  */
-import { getCssText } from "@/css/implementation";
+import {
+  connectGlobalStyles,
+  disconnectGlobalStyles,
+  getCssText,
+} from "@/css/implementation";
 import {
   bindCurrentStoreToSubtree,
   captureCurrentStore,
@@ -536,10 +540,6 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
           this.attachShadow({ mode: "open" });
         }
       }
-      if (sheets) {
-        this.shadowRoot!.adoptedStyleSheets = sheets;
-      }
-
       // Create prop signals with type coercion
       if (propsSchema) {
         const signals: Record<string, Signal<unknown>> = {};
@@ -549,7 +549,7 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
           const rawAttr =
             attrName !== null ? this.getAttribute(attrName) : null;
           const initialValue =
-            rawAttr !== null ? coerceValue(def, rawAttr) : getDefaultValue(def);
+            attrName !== null ? coerceValue(def, rawAttr) : getDefaultValue(def);
           signals[propName] = signal(initialValue);
         }
         propSignalMap.set(this, signals);
@@ -567,6 +567,7 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
       } as ComponentContext<S>;
       const shadowRoot = this.shadowRoot!;
       const hasDSD = shadowRoot.childNodes.length > 0;
+      connectGlobalStyles(shadowRoot, sheets ?? []);
 
       const retryIfStoreEventuallyBinds = (run: () => void): boolean => {
         if (
@@ -632,7 +633,7 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
       };
 
       if (hasDSD) {
-        if (sheets) {
+        if (this.shadowRoot!.adoptedStyleSheets.length > 0) {
           const dsdStyles = shadowRoot.querySelectorAll("style");
           for (const style of dsdStyles) {
             style.remove();
@@ -652,6 +653,7 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
     disconnectedCallback(): void {
       this.#dispose?.();
       this.#dispose = undefined;
+      disconnectGlobalStyles(this.shadowRoot!);
     }
 
     attributeChangedCallback(

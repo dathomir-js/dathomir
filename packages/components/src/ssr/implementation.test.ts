@@ -10,6 +10,10 @@ import type {
   ComponentClass,
   ComponentContext,
 } from "@/defineComponent/implementation";
+import {
+  adoptGlobalStyles,
+  clearGlobalStyles,
+} from "@/css/implementation";
 import { defineComponent } from "@/defineComponent/implementation";
 import { clearRegistry, registerComponent } from "@/registry/implementation";
 import {
@@ -19,11 +23,13 @@ import {
   renderDSD,
   renderDSDContent,
 } from "./implementation";
+import { renderToString } from "@dathomir/runtime/ssr";
 
 describe("ssr", () => {
   beforeEach(() => {
     clearRegistry();
     _resetRendererState();
+    clearGlobalStyles();
   });
 
   describe("renderDSD", () => {
@@ -115,6 +121,48 @@ describe("ssr", () => {
 
       expect(html).toContain("<style>:host { display: block; }</style>");
       expect(html).toContain("<style>div { color: red; }</style>");
+    });
+
+    it("should render adopted global styles before component local styles", () => {
+      adoptGlobalStyles(":host { color: seagreen; }");
+      registerComponent(
+        "global-style-order",
+        () => "<div>Order</div>",
+        [":host { display: block; }"],
+      );
+
+      const html = renderDSD("global-style-order", {});
+      const globalIndex = html.indexOf("<style>:host { color: seagreen; }</style>");
+      const localIndex = html.indexOf("<style>:host { display: block; }</style>");
+
+      expect(globalIndex).toBeGreaterThanOrEqual(0);
+      expect(localIndex).toBeGreaterThan(globalIndex);
+    });
+
+    it("should dedupe duplicate global and local css texts in SSR output", () => {
+      adoptGlobalStyles(":host { color: seagreen; }");
+      registerComponent(
+        "global-style-dedupe",
+        () => "<div>Dedupe</div>",
+        [":host { color: seagreen; }", ":host { display: block; }"],
+      );
+
+      const html = renderDSD("global-style-dedupe", {});
+
+      expect(html.match(/<style>:host \{ color: seagreen; \}<\/style>/g)).toHaveLength(1);
+      expect(html).toContain("<style>:host { display: block; }</style>");
+    });
+
+    it("should render native CSSStyleSheet global styles in SSR output", () => {
+      const globalSheet = new CSSStyleSheet();
+      globalSheet.replaceSync(":host { color: olive; }");
+
+      adoptGlobalStyles(globalSheet);
+      registerComponent("native-global-style", () => "<div>Native</div>", []);
+
+      const html = renderDSD("native-global-style", {});
+
+      expect(html).toContain("<style>:host { color: olive; }</style>");
     });
 
     it("should throw error for unregistered component", () => {
@@ -334,6 +382,35 @@ describe("ssr", () => {
         renderDSDContent("non-existent", {});
       }).toThrow('Component "non-existent" is not registered');
     });
+
+    it("should render adopted global styles before local styles in template output", () => {
+      adoptGlobalStyles(":host { color: seagreen; }");
+      registerComponent(
+        "template-global-style-order",
+        () => "<div>Order</div>",
+        [":host { display: block; }"],
+      );
+
+      const html = renderDSDContent("template-global-style-order", {});
+      const globalIndex = html.indexOf("<style>:host { color: seagreen; }</style>");
+      const localIndex = html.indexOf("<style>:host { display: block; }</style>");
+
+      expect(globalIndex).toBeGreaterThanOrEqual(0);
+      expect(localIndex).toBeGreaterThan(globalIndex);
+    });
+
+    it("should dedupe duplicate global and local css texts in template output", () => {
+      adoptGlobalStyles(":host { color: seagreen; }");
+      registerComponent(
+        "template-global-style-dedupe",
+        () => "<div>Dedupe</div>",
+        [":host { color: seagreen; }"],
+      );
+
+      const html = renderDSDContent("template-global-style-dedupe", {});
+
+      expect(html.match(/<style>:host \{ color: seagreen; \}<\/style>/g)).toHaveLength(1);
+    });
   });
 
   describe("ensureComponentRenderer", () => {
@@ -356,6 +433,17 @@ describe("ssr", () => {
       // renderDSD should work after setup
       const html = renderDSD("renderer-test", {});
       expect(html).toContain("<div>Renderer Test</div>");
+    });
+
+    it("should clear the runtime component renderer on reset", () => {
+      registerComponent("runtime-reset-test", () => "<div>Reset</div>", []);
+
+      ensureComponentRenderer();
+      expect(renderToString([["runtime-reset-test", null]])).toContain("<div>Reset</div>");
+
+      _resetRendererState();
+
+      expect(renderToString([["runtime-reset-test", null]])).toBe("<runtime-reset-test></runtime-reset-test>");
     });
   });
 

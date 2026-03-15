@@ -42,8 +42,6 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
       attrs: Record<string, unknown>,
     ) => string | null
 
-    function escapeAttr(value: string): string
-
     interface ComponentMetadata {
       readonly __tagName__: string;
     }
@@ -55,12 +53,14 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     - 未登録コンポーネントでは `renderDSD()` と `renderDSDContent()` は例外を投げる
     - `ensureComponentRenderer()` は冪等である
     - `createComponentRenderer()` が返す renderer は未登録時に `null` を返す
-    - `escapeAttr()` は `&`, `"`, `<`, `>` を HTML エスケープする
+    - `renderDSD()` は属性値中の `&`, `"`, `<`, `>` を HTML エスケープする
     - `options.store` が指定された場合、SSR 時の `ComponentContext.store` はその store instance を返す
     - `options.store` が未指定でも、active な `withStore()` boundary が存在する場合はその store instance を返す
     - `options.store` も active `withStore()` boundary もない場合、SSR 時の `ctx.store` アクセスは明示的に例外を投げる
     - `options.storeSnapshotSchema` が指定された場合、DSD template 内へ `<script type="application/json" data-dh-store>` を含める
     - `options.storeSnapshotSchema` を使う場合は `options.store` も必須とする
+    - `adoptGlobalStyles()` で登録済みの global style は component local style より前に DSD `<style>` として出力する
+    - 同一 CSS テキストが global/local の両方に存在する場合、DSD `<style>` は 1 回だけ出力する
   ],
 )
 
@@ -82,15 +82,18 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     8. 属性値が正しく HTML エスケープされる
     9. CSS が `<style>` タグとして DSD に含まれる
     10. 複数の `<style>` タグが正しく出力される
+    10.5. global style が component local style より前に出力される
+    10.6. global/local で重複する CSS テキストは 1 回だけ出力される
     11. `ensureComponentRenderer()` が複数回呼ばれても安全である
     12. `createComponentRenderer()` が返す renderer が未登録コンポーネントで `null` を返す
       13. `Number` 型プロップで `null` 属性はデフォルト値を使う
       14. `String` 型プロップで `null` 属性はデフォルト値を使う
       15. SSR で `options.store` を渡した場合、`ctx.store` から同じ store instance を取得できる
-        16. SSR で `options.store` がなくても active `withStore()` boundary がある場合、`ctx.store` からその store instance を取得できる
-        17. SSR で `options.store` も active `withStore()` boundary もない場合、`ctx.store` にアクセスすると明示エラーになる
-        18. `options.storeSnapshotSchema` を渡した場合、DSD に `data-dh-store` script が含まれる
-        19. `options.storeSnapshotSchema` を `options.store` なしで使うとエラーになる
+    16. SSR で `options.store` がなくても active `withStore()` boundary がある場合、`ctx.store` からその store instance を取得できる
+    17. SSR で `options.store` も active `withStore()` boundary もない場合、`ctx.store` にアクセスすると明示エラーになる
+    18. `options.storeSnapshotSchema` を渡した場合、DSD に `data-dh-store` script が含まれる
+    19. `options.storeSnapshotSchema` を `options.store` なしで使うとエラーになる
+    20. `_resetRendererState()` は components 側の初期化フラグだけでなく runtime 側の global renderer も解除し、テスト間で状態を分離する
   ],
   impl_notes: [
     *使用例*:
@@ -138,7 +141,7 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     `renderDSD` が生成する属性値を自動的に HTML エスケープする。
   ],
   [
-    - `escapeAttr()` で `&`, `"`, `<`, `>` を変換する
+    - `renderDSD()` 内部で `&`, `"`, `<`, `>` を変換する
     - 利用者が個別にエスケープを意識しなくてよい
   ],
 )
@@ -229,6 +232,21 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     - DSD 単位で store snapshot を局所化できる
     - hydration 側が template 内から store snapshot を独立に復元できる
     - store を使わない SSR には影響しない
+  ],
+)
+
+#adr(
+  header("DSD は global style を local style より前に含める", Status.Accepted, "2026-03-15"),
+  [
+    CSR では `adoptedStyleSheets` によって global style と local style を順序付きで合成するため、SSR の `<style>` 出力も同じ順序でないと hydration 後の見た目差分が起きやすい。
+  ],
+  [
+    `renderDSD` / `renderDSDContent` は `adoptGlobalStyles()` で登録された CSS テキストを local CSS より前に template 内へ並べ、同じ CSS テキストは重複出力しない。
+  ],
+  [
+    - SSR / CSR で style 適用順を揃えられる
+    - global style の説明責務を component 定義から分離できる
+    - shared typography / reset の重複 `<style>` を減らせる
   ],
 )
 

@@ -1,3 +1,4 @@
+import { clearGlobalStyles } from "@dathomir/components";
 import { renderDSD } from "@dathomir/components/ssr";
 
 import { SSRAppRoot } from "./SSRAppRoot";
@@ -17,6 +18,8 @@ type SSRRenderContext = {
  * Render the application to HTML string for SSR.
  */
 export async function render(context: SSRRenderContext = {}): Promise<string> {
+  clearGlobalStyles();
+
   const requestId = context.requestId ?? "page-request";
   const routePath = getPlaygroundRouteOrDefault(context.routePath ?? "/")
     .path as PlaygroundRoutePath;
@@ -31,16 +34,20 @@ export async function render(context: SSRRenderContext = {}): Promise<string> {
     requestStore,
   });
 
-  return renderDSD(
-    SSRAppRoot,
-    {
-      requestId,
-      requestStoreAppId: requestStore.appId,
-      routePath,
-      pagePayloadJson,
-    },
-    { store: requestStore },
-  );
+  try {
+    return renderDSD(
+      SSRAppRoot,
+      {
+        requestId,
+        requestStoreAppId: requestStore.appId,
+        routePath,
+        pagePayloadJson,
+      },
+      { store: requestStore },
+    );
+  } finally {
+    clearGlobalStyles();
+  }
 }
 
 export { render as default };

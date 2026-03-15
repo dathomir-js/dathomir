@@ -1,8 +1,9 @@
 import { PlaygroundShell } from "./PlaygroundShell";
 import { ALSPage } from "./pages/ALSPage";
 import { ComponentSSRPage } from "./pages/ComponentSSRPage";
-import { OverviewPage } from "./pages/OverviewPage";
 import { StoreBoundariesPage } from "./pages/StoreBoundariesPage";
+import { GlobalStylesPage } from "./pages/GlobalStylesPage";
+import { OverviewPage } from "./pages/OverviewPage";
 import {
   getPlaygroundRouteOrDefault,
   type PlaygroundRoutePath,
@@ -34,6 +35,10 @@ function renderPlaygroundPage(props: {
 
     case "/component-ssr":
       pageContent = <ComponentSSRPage />;
+      break;
+
+    case "/global-styles":
+      pageContent = <GlobalStylesPage />;
       break;
 
     case "/":

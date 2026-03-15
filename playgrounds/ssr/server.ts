@@ -11,25 +11,19 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer as createViteServer } from "vite";
+import { getPlaygroundRoute, normalizePlaygroundPath } from "./src/routes";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isPreview = process.argv.includes("--preview");
 let pageRequestCount = 0;
 
-const routedPages = new Set([
-  "/",
-  "/index.html",
-  "/als",
-  "/store-boundaries",
-  "/component-ssr",
-]);
-
 function resolveRoutePath(pathname: string): string | undefined {
-  if (pathname === "/index.html") {
-    return "/";
-  }
+  const normalizedPath = normalizePlaygroundPath(pathname);
+  return getPlaygroundRoute(normalizedPath)?.path;
+}
 
-  return routedPages.has(pathname) ? pathname : undefined;
+function renderClientFallback(routePath: string): string {
+  return `<playground-ssr-app routePath="${routePath}"></playground-ssr-app>`;
 }
 
 async function createServer() {
@@ -98,9 +92,13 @@ async function createServer() {
           res.end(html);
         } catch (ssrError) {
           console.error("SSR Error:", ssrError);
-          // Fallback to CSR
+          const html = template.replace(
+            "<!--ssr-outlet-->",
+            renderClientFallback(routePath),
+          );
+
           res.writeHead(200, { "Content-Type": "text/html" });
-          res.end(template);
+          res.end(html);
         }
         return;
       }

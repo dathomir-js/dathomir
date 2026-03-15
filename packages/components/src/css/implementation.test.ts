@@ -1,8 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { css, getCssText } from "./implementation";
+import {
+  adoptGlobalStyles,
+  clearGlobalStyles,
+  css,
+  getCssText,
+  getGlobalStyleCssTexts,
+} from "./implementation";
 
 describe("css", () => {
+  beforeEach(() => {
+    clearGlobalStyles();
+  });
+
   it("should return a CSSStyleSheet instance", () => {
     const sheet = css`
       :host {
@@ -62,5 +72,51 @@ describe("css", () => {
   it("getCssText() should return a plain string as-is", () => {
     const rawCss = ":host { display: block; }";
     expect(getCssText(rawCss)).toBe(rawCss);
+  });
+
+  it("adoptGlobalStyles() should register string and CSSStyleSheet inputs", () => {
+    const sheet = css`
+      :host {
+        color: green;
+      }
+    `;
+
+    adoptGlobalStyles(":host { display: block; }", sheet);
+
+    expect(getGlobalStyleCssTexts()).toEqual([
+      ":host { display: block; }",
+      `
+      :host {
+        color: green;
+      }
+    `,
+    ]);
+  });
+
+  it("adoptGlobalStyles() should register native CSSStyleSheet inputs", () => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(":host { color: olive; }");
+
+    adoptGlobalStyles(sheet);
+
+    expect(getGlobalStyleCssTexts()).toEqual([":host { color: olive; }"]);
+  });
+
+  it("adoptGlobalStyles() should dedupe duplicate css text", () => {
+    const a = ":host { color: tomato; }";
+    const b = css`:host { color: tomato; }`;
+
+    adoptGlobalStyles(a, b, a);
+
+    expect(getGlobalStyleCssTexts()).toEqual([a]);
+  });
+
+  it("adoptGlobalStyles() should dedupe duplicate native sheet identity", () => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(":host { color: slateblue; }");
+
+    adoptGlobalStyles(sheet, sheet);
+
+    expect(getGlobalStyleCssTexts()).toEqual([":host { color: slateblue; }"]);
   });
 });

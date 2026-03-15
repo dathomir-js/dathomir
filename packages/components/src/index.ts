@@ -1,5 +1,10 @@
 // Web Components high-level API
-export { css, getCssText } from "@/css/implementation";
+export {
+  adoptGlobalStyles,
+  clearGlobalStyles,
+  css,
+  getCssText,
+} from "@/css/implementation";
 export type { DathomirStyleSheet } from "@/css/implementation";
 export { defineComponent } from "@/defineComponent/implementation";
 export type {

@@ -115,10 +115,12 @@
     - JSX runtime が生成した subtree 内の custom element に対しても current store boundary が伝播する
     - `attribute: false` の prop は属性監視せず、property setter 経由でのみ更新する
     - `connectedCallback` では host に bind 済みの store を解決し、`createRoot` スコープ内で関数コンポーネントを実行する
+    - `connectedCallback` では local `styles` と `adoptGlobalStyles()` で登録済みの global style を合成し、`adoptedStyleSheets` へ反映する
     - DSD が存在し `hydrate` がある場合は hydrate パス、`hydrate` がない場合は shadowRoot をクリアして再実行する
+    - DSD に SSR `<style>` が存在し、CSR で `adoptedStyleSheets` を適用する場合は `<style>` を除去して重複適用を避ける
     - `disconnectedCallback` では `dispose` により cleanup を実行する
     - SSR では `getCssText()`、`registerComponent()`、`ensureComponentRenderer()` を用いて SSR 情報を登録する
-    - 属性から Signal への型変換は `String` / `Number` / `Boolean` / カスタム関数の規則に従い、`Number` では `null` を `Number(null)` にせずデフォルト値へフォールバックする
+    - 属性から Signal への型変換は `String` / `Number` / `Boolean` / カスタム関数の規則に従い、初期化時と属性変更時で同じ coercion 規則を使う。`Number` では `null` を `Number(null)` にせずデフォルト値へフォールバックする
   ],
 )
 
@@ -177,6 +179,21 @@
   [
     - `<style>` タグより共有効率が良い
     - DSD ハイドレーション時は SSR の `<style>` を置き換えられる
+  ],
+)
+
+#adr(
+  header("global style は component local style より前に合成する", Status.Accepted, "2026-03-15"),
+  [
+    design token / typography / reset のような global style は複数 component で共有したいが、component 固有 style で上書きできる余地も残す必要がある。
+  ],
+  [
+    `defineComponent` は `adoptGlobalStyles()` で登録済みの global style を local `styles` より前に `adoptedStyleSheets` へ並べる。重複する style は 1 回だけ採用する。
+  ],
+  [
+    - shared style の優先順位が安定する
+    - component 固有 style は後段で override しやすい
+    - local/global の同一 style 重複を避けられる
   ],
 )
 
@@ -385,5 +402,10 @@
     22. `withStore()` 内で生成された custom element が `ctx.store` から同じ store instance を受け取る
     23. nested `withStore()` で生成された custom element は内側の store instance を受け取る
     24. `withStore()` 内の JSX subtree に含まれる nested custom element も store instance を受け取る
+    25. `adoptGlobalStyles()` で登録した global style が `adoptedStyleSheets` に含まれる
+    26. component 接続後に `adoptGlobalStyles()` を呼んでも既存 ShadowRoot へ style が反映される
+    27. component が切断されている間は global style 更新を受け取らず、再接続時に最新の style 集合へ再同期する
+    28. custom coercer prop は属性未指定の初期化時も属性除去時も同じ `null` 入力規則で評価される
+    29. DSD hydration 時に SSR `<style>` を除去し、global/local の `adoptedStyleSheets` へ置き換える
   ],
 )

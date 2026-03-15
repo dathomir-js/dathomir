@@ -6,6 +6,7 @@
  * @module
  */
 
+import { getGlobalStyleCssTexts } from "@/css/implementation";
 import type {
   ComponentContext,
   ComponentMetadata,
@@ -157,8 +158,18 @@ function renderComponentContent(
     dsdContent += createStoreScript(serializeState(snapshot));
   }
 
+  const emittedCssTexts = new Set<string>();
+
+  for (const cssText of getGlobalStyleCssTexts()) {
+    if (emittedCssTexts.has(cssText)) continue;
+    emittedCssTexts.add(cssText);
+    dsdContent += `<style>${cssText}</style>`;
+  }
+
   // Add CSS as <style> tags inside DSD
   for (const cssText of registration.cssTexts) {
+    if (emittedCssTexts.has(cssText)) continue;
+    emittedCssTexts.add(cssText);
     dsdContent += `<style>${cssText}</style>`;
   }
 
@@ -303,6 +314,7 @@ function ensureComponentRenderer(): void {
  */
 function _resetRendererState(): void {
   _rendererInitialized = false;
+  setComponentRenderer(undefined);
 }
 
 export {

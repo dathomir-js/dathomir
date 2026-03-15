@@ -27,6 +27,13 @@ const playgroundRoutes = [
     description:
       "Shows defineComponent SSR, shared store usage inside a custom element, and raw DSD markup output.",
   },
+  {
+    path: "/global-styles",
+    label: "Global Styles",
+    title: "Shadow DOM Global CSS Injection",
+    description:
+      "Shows how adoptGlobalStyles() can share typography and surface styles across multiple Shadow DOM components.",
+  },
 ] as const;
 
 type PlaygroundRoute = (typeof playgroundRoutes)[number];

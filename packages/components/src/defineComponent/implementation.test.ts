@@ -2,9 +2,13 @@ import { onCleanup, signal, templateEffect } from "@dathomir/reactivity";
 import { atom, createAtomStore, withStore } from "@dathomir/store";
 
 import { bindStoreToHost, peekStoreFromHost } from "./internal";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { css } from "../css/implementation";
+import {
+  adoptGlobalStyles,
+  clearGlobalStyles,
+  css,
+} from "../css/implementation";
 import { defineComponent } from "./implementation";
 
 /**
@@ -21,6 +25,10 @@ function uniqueTag(): string {
 }
 
 describe("defineComponent", () => {
+  beforeEach(() => {
+    clearGlobalStyles();
+  });
+
   it("should create Shadow DOM automatically", async () => {
     const tag = uniqueTag();
     defineComponent(tag, () => {
@@ -141,26 +149,90 @@ describe("defineComponent", () => {
     el.remove();
   });
 
-  it("should call hydrate when DSD content exists", async () => {
+  it("should include adopted global styles before local styles", async () => {
+    const tag = uniqueTag();
+    const globalSheet = css`:host { color: rebeccapurple; }`;
+    const localSheet = css`:host { display: block; }`;
+
+    adoptGlobalStyles(globalSheet);
+
+    defineComponent(tag, () => document.createTextNode("styled"), {
+      styles: [localSheet],
+    });
+
+    const el = document.createElement(tag);
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.shadowRoot!.adoptedStyleSheets[0]).toBe(globalSheet);
+    expect(el.shadowRoot!.adoptedStyleSheets[1]).toBe(localSheet);
+
+    el.remove();
+  });
+
+  it("should apply newly adopted global styles to already connected components", async () => {
+    const tag = uniqueTag();
+
+    defineComponent(tag, () => document.createTextNode("styled"));
+
+    const el = document.createElement(tag);
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.shadowRoot!.adoptedStyleSheets).toHaveLength(0);
+
+    const globalSheet = css`:host { color: steelblue; }`;
+    adoptGlobalStyles(globalSheet);
+    await waitForMicrotask();
+
+    expect(el.shadowRoot!.adoptedStyleSheets).toContain(globalSheet);
+
+    el.remove();
+  });
+
+  it("should resync latest global styles after disconnect and reconnect", async () => {
+    const tag = uniqueTag();
+    const firstGlobalSheet = css`:host { color: salmon; }`;
+    const secondGlobalSheet = css`:host { background: beige; }`;
+
+    adoptGlobalStyles(firstGlobalSheet);
+
+    defineComponent(tag, () => document.createTextNode("styled"));
+
+    const el = document.createElement(tag);
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.shadowRoot!.adoptedStyleSheets).toContain(firstGlobalSheet);
+
+    el.remove();
+    adoptGlobalStyles(secondGlobalSheet);
+
+    expect(el.shadowRoot!.adoptedStyleSheets).toContain(firstGlobalSheet);
+    expect(el.shadowRoot!.adoptedStyleSheets).not.toContain(secondGlobalSheet);
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.shadowRoot!.adoptedStyleSheets).toContain(firstGlobalSheet);
+    expect(el.shadowRoot!.adoptedStyleSheets).toContain(secondGlobalSheet);
+
+    el.remove();
+  });
+
+  it("should call setup when DSD content does not exist", async () => {
     const tag = uniqueTag();
     const hydrateFn = vi.fn();
     const setupFn = vi.fn(() => document.createTextNode("setup"));
 
     defineComponent(tag, setupFn, { hydrate: hydrateFn });
 
-    // Manually create element with pre-existing shadow content (simulating DSD)
+    // This covers the non-DSD branch even when a hydrate option exists.
     const el = document.createElement(tag);
 
-    // We need to attach shadow and add content before connectedCallback
-    // to simulate DSD. The constructor will see existing shadowRoot.
-    // Since happy-dom might not support getInternals/DSD natively,
-    // we simulate by checking if the constructor detects existing shadowRoot.
-    // With the current impl, attachShadow is called in constructor if no shadowRoot.
-    // To simulate DSD, we can test the non-DSD path (which is more reliable).
     document.body.appendChild(el);
     await waitForMicrotask();
 
-    // Without pre-existing content, setup should be called, not hydrate
     expect(setupFn).toHaveBeenCalled();
     expect(hydrateFn).not.toHaveBeenCalled();
 
@@ -392,6 +464,43 @@ describe("defineComponent", () => {
 
     expect(capturedProps.count.value).toBe(5);
     expect(capturedProps.label.value).toBe("hello");
+
+    el.remove();
+  });
+
+  it("should initialize custom coercer props with null when attribute is absent", async () => {
+    const tag = uniqueTag();
+    const seenValues: Array<string> = [];
+
+    defineComponent(
+      tag,
+      ({ props }) => {
+        seenValues.push(props.mode.value);
+        return document.createTextNode(props.mode.value);
+      },
+      {
+        props: {
+          mode: {
+            type: (value: string | null) => (value === null ? "fallback" : value),
+          },
+        },
+      },
+    );
+
+    const el = document.createElement(tag) as HTMLElement & { mode: string };
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.mode).toBe("fallback");
+    expect(seenValues.at(-1)).toBe("fallback");
+
+    el.setAttribute("mode", "active");
+    await waitForMicrotask();
+    expect(el.mode).toBe("active");
+
+    el.removeAttribute("mode");
+    await waitForMicrotask();
+    expect(el.mode).toBe("fallback");
 
     el.remove();
   });
@@ -655,6 +764,35 @@ describe("defineComponent", () => {
     // hydrate should be called, not setup
     expect(hydrateFn).toHaveBeenCalled();
     expect(setupFn).not.toHaveBeenCalled();
+
+    el.remove();
+  });
+
+  it("should replace SSR style tags with adoptedStyleSheets during DSD hydrate", async () => {
+    const tag = uniqueTag();
+    const globalSheet = css`:host { color: navy; }`;
+    const localSheet = css`:host { display: block; }`;
+
+    adoptGlobalStyles(globalSheet);
+
+    const hydrateFn = vi.fn();
+
+    defineComponent(tag, () => document.createTextNode("from-setup"), {
+      styles: [localSheet],
+      hydrate: hydrateFn,
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><style>:host { color: navy; }</style><style>:host { display: block; }</style><p>SSR content</p></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(hydrateFn).toHaveBeenCalled();
+    expect(el.shadowRoot!.querySelectorAll("style")).toHaveLength(0);
+    expect(el.shadowRoot!.adoptedStyleSheets).toContain(globalSheet);
+    expect(el.shadowRoot!.adoptedStyleSheets).toContain(localSheet);
 
     el.remove();
   });

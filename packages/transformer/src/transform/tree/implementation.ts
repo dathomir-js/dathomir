@@ -14,6 +14,7 @@ import {
 } from "@/transform/ast/implementation";
 import type { CallExpression, ESTNode } from "@/transform/ast/implementation";
 import {
+  getColocatedClientDirective,
   getIslandsDirectiveName,
   getTagName,
   isClientDirectiveNamespace,
@@ -34,6 +35,7 @@ import type {
   JSXSpreadChild,
 } from "@/transform/jsx/implementation";
 import type { TransformState } from "@/transform/state/implementation";
+import { createClientTargetId } from "@/transform/state/implementation";
 
 interface DynamicPart {
   type: "text" | "attr" | "event" | "spread" | "insert";
@@ -54,6 +56,10 @@ interface ProcessedAttributes {
   spreads: ESTNode[];
 }
 
+interface ColocatedClientState {
+  strategy: "load" | "interaction" | null;
+}
+
 interface IslandsDirectiveMetadata {
   strategy: IslandsDirectiveName;
   value: ESTNode | null;
@@ -72,6 +78,35 @@ function throwUnknownClientDirective(name: JSXAttribute["name"]): never {
   throw new Error(
     `[dathomir] Unknown client:* directive: client:${name.name.name}`,
   );
+}
+
+function getRawAttributeNameForDiagnostics(
+  name: JSXAttribute["name"],
+): string | null {
+  if (name.type === "JSXIdentifier") {
+    return name.name;
+  }
+
+  if (name.type === "JSXNamespacedName") {
+    return `${name.namespace.name}:${name.name.name}`;
+  }
+
+  return null;
+}
+
+function getUnsupportedColocatedDirectiveError(
+  name: JSXAttribute["name"],
+): string | null {
+  const rawName = getRawAttributeNameForDiagnostics(name);
+  if (rawName === null) {
+    return null;
+  }
+
+  if (rawName.startsWith("load:") || rawName.startsWith("interaction:")) {
+    return `Unsupported colocated client directive: ${rawName}`;
+  }
+
+  return null;
 }
 
 interface NestedTransformers {
@@ -149,6 +184,12 @@ function buildComponentCall(
         value: normalizeIslandsDirectiveValue(directiveName, attr.value),
       };
       continue;
+    }
+
+    const unsupportedColocatedDirectiveError =
+      getUnsupportedColocatedDirectiveError(attr.name);
+    if (unsupportedColocatedDirectiveError !== null) {
+      throw new Error(`[dathomir] ${unsupportedColocatedDirectiveError}`);
     }
 
     if (isClientDirectiveNamespace(attr.name)) {
@@ -358,6 +399,8 @@ function processAttributes(
   attributes: (JSXAttribute | JSXSpreadAttribute)[],
   dynamicParts: DynamicPart[],
   path: number[],
+  state: TransformState,
+  colocatedClientState: ColocatedClientState,
 ): ProcessedAttributes {
   const staticProps: ESTNode[] = [];
   const events: { type: string; handler: ESTNode }[] = [];
@@ -373,6 +416,45 @@ function processAttributes(
       throw new Error(
         "[dathomir] client:* directives are only supported on component elements",
       );
+    }
+
+    const colocatedClientDirective = getColocatedClientDirective(attr.name);
+    if (colocatedClientDirective !== null) {
+      if (!isJSXExpressionContainer(attr.value) || isJSXEmptyExpression(attr.value.expression)) {
+        throw new Error(
+          `[dathomir] ${colocatedClientDirective.strategy}:onClick requires an inline handler expression`,
+        );
+      }
+
+      if (
+        colocatedClientState.strategy !== null &&
+        colocatedClientState.strategy !== colocatedClientDirective.strategy
+      ) {
+        throw new Error(
+          "[dathomir] Mixed colocated client strategies are not supported in one JSX root",
+        );
+      }
+
+      colocatedClientState.strategy = colocatedClientDirective.strategy;
+      const targetId = createClientTargetId(state);
+      staticProps.push(
+        nProp(nLit("data-dh-client-target"), nLit(targetId)),
+        nProp(
+          nLit("data-dh-client-strategy"),
+          nLit(colocatedClientDirective.strategy),
+        ),
+      );
+      events.push({
+        type: colocatedClientDirective.event,
+        handler: attr.value.expression,
+      });
+      continue;
+    }
+
+    const unsupportedColocatedDirectiveError =
+      getUnsupportedColocatedDirectiveError(attr.name);
+    if (unsupportedColocatedDirectiveError !== null) {
+      throw new Error(`[dathomir] ${unsupportedColocatedDirectiveError}`);
     }
 
     if (isClientDirectiveNamespace(attr.name)) {
@@ -433,6 +515,8 @@ function jsxElementToTree(
     opening.attributes,
     dynamicParts,
     path,
+    state,
+    state.currentColocatedClientState ?? { strategy: null },
   );
 
   const children = processChildren(
@@ -615,22 +699,33 @@ function jsxToTree(
   nested: NestedTransformers,
 ): { tree: ESTNode; dynamicParts: DynamicPart[] } {
   const dynamicParts: DynamicPart[] = [];
+  const scopedState = state as TransformState & {
+    currentColocatedClientState?: ColocatedClientState;
+  };
+  const previousColocatedClientState = scopedState.currentColocatedClientState;
+  const colocatedClientState = previousColocatedClientState ?? {
+    strategy: null,
+  };
+  scopedState.currentColocatedClientState = colocatedClientState;
 
   if (node.type === "JSXFragment") {
     const children = processChildren(
       node.children,
-      state,
+      scopedState,
       dynamicParts,
       [],
       nested,
     );
-    return {
+    const result = {
       tree: nArr(children.map((c) => c.tree)),
       dynamicParts,
     };
+    scopedState.currentColocatedClientState = previousColocatedClientState;
+    return result;
   }
 
-  const result = jsxElementToTree(node, state, dynamicParts, [0], nested);
+  const result = jsxElementToTree(node, scopedState, dynamicParts, [0], nested);
+  scopedState.currentColocatedClientState = previousColocatedClientState;
   return { tree: nArr([result.tree]), dynamicParts };
 }
 

@@ -4,6 +4,7 @@ import { ComponentSSRPage } from "./pages/ComponentSSRPage";
 import { StoreBoundariesPage } from "./pages/StoreBoundariesPage";
 import { GlobalStylesPage } from "./pages/GlobalStylesPage";
 import { IslandsDirectivePage } from "./pages/IslandsDirectivePage";
+import { IslandsRuntimePage } from "./pages/IslandsRuntimePage";
 import { OverviewPage } from "./pages/OverviewPage";
 import {
   getPlaygroundRouteOrDefault,
@@ -44,6 +45,10 @@ function renderPlaygroundPage(props: {
 
     case "/islands-directive":
       pageContent = <IslandsDirectivePage pagePayloadJson={props.pagePayloadJson} />;
+      break;
+
+    case "/islands-runtime":
+      pageContent = <IslandsRuntimePage />;
       break;
 
     case "/":

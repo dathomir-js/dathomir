@@ -55,7 +55,14 @@
     interface ComponentContext<S extends PropsSchema = PropsSchema> {
       readonly host: HTMLElement;
       readonly props: Readonly<InferProps<S>>;
+      readonly client: ComponentClientContext;
       readonly store: AtomStore;
+    }
+
+    interface ComponentClientContext {
+      readonly strategy: "load" | "visible" | "idle" | "interaction" | "media" | null;
+      readonly value: string | null;
+      readonly hydrated: boolean;
     }
 
     interface ComponentOptions<S extends PropsSchema = PropsSchema> {
@@ -82,6 +89,11 @@
       readonly [K in keyof S]?: JSXPropValue<InferPropType<S[K]>>;
     } & {
       readonly children?: unknown;
+      readonly "client:load"?: true | "";
+      readonly "client:visible"?: true | "";
+      readonly "client:idle"?: true | "";
+      readonly "client:interaction"?: true | "" | string;
+      readonly "client:media"?: string;
     };
 
     type JSXComponent<S extends PropsSchema = PropsSchema> = (
@@ -107,16 +119,21 @@
   ],
   constraints: [
     - `tagName` は custom element 規約に従いハイフンを含む
-    - `component` は `host` / `props` / `store` を持つ単一 context object を受け取る関数コンポーネントである
+    - `component` は `host` / `props` / `client` / `store` を持つ単一 context object を受け取る関数コンポーネントである
     - 返り値は callable な `DefinedComponent` であり、`<Counter />` のように JSX 関数コンポーネントとして使える
     - `DefinedComponent.webComponent` は CSR では登録済み `HTMLElement` クラス、SSR では `__tagName__` / `__propsSchema__` を持つプレースホルダークラスを返す
+    - JSX helper props 型は compiler-reserved な `client:*` directive を受け入れて transform 入力との型整合を保つが、JSX helper runtime 自体はそれらを DOM へ書き出さない
+    - JSX helper runtime は compiler-generated internal client strategy metadata がある場合、host へ `data-dh-island` / `data-dh-island-value` を自動付与できる
     - コンストラクタで props シグナルを型変換付きで初期化し、各 prop に JS property getter / setter を定義する
     - CSR の custom element constructor では current store boundary を host に捕捉する
     - JSX runtime が生成した subtree 内の custom element に対しても current store boundary が伝播する
     - `attribute: false` の prop は属性監視せず、property setter 経由でのみ更新する
     - `connectedCallback` では host に bind 済みの store を解決し、`createRoot` スコープ内で関数コンポーネントを実行する
+    - `connectedCallback` と `hydrate` へ渡す context には、host の island metadata を正規化した read-only `client` context を含める
     - `connectedCallback` では local `styles` と `adoptGlobalStyles()` で登録済みの global style を合成し、`adoptedStyleSheets` へ反映する
     - DSD が存在し `hydrate` がある場合は hydrate パス、`hydrate` がない場合は shadowRoot をクリアして再実行する
+    - DSD と `hydrate` があり、host が runtime が認識する `data-dh-island` metadata（`load` / `visible` / `idle` / `interaction` / `media`）を持つ場合は `connectedCallback` で即 hydrate せず、runtime `hydrateIslands()` が呼ぶ internal hook を host に公開して遅延 hydrate する
+    - compiler-generated colocated client handler を持つ component は render ベースの setup を hydrate entrypoint とし、`interaction` では初回 click 後に root setup を実行して event replay する
     - DSD に SSR `<style>` が存在し、CSR で `adoptedStyleSheets` を適用する場合は `<style>` を除去して重複適用を避ける
     - `disconnectedCallback` では `dispose` により cleanup を実行する
     - SSR では `getCssText()`、`registerComponent()`、`ensureComponentRenderer()` を用いて SSR 情報を登録する
@@ -151,6 +168,21 @@
   [
     - DSD 対応ブラウザでは ShadowRoot に既存コンテンツが入る
     - `hydrate` オプションがある場合のみハイドレーションモードになる
+  ],
+)
+
+#adr(
+  header("islands metadata を持つ host の hydrate は runtime scheduler に委譲する", Status.Accepted, "2026-03-16"),
+  [
+    Phase 0 / Pillar 2 では component 自体の hydrate 実装は維持しつつ、`client:*` directive 由来 metadata に応じて hydration のタイミングだけを遅延制御する必要がある。
+  ],
+  [
+    runtime が認識する `data-dh-island` metadata を持つ host は `connectedCallback` で即 hydrate せず、runtime `hydrateIslands()` が呼ぶ internal hook を instance 上へ登録して strategy 発火時に hydrate する。未知の値は island とみなさず通常 hydrate にフォールバックする。
+  ],
+  [
+    - Web Component 自身が ShadowRoot hydration の責務を持つ ADR と両立できる
+    - scheduler 実装を runtime 側へ閉じ込められる
+    - island でない component の既存 hydrate/setup フローを壊さない
   ],
 )
 
@@ -299,6 +331,66 @@
 )
 
 #adr(
+  header("client metadata は ComponentContext から読めるようにする", Status.Proposed, "2026-03-16"),
+  [
+    `client:*` を host metadata へ正規化するだけでは component author から hydration strategy の意図が見えづらく、colocated client handler 設計とも接続しにくい。
+  ],
+  [
+    `ComponentContext` / hydrate context に `client` object を追加し、strategy / value / hydrated を読み取れるようにする。`client` は host の island metadata を runtime が正規化した read-only view とし、unknown metadata は `null` として扱う。
+  ],
+  [
+    - render と hydrate の両方から client strategy を同じ mental model で参照できる
+    - bare host-level `client:*` と将来の colocated client handlers を同じ context surface へ寄せられる
+    - existing `props` / `store` 中心 API と整合する
+  ],
+)
+
+#adr(
+  header("compiler-generated client handlers も defineComponent host 境界へ集約する", Status.Proposed, "2026-03-16"),
+  [
+    colocated client handler syntax を導入しても、runtime scheduler と cleanup は Web Component host 単位で管理した方が既存 island 設計と両立しやすい。
+  ],
+  [
+    `<strategy>:on<Event>` は target HTML 要素に直接 hydrate 境界を作らず、transformer が target marker と strategy metadata を埋め込む。`defineComponent` host は DSD 接続時に shadowRoot 内 metadata を読んで island 境界へ集約する。
+  ],
+  [
+    - scheduler / cleanup / store boundary を host 単位で維持できる
+    - native element 単位の sub-island を runtime へ増やさずに済む
+    - element-level syntax と host-level execution model を両立できる
+  ],
+)
+
+#adr(
+  header("colocated client handlers MVP は render replay で実現する", Status.Proposed, "2026-03-16"),
+  [
+    将来は compiler-generated action plan を個別 bind する設計を見据えるが、まず UX を検証できる MVP が必要である。現行 runtime / transformer の構造では host setup を hydrate entrypoint に再利用する方が変更範囲を抑えやすい。
+  ],
+  [
+    MVP では `load:onClick` / `interaction:onClick` を compiler が target marker + strategy metadata へ変換し、component は DSD を保持したまま strategy 発火後に root setup を再実行する。`interaction` では trigger click 後に host subtree の target button へ synthetic click を replay する。
+  ],
+  [
+    - MVP を比較的短い変更で動かせる
+    - SSR DSD を部分再利用するのではなく、hydrate 時に client render へ切り替える
+    - `hydrate` option と共存させるには別の artifact-based 設計が必要になる
+  ],
+)
+
+#adr(
+  header("colocated client handler の capture は v1 で厳格に制限する", Status.Proposed, "2026-03-16"),
+  [
+    colocated syntax は author 体験を改善する一方で、任意の closure capture を許すと compiler / runtime の責務が急激に肥大化する。
+  ],
+  [
+    MVP 実装は render replay ベースで inline handler 自体を setup に残すが、artifact-based action extraction へ進む v2 では compiler-generated client handler が参照できる外側値を `props`, `store`, signal, serializable で不変な local `const` に限定する。serializable local `const` には primitive literal、primitive-only template literal、readonly tuple、readonly object literal を含める。
+  ],
+  [
+    - MVP の後でも capture model の拡張方針をぶらさずに進められる
+    - `ctx.client` / `ctx.store` を中心に mental model を揃えやすい
+    - imported helper や class instance capture は将来拡張として切り出せる
+  ],
+)
+
+#adr(
   header("store binding は components 内部実装で扱う", Status.Accepted, "2026-03-10"),
   [
     `withStore()` の boundary を custom element instance まで運ぶ仕組みは必要だが、利用者に public API として公開すると mental model が複雑になる。
@@ -404,8 +496,14 @@
     24. `withStore()` 内の JSX subtree に含まれる nested custom element も store instance を受け取る
     25. `adoptGlobalStyles()` で登録した global style が `adoptedStyleSheets` に含まれる
     26. component 接続後に `adoptGlobalStyles()` を呼んでも既存 ShadowRoot へ style が反映される
-    27. component が切断されている間は global style 更新を受け取らず、再接続時に最新の style 集合へ再同期する
-    28. custom coercer prop は属性未指定の初期化時も属性除去時も同じ `null` 入力規則で評価される
-    29. DSD hydration 時に SSR `<style>` を除去し、global/local の `adoptedStyleSheets` へ置き換える
+     27. component が切断されている間は global style 更新を受け取らず、再接続時に最新の style 集合へ再同期する
+     28. custom coercer prop は属性未指定の初期化時も属性除去時も同じ `null` 入力規則で評価される
+     29. DSD hydration 時に SSR `<style>` を除去し、global/local の `adoptedStyleSheets` へ置き換える
+     30. `data-dh-island` を持つ DSD component は `connectedCallback` で hydrate せず、`hydrateIslands()` の strategy 発火後に hydrate する
+     31. JSX helper で `client:*` directive を書いても型エラーにならず、runtime では DOM attribute として書き出されない
+     32. `ctx.client` から island strategy / value / hydrated 状態を読める
+     33. colocated client handler MVP は host-level island metadata により setup を遅延実行する
+     34. artifact-based client handler へ進む段階では capture model を `props` / `store` / signal / serializable local `const` へ制限する
+     35. `interaction:onClick` は host setup 完了後に target click を replay する
   ],
 )

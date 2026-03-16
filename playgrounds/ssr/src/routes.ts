@@ -41,6 +41,13 @@ const playgroundRoutes = [
     description:
       "Shows how transformer-level client:* directives normalize into reserved island metadata before runtime strategy execution exists.",
   },
+  {
+    path: "/islands-runtime",
+    label: "Islands Runtime",
+    title: "Hydration Strategy Engine",
+    description:
+      "Shows runtime-side `hydrateIslands()` scheduling plus the colocated `load:onClick` and `interaction:onClick` MVP.",
+  },
 ] as const;
 
 type PlaygroundRoute = (typeof playgroundRoutes)[number];

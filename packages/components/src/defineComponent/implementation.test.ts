@@ -3,6 +3,10 @@ import { atom, createAtomStore, withStore } from "@dathomir/store";
 
 import { bindStoreToHost, peekStoreFromHost } from "./internal";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  hydrateIslands,
+  HYDRATE_ISLANDS_STATUS,
+} from "@dathomir/runtime/hydration";
 
 import {
   adoptGlobalStyles,
@@ -589,6 +593,49 @@ describe("defineComponent", () => {
     el.remove();
   });
 
+  it("should not write compiler-reserved client directive props to DOM when using the JSX helper", () => {
+    const tag = uniqueTag();
+    const Comp = defineComponent(tag, () => document.createTextNode("test"));
+
+    const el = Comp({
+      "client:load": true,
+      "client:visible": "",
+      "client:interaction": "mouseenter",
+      "client:media": "(max-width: 720px)",
+    }) as HTMLElement;
+
+    expect(el.hasAttribute("client:load")).toBe(false);
+    expect(el.hasAttribute("client:visible")).toBe(false);
+    expect(el.hasAttribute("client:interaction")).toBe(false);
+    expect(el.hasAttribute("client:media")).toBe(false);
+  });
+
+  it("should expose client context defaults for non-island components", async () => {
+    const tag = uniqueTag();
+    let capturedClient: { strategy: string | null; value: string | null; hydrated: boolean } | undefined;
+
+    defineComponent(tag, ({ client }) => {
+      capturedClient = {
+        strategy: client.strategy,
+        value: client.value,
+        hydrated: client.hydrated,
+      };
+      return document.createTextNode("test");
+    });
+
+    const el = document.createElement(tag);
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(capturedClient).toEqual({
+      strategy: null,
+      value: null,
+      hydrated: false,
+    });
+
+    el.remove();
+  });
+
   // Test case #18: Number prop: null attribute uses default value (not Number(null) = 0)
   it("should use default value for Number prop when attribute is absent, not Number(null)", async () => {
     const tag = uniqueTag();
@@ -709,6 +756,229 @@ describe("defineComponent", () => {
     expect(capturedStore).toBe(store);
 
     host.remove();
+  });
+
+  it("should defer island hydration until hydrateIslands triggers the strategy", async () => {
+    const tag = uniqueTag();
+    const hydrateFn = vi.fn(({ host }: { host: HTMLElement }) => {
+      host.setAttribute("data-hydrated", "true");
+    });
+
+    defineComponent(tag, () => "<button type=\"button\">SSR</button>", {
+      hydrate: hydrateFn,
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag} data-dh-island=\"interaction\"><template shadowrootmode=\"open\"><button type=\"button\">SSR</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(hydrateFn).not.toHaveBeenCalled();
+
+    hydrateIslands(document);
+    el.dispatchEvent(new Event("click"));
+    await waitForMicrotask();
+
+    expect(hydrateFn).toHaveBeenCalledTimes(1);
+    expect(el.getAttribute("data-hydrated")).toBe("true");
+
+    el.remove();
+  });
+
+  it("should hydrate immediately when data-dh-island uses an unknown strategy value", async () => {
+    const tag = uniqueTag();
+    const hydrateFn = vi.fn(({ host }: { host: HTMLElement }) => {
+      host.setAttribute("data-hydrated", "true");
+    });
+
+    defineComponent(tag, () => "<button type=\"button\">SSR</button>", {
+      hydrate: hydrateFn,
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag} data-dh-island="typo"><template shadowrootmode="open"><button type="button">SSR</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(hydrateFn).toHaveBeenCalledTimes(1);
+    expect(el.getAttribute("data-hydrated")).toBe("true");
+
+    el.remove();
+  });
+
+  it("should keep deferred island hydration schedulable until store binding arrives", async () => {
+    const tag = uniqueTag();
+    const countAtom = atom("count", 12);
+    const store = createAtomStore({ appId: `late-store-island-${tag}` });
+    let capturedStore: ReturnType<typeof createAtomStore> | undefined;
+
+    defineComponent(tag, () => "<button type=\"button\">SSR</button>", {
+      hydrate: ({ host, store: ctxStore }) => {
+        capturedStore = ctxStore;
+        host.setAttribute("data-hydrated", "true");
+        host.setAttribute("data-count", String(ctxStore.ref(countAtom).value));
+      },
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag} data-dh-island="interaction"><template shadowrootmode="open"><button type="button">SSR</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    hydrateIslands(document);
+    el.dispatchEvent(new Event("click"));
+    await waitForMicrotask();
+
+    expect(capturedStore).toBeUndefined();
+    expect(el.getAttribute("data-hydrated")).toBeNull();
+
+    bindStoreToHost(el, store);
+    hydrateIslands(document);
+    el.dispatchEvent(new Event("click"));
+    await waitForMicrotask();
+
+    expect(capturedStore).toBe(store);
+    expect(el.getAttribute("data-hydrated")).toBe("true");
+    expect(el.getAttribute("data-count")).toBe("12");
+    expect(
+      (el as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS],
+    ).toBe("hydrated");
+
+    el.remove();
+  });
+
+  it("should derive host interaction metadata from colocated target markers before scheduling hydration", async () => {
+    const tag = uniqueTag();
+    const clickSpy = vi.fn();
+
+    defineComponent(tag, () => {
+      const button = document.createElement("button");
+      button.setAttribute("data-dh-client-target", "cta");
+      button.setAttribute("data-dh-client-strategy", "interaction");
+      button.textContent = "Click me";
+      button.addEventListener("click", () => {
+        clickSpy();
+      });
+      return button;
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><button data-dh-client-target="cta" data-dh-client-strategy="interaction">Click me</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.getAttribute("data-dh-island")).toBe("interaction");
+    expect(el.getAttribute("data-dh-island-value")).toBe("click");
+
+    hydrateIslands(document);
+    const ssrButton = el.shadowRoot?.querySelector("button");
+    ssrButton?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await waitForMicrotask();
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    el.remove();
+  });
+
+  it("should reject colocated client markers when the component also defines hydrate", async () => {
+    const tag = uniqueTag();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    defineComponent(tag, () => document.createElement("button"), {
+      hydrate: () => {},
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><button data-dh-client-target="cta" data-dh-client-strategy="interaction">Click me</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[dathomir] colocated load:onClick / interaction:onClick cannot be combined with a hydrate option in the same component",
+    );
+    expect(el.getAttribute("data-dh-island")).toBeNull();
+
+    el.remove();
+    errorSpy.mockRestore();
+  });
+
+  it("should replay the first click for interaction-deferred setup islands with client target markers", async () => {
+    const tag = uniqueTag();
+    const clickSpy = vi.fn();
+
+    defineComponent(tag, () => {
+      const button = document.createElement("button");
+      button.setAttribute("data-dh-client-target", "cta");
+      button.textContent = "Click me";
+      button.addEventListener("click", () => {
+        clickSpy();
+      });
+      return button;
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag} data-dh-island="interaction"><template shadowrootmode="open"><button data-dh-client-target="cta">Click me</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    hydrateIslands(document);
+    const ssrButton = el.shadowRoot?.querySelector("button");
+    ssrButton?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await waitForMicrotask();
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    el.remove();
+  });
+
+  it("should allow a deferred island to hydrate after reconnect", async () => {
+    const tag = uniqueTag();
+    const hydrateFn = vi.fn(({ host }: { host: HTMLElement }) => {
+      host.setAttribute("data-hydrated", "true");
+    });
+
+    defineComponent(tag, () => "<button type=\"button\">SSR</button>", {
+      hydrate: hydrateFn,
+    });
+
+    const createIslandElement = () => {
+      const container = document.createElement("div");
+      container.innerHTML = `<${tag} data-dh-island=\"interaction\"><template shadowrootmode=\"open\"><button type=\"button\">SSR</button></template></${tag}>`;
+      return container.firstElementChild as HTMLElement;
+    };
+
+    const el = createIslandElement();
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    hydrateIslands(document);
+    el.remove();
+    await waitForMicrotask();
+
+    const reconnected = createIslandElement();
+    document.body.appendChild(reconnected);
+    await waitForMicrotask();
+
+    hydrateIslands(document);
+    reconnected.dispatchEvent(new Event("click"));
+    await waitForMicrotask();
+
+    expect(hydrateFn).toHaveBeenCalledTimes(1);
+    expect(reconnected.getAttribute("data-hydrated")).toBe("true");
+
+    reconnected.remove();
   });
 
   // Test case #19: setup throwing an error leaves #dispose undefined; reconnect is safe

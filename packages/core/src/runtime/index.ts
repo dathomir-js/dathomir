@@ -66,6 +66,7 @@ export {
   deserializeState,
   findMarker,
   hydrate,
+  hydrateIslands,
   hydrateRoot,
   isHydrated,
   parseStateScript,

@@ -12,14 +12,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   HydrationMismatchError,
+  HydrationMarkerType,
+  cancelScheduledIslandHydration,
+  HYDRATE_ISLANDS_HOOK,
   handleMismatch,
   hydrate,
+  hydrateIslands,
   hydrateRoot,
   hydrateTextMarker,
   isHydrated,
   markHydrated,
 } from "@/hydration/hydrate/implementation";
-import { HydrationMarkerType } from "@/hydration/walker/implementation";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -338,5 +341,319 @@ describe("hydrateTextMarker", () => {
     count.set(42);
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(textNode.textContent).toBe("42");
+  });
+});
+
+describe("hydrateIslands", () => {
+  let host: HTMLElement;
+
+  beforeEach(() => {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(host);
+  });
+
+  it("hydrates load islands after window load", () => {
+    Object.defineProperty(document, "readyState", {
+      configurable: true,
+      value: "loading",
+    });
+
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "load");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    expect(hydrateHook).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new Event("load"));
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for intersection before hydrating visible islands", () => {
+    let observerCallback:
+      | ((entries: Array<{ isIntersecting: boolean; target: Element }>) => void)
+      | undefined;
+    const disconnect = vi.fn();
+
+    class MockIntersectionObserver {
+      constructor(
+        callback: (entries: Array<{ isIntersecting: boolean; target: Element }>) => void,
+      ) {
+        observerCallback = callback;
+      }
+
+      observe() {}
+      unobserve() {}
+      disconnect() {
+        disconnect();
+      }
+    }
+
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "visible");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    expect(hydrateHook).not.toHaveBeenCalled();
+
+    observerCallback?.([{ isIntersecting: false, target: island }]);
+    expect(hydrateHook).not.toHaveBeenCalled();
+
+    observerCallback?.([{ isIntersecting: true, target: island }]);
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+    expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("hydrates idle islands through requestIdleCallback", () => {
+    let idleCallback: (() => void) | undefined;
+    const cancelIdle = vi.fn();
+
+    vi.stubGlobal(
+      "requestIdleCallback",
+      vi.fn((callback: () => void) => {
+        idleCallback = callback;
+        return 7;
+      }),
+    );
+    vi.stubGlobal("cancelIdleCallback", cancelIdle);
+
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "idle");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    expect(hydrateHook).not.toHaveBeenCalled();
+
+    idleCallback?.();
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+  });
+
+  it("hydrates idle islands through the timeout fallback when requestIdleCallback is unavailable", async () => {
+    vi.stubGlobal("requestIdleCallback", undefined);
+
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "idle");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    expect(hydrateHook).not.toHaveBeenCalled();
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+  });
+
+  it("hydrates interaction islands when the configured event fires", () => {
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "interaction");
+    island.setAttribute("data-dh-island-value", "mouseenter");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    expect(hydrateHook).not.toHaveBeenCalled();
+
+    island.dispatchEvent(new Event("click"));
+    expect(hydrateHook).not.toHaveBeenCalled();
+
+    island.dispatchEvent(new Event("mouseenter"));
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+  });
+
+  it("defaults interaction islands to click when no value is present", () => {
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "interaction");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    island.dispatchEvent(new Event("click"));
+
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes the replay target id from the first interaction event into the island hook", () => {
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "interaction");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+
+    const button = document.createElement("button");
+    button.setAttribute("data-dh-client-target", "cta");
+    island.appendChild(button);
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+
+    expect(hydrateHook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        strategy: "interaction",
+        eventType: "click",
+        replayTargetId: "cta",
+      }),
+    );
+  });
+
+  it("hydrates media islands after the media query matches", () => {
+    let changeListener:
+      | ((event: { matches: boolean }) => void)
+      | undefined;
+
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({
+        matches: false,
+        media: "(max-width: 720px)",
+        addEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => {
+          changeListener = listener;
+        },
+        removeEventListener: vi.fn(),
+      })),
+    );
+
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "media");
+    island.setAttribute("data-dh-island-value", "(max-width: 720px)");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    expect(hydrateHook).not.toHaveBeenCalled();
+
+    changeListener?.({ matches: true });
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not schedule or hydrate the same island twice", () => {
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "interaction");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    hydrateIslands(document);
+    island.dispatchEvent(new Event("click"));
+    island.dispatchEvent(new Event("click"));
+
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+  });
+
+  it("finds islands inside open shadow roots", () => {
+    const wrapper = document.createElement("section");
+    const wrapperShadowRoot = wrapper.attachShadow({ mode: "open" });
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "interaction");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    wrapperShadowRoot.appendChild(island);
+    host.appendChild(wrapper);
+
+    hydrateIslands(document);
+    island.dispatchEvent(new Event("click"));
+
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns a cleanup function that cancels pending strategy work", () => {
+    let observerCallback:
+      | ((entries: Array<{ isIntersecting: boolean; target: Element }>) => void)
+      | undefined;
+    const disconnect = vi.fn();
+
+    class MockIntersectionObserver {
+      constructor(
+        callback: (entries: Array<{ isIntersecting: boolean; target: Element }>) => void,
+      ) {
+        observerCallback = callback;
+      }
+
+      observe() {}
+      unobserve() {}
+      disconnect() {
+        disconnect();
+      }
+    }
+
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "visible");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    const dispose = hydrateIslands(document);
+    dispose();
+    observerCallback?.([{ isIntersecting: true, target: island }]);
+
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    expect(hydrateHook).not.toHaveBeenCalled();
+  });
+
+  it("cancels a pending island schedule per host and allows a later rescan to reschedule it", () => {
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "interaction");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    cancelScheduledIslandHydration(island);
+    island.dispatchEvent(new Event("click"));
+
+    expect(hydrateHook).not.toHaveBeenCalled();
+
+    hydrateIslands(document);
+    island.dispatchEvent(new Event("click"));
+
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+  });
+
+  it("hydrates visible islands immediately when IntersectionObserver is unavailable", () => {
+    vi.stubGlobal("IntersectionObserver", undefined);
+
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "visible");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
+  });
+
+  it("hydrates media islands immediately when matchMedia is unavailable", () => {
+    vi.stubGlobal("matchMedia", undefined);
+
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "media");
+    island.setAttribute("data-dh-island-value", "(max-width: 720px)");
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    host.appendChild(island);
+
+    hydrateIslands(document);
+
+    expect(hydrateHook).toHaveBeenCalledTimes(1);
   });
 });

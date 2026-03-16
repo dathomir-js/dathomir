@@ -346,6 +346,11 @@ interface CommonAttributes {
   /** Any data-* attribute */
   [dataAttr: `data-${string}`]: string | undefined;
 
+  /** Deferred client click hydration on load (MVP) */
+  "load:onClick"?: (event: MouseEvent) => void;
+  /** Deferred client click hydration on first interaction (MVP) */
+  "interaction:onClick"?: (event: MouseEvent) => void;
+
   // Children
   /** Children nodes */
   children?: dathomirNode;

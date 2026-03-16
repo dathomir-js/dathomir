@@ -25,6 +25,7 @@ type IslandsDirectiveName =
   | "idle"
   | "interaction"
   | "media";
+type ColocatedClientStrategyName = "load" | "interaction";
 
 interface JSXOpeningElement {
   type: "JSXOpeningElement";
@@ -130,23 +131,57 @@ function getTagName(name: JSXName): string {
 }
 
 function isClientDirectiveNamespace(name: JSXAttribute["name"]): boolean {
-  return name.type === "JSXNamespacedName" && name.namespace.name === "client";
+  return (
+    (name.type === "JSXNamespacedName" && name.namespace.name === "client") ||
+    (name.type === "JSXIdentifier" && name.name.startsWith("client:"))
+  );
+}
+
+function getRawAttributeName(name: JSXAttribute["name"]): string | null {
+  if (name.type === "JSXNamespacedName") {
+    return `${name.namespace.name}:${name.name.name}`;
+  }
+
+  if (name.type === "JSXIdentifier") {
+    return name.name;
+  }
+
+  return null;
+}
+
+function getColocatedClientDirective(
+  name: JSXAttribute["name"],
+): { strategy: ColocatedClientStrategyName; event: "click" } | null {
+  switch (getRawAttributeName(name)) {
+    case "load:onClick":
+      return {
+        strategy: "load",
+        event: "click",
+      };
+    case "interaction:onClick":
+      return {
+        strategy: "interaction",
+        event: "click",
+      };
+    default:
+      return null;
+  }
 }
 
 function getIslandsDirectiveName(
   name: JSXAttribute["name"],
 ): IslandsDirectiveName | null {
-  if (!isClientDirectiveNamespace(name)) {
-    return null;
-  }
-
-  switch (name.name.name) {
-    case "load":
-    case "visible":
-    case "idle":
-    case "interaction":
-    case "media":
-      return name.name.name;
+  switch (getRawAttributeName(name)) {
+    case "client:load":
+      return "load";
+    case "client:visible":
+      return "visible";
+    case "client:idle":
+      return "idle";
+    case "client:interaction":
+      return "interaction";
+    case "client:media":
+      return "media";
     default:
       return null;
   }
@@ -200,6 +235,7 @@ function normalizeIslandsDirectiveValue(
 }
 
 export {
+  getColocatedClientDirective,
   isClientDirectiveNamespace,
   getIslandsDirectiveName,
   getTagName,
@@ -209,6 +245,7 @@ export {
   normalizeIslandsDirectiveValue,
 };
 export type {
+  ColocatedClientStrategyName,
   IslandsDirectiveName,
   JSXAttribute,
   JSXChild,

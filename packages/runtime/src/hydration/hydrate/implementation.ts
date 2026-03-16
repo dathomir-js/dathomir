@@ -39,6 +39,39 @@ import type {
  * WeakMap to track hydrated ShadowRoots (idempotency).
  */
 const hydratedRoots = new WeakMap<ShadowRoot, boolean>();
+const scheduledIslandCleanups = new WeakMap<HTMLElement, () => void>();
+
+const HYDRATE_ISLANDS_HOOK = Symbol("dathomir.hydrateIslandsHook");
+const HYDRATE_ISLANDS_STATUS = Symbol("dathomir.hydrateIslandsStatus");
+
+type IslandsStrategyName =
+  | "load"
+  | "visible"
+  | "idle"
+  | "interaction"
+  | "media";
+type HydrateIslandsStatus = "idle" | "hydrated";
+interface IslandHydrationTrigger {
+  readonly strategy: string;
+  readonly eventType?: string;
+  readonly replayTargetId?: string | null;
+}
+type HydrateIslandHook = (trigger?: IslandHydrationTrigger) => boolean;
+
+interface IslandHost extends HTMLElement {
+  [HYDRATE_ISLANDS_HOOK]?: HydrateIslandHook;
+  [HYDRATE_ISLANDS_STATUS]?: HydrateIslandsStatus;
+}
+
+interface IdleCallbackDeadline {
+  readonly didTimeout: boolean;
+  timeRemaining(): number;
+}
+
+type RequestIdleCallback = (
+  callback: (deadline: IdleCallbackDeadline) => void,
+) => number;
+type CancelIdleCallback = (handle: number) => void;
 
 /**
  * Hydration context for tracking state during hydration.
@@ -210,6 +243,280 @@ function hydrateTextMarker(marker: MarkerInfo, getValue: () => unknown): void {
   });
 }
 
+function isIslandHost(value: Element): value is IslandHost {
+  return value instanceof HTMLElement;
+}
+
+function getIslandStrategy(host: Element): IslandsStrategyName | null {
+  const strategy = host.getAttribute("data-dh-island");
+
+  switch (strategy) {
+    case "load":
+    case "visible":
+    case "idle":
+    case "interaction":
+    case "media":
+      return strategy;
+    default:
+      return null;
+  }
+}
+
+function getInteractionEventType(host: Element): string {
+  return host.getAttribute("data-dh-island-value") ?? "click";
+}
+
+function getMediaQuery(host: Element): string | null {
+  return host.getAttribute("data-dh-island-value");
+}
+
+function getReplayTargetIdFromEvent(event: Event): string | null {
+  const path =
+    typeof event.composedPath === "function" ? event.composedPath() : [];
+
+  for (const item of path) {
+    if (!(item instanceof HTMLElement)) {
+      continue;
+    }
+
+    const targetId = item.getAttribute("data-dh-client-target");
+    if (targetId !== null) {
+      return targetId;
+    }
+  }
+
+  return null;
+}
+
+function collectIslandHosts(
+  root: Document | ShadowRoot | Element,
+  hosts: IslandHost[] = [],
+): IslandHost[] {
+  if (root instanceof Element && isIslandHost(root) && getIslandStrategy(root)) {
+    hosts.push(root);
+  }
+
+  if (root instanceof Element && root.shadowRoot !== null) {
+    collectIslandHosts(root.shadowRoot, hosts);
+  }
+
+  const children =
+    root instanceof Document || root instanceof ShadowRoot || root instanceof Element
+      ? Array.from(root.children)
+      : [];
+
+  for (const child of children) {
+    collectIslandHosts(child, hosts);
+  }
+
+  return hosts;
+}
+
+function runIslandHydration(host: IslandHost): boolean {
+  return runIslandHydrationWithTrigger(host);
+}
+
+function runIslandHydrationWithTrigger(
+  host: IslandHost,
+  trigger?: IslandHydrationTrigger,
+): boolean {
+  if (host[HYDRATE_ISLANDS_STATUS] === "hydrated") {
+    return false;
+  }
+
+  const hydrateHook = host[HYDRATE_ISLANDS_HOOK];
+  if (typeof hydrateHook !== "function") {
+    return false;
+  }
+
+  const didHydrate = hydrateHook(trigger);
+  if (didHydrate) {
+    host[HYDRATE_ISLANDS_STATUS] = "hydrated";
+  }
+
+  return didHydrate;
+}
+
+function scheduleIslandHydration(host: IslandHost): (() => void) | null {
+  if (
+    scheduledIslandCleanups.has(host) ||
+    host[HYDRATE_ISLANDS_STATUS] === "hydrated"
+  ) {
+    return null;
+  }
+
+  const strategy = getIslandStrategy(host);
+  if (strategy === null || typeof host[HYDRATE_ISLANDS_HOOK] !== "function") {
+    return null;
+  }
+
+  let active = true;
+  let cleanup = () => {};
+
+  const finish = (trigger?: IslandHydrationTrigger) => {
+    if (!active) {
+      return;
+    }
+
+    active = false;
+    cleanup();
+    scheduledIslandCleanups.delete(host);
+    runIslandHydrationWithTrigger(host, trigger);
+  };
+
+  switch (strategy) {
+    case "load": {
+      if (document.readyState === "complete") {
+        finish();
+        return null;
+      }
+
+      const onLoad = () => {
+        finish();
+      };
+      window.addEventListener("load", onLoad, { once: true });
+      cleanup = () => {
+        window.removeEventListener("load", onLoad);
+      };
+      break;
+    }
+
+    case "visible": {
+      if (typeof IntersectionObserver === "undefined") {
+        finish();
+        return null;
+      }
+
+      const observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.target === host && entry.isIntersecting) {
+            finish();
+            return;
+          }
+        }
+      });
+
+      observer.observe(host);
+      cleanup = () => {
+        observer.disconnect();
+      };
+      break;
+    }
+
+    case "idle": {
+      const requestIdle = globalThis.requestIdleCallback as
+        | RequestIdleCallback
+        | undefined;
+      const cancelIdle = globalThis.cancelIdleCallback as
+        | CancelIdleCallback
+        | undefined;
+
+      if (typeof requestIdle === "function") {
+        const handle = requestIdle(() => {
+          finish();
+        });
+        cleanup = () => {
+          cancelIdle?.(handle);
+        };
+        break;
+      }
+
+      const timeoutHandle = window.setTimeout(() => {
+        finish();
+      }, 0);
+      cleanup = () => {
+        window.clearTimeout(timeoutHandle);
+      };
+      break;
+    }
+
+    case "interaction": {
+      const eventType = getInteractionEventType(host);
+      const onInteraction = (event: Event) => {
+        finish({
+          strategy,
+          eventType,
+          replayTargetId: getReplayTargetIdFromEvent(event),
+        });
+      };
+      host.addEventListener(eventType, onInteraction, { once: true });
+      cleanup = () => {
+        host.removeEventListener(eventType, onInteraction);
+      };
+      break;
+    }
+
+    case "media": {
+      const query = getMediaQuery(host);
+      if (query === null || typeof window.matchMedia !== "function") {
+        finish();
+        return null;
+      }
+
+      const mediaQueryList = window.matchMedia(query);
+      if (mediaQueryList.matches) {
+        finish();
+        return null;
+      }
+
+      const onChange = (event: MediaQueryListEvent | MediaQueryList) => {
+        if (event.matches) {
+          finish();
+        }
+      };
+
+      if (typeof mediaQueryList.addEventListener === "function") {
+        mediaQueryList.addEventListener("change", onChange);
+        cleanup = () => {
+          mediaQueryList.removeEventListener("change", onChange);
+        };
+      } else {
+        mediaQueryList.addListener(onChange);
+        cleanup = () => {
+          mediaQueryList.removeListener(onChange);
+        };
+      }
+      break;
+    }
+  }
+
+  const dispose = () => {
+    if (!active) {
+      return;
+    }
+
+    active = false;
+    cleanup();
+    scheduledIslandCleanups.delete(host);
+  };
+
+  scheduledIslandCleanups.set(host, dispose);
+  return dispose;
+}
+
+function cancelScheduledIslandHydration(host: HTMLElement): void {
+  scheduledIslandCleanups.get(host)?.();
+}
+
+function hydrateIslands(
+  root: Document | ShadowRoot | Element = document,
+): () => void {
+  const scheduledByCall: Array<() => void> = [];
+
+  for (const host of collectIslandHosts(root)) {
+    const cleanup = scheduleIslandHydration(host);
+    if (cleanup !== null) {
+      scheduledByCall.push(cleanup);
+    }
+  }
+
+  return () => {
+    for (const cleanup of scheduledByCall) {
+      cleanup();
+    }
+  };
+}
+
 /**
  * Hydrate a ShadowRoot.
  *
@@ -325,13 +632,24 @@ function hydrate(
 }
 
 export {
+  cancelScheduledIslandHydration,
   createHydrationContext,
   handleMismatch,
   hydrate,
+  hydrateIslands,
   hydrateRoot,
   hydrateTextMarker,
   HydrationMismatchError,
+  HydrationMarkerType,
+  HYDRATE_ISLANDS_HOOK,
+  HYDRATE_ISLANDS_STATUS,
   isHydrated,
   markHydrated,
 };
-export type { HydrationContext };
+export type {
+  HydrateIslandHook,
+  HydrateIslandsStatus,
+  HydrationContext,
+  IslandHydrationTrigger,
+  IslandHost,
+};

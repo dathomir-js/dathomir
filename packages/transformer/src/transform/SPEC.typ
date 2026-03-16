@@ -22,8 +22,9 @@
     - HTML 要素は構造化配列 tree と dynamic part 群へ分解する
     - `options.mode` に応じて CSR / SSR の生成結果を切り替える
     - 必要なランタイムインポートを自動的に追加する
-    - `client:*` directive はコンポーネント要素でのみ許可し、HTML 要素では transform error にする
+    - bare host-level `client:*` directive はコンポーネント要素でのみ許可する
     - `client:*` directive は 1 要素につき 1 つまでとし、内部 metadata は予約属性 `data-dh-island` / `data-dh-island-value` に正規化する
+    - colocated client handler MVP では `load:onClick` / `interaction:onClick` を HTML 要素でのみ許可する
   ],
 )
 
@@ -122,6 +123,33 @@
   postconditions: [
     - transform 後の出力から `client:*` 属性は消える
     - CSR / SSR の両モードで同じ metadata key を使う
+  ],
+)
+
+#behavior_spec(
+  name: "colocated client handlers MVP",
+  summary: [
+    HTML 要素上の `load:onClick` / `interaction:onClick` を sugar として認識する。v1 では target marker 付き click binding と strategy metadata へ落とし込み、`defineComponent()` host 側で DSD rerender-based hydration replay に使えるようにする。
+  ],
+  preconditions: [
+    - v1 では `onClick` のみサポートする
+    - v1 では 1 component render subtree 内で 1 種類の strategy (`load` または `interaction`) のみ許可する
+  ],
+  steps: [
+    1. transformer は `load:onClick` / `interaction:onClick` を namespaced 属性として認識する
+    2. transformer は target HTML 要素へ stable `data-dh-client-target` marker を付与する
+    3. colocated directive 自体は出力から除去し、handler は通常の `onClick` event binding として CSR transform へ流す
+    4. target HTML 要素へ `data-dh-client-strategy` metadata を残す
+    5. `defineComponent()` host は DSD 接続時に shadowRoot 内 marker を読んで `data-dh-island` metadata を自動付与できる
+  ],
+  postconditions: [
+    - author は event と hydrate trigger を 1 箇所で記述できる
+    - SSR 出力には target marker と target-level strategy metadata が残る
+    - CSR setup 後は通常の `onClick` handler として動作する
+  ],
+  errors: [
+    - `onClick` 以外の colocated client handler は transform error
+    - 同一 component render subtree に `load` と `interaction` を混在させた場合は transform error
   ],
 )
 
@@ -358,9 +386,126 @@
     - bare `client:interaction` を `data-dh-island-value="click"` へ変換する
      - `client:media` に string literal がない場合を transform error にする
      - `client:visible="foo"` のような値付き valueless directive を transform error にする
-     - HTML 要素上の `client:*` directive を transform error にする
-     - 複数の `client:*` directive 組み合わせを transform error にする
-     - 未知の `client:*` directive 名を transform error にする
-     - islands directive と `data-dh-island*` 明示 props の衝突を transform error にする
-   ],
- )
+      - HTML 要素上の `client:*` directive を transform error にする
+      - 複数の `client:*` directive 組み合わせを transform error にする
+      - 未知の `client:*` directive 名を transform error にする
+      - islands directive と `data-dh-island*` 明示 props の衝突を transform error にする
+      - `<button load:onClick={...}>` を target marker 付き `onClick` へ変換する
+      - `<button interaction:onClick={...}>` を interaction strategy metadata 付きへ変換する
+      - 1 JSX root 内で `load:onClick` と `interaction:onClick` を混在させると transform error にする
+    ],
+  )
+
+== 将来拡張案
+
+#adr(
+  header("colocated client handler syntax", Status.Proposed, "2026-03-16"),
+  [
+    現状の `client:*` は component host 単位の hydrate timing だけを宣言でき、実際の event handler は `hydrate` 実装側へ分離される。そのため author は「いつ起動するか」と「何をするか」を別の場所で読む必要があり、DX が低い。
+  ],
+  [
+    将来拡張として `<strategy>:on<Event>` 形式の colocated syntax を導入し、HTML 要素上に書いた client handler を transformer が抽出して host-local な client action plan へ変換する。v1 では `load:onClick` / `interaction:onClick` に絞り、transformer は target element の stable id、strategy metadata、handler 本体、必要な capture 情報を compiler artifact へ近い形で残す。
+  ],
+  [
+    - author は event と hydrate trigger を同じ場所で読める
+    - runtime は compiler-generated artifact を用いて自動 hydrate / event binding / replay を行える
+    - 実装は current `client:*` metadata 正規化より大幅に広い compiler 責務を持つ
+  ],
+  alternatives: [
+    - `clientActions` のような名前付き action を component option へ分離登録する
+    - 現行の host-level `client:*` + hand-written `hydrate` を維持する
+  ],
+)
+
+#behavior_spec(
+  name: "colocated client handler transform (proposal)",
+  summary: [
+    `<strategy>:on<Event>` を component-local client action artifact へ変換し、host hydration と target event binding を compiler が接続する。
+  ],
+  preconditions: [
+    - v1 では `defineComponent()` の render 関数が返す JSX subtree 内でのみ許可する
+    - directive target は HTML 要素であり、component 要素ではない
+    - v1 では 1 つの render subtree で使用する client strategy は 1 種類に制限する
+  ],
+  steps: [
+    1. transformer は `<strategy>:on<Event>` 形式の namespaced 属性を認識する
+    2. handler 式を抽出し、stable action id と target element id を割り当てる
+    3. enclosing component host 用に `data-dh-island` / `data-dh-island-value` metadata を生成する
+    4. target HTML 要素には hydration 後の再接続に必要な内部 marker を付与する
+    5. handler は compiler-generated client action plan へ移し、component definition 側へ注入する
+    6. interaction strategy の trigger event と bound event が同一の場合、runtime が first event replay できる形で metadata を残す
+  ],
+  postconditions: [
+    - source 上では event と hydrate trigger が colocated に見える
+    - generated output では runtime が解釈できる内部 metadata / action artifact に分解される
+    - bare `client:*` と同じ host-level island scheduler と整合する
+  ],
+  errors: [
+    - `defineComponent()` render subtree 外の HTML 要素で使った場合は transform error
+    - 同一 render subtree で複数 strategy を混在させた場合は transform error
+    - v1 で許可していない capture や unsupported event forms は transform error
+  ],
+)
+
+#behavior_spec(
+  name: "client handler capture model v2 (proposal)",
+  summary: [
+    将来 artifact-based client action plan へ移行する場合に備え、colocated client handler の capture 制約を事前に定義しておく。
+  ],
+  preconditions: [
+    - MVP は render replay ベースなので compile-time capture validation を行わない
+    - artifact-based action extraction を導入する段階で有効化する
+  ],
+  steps: [
+    1. handler 本体が参照する外側識別子を抽出する
+    2. `props`, `store`, signal、serializable で不変な local `const` を v1 の許可対象として扱う
+    3. serializable local `const` には primitive literal、primitive だけで構成される template literal、readonly tuple / readonly object literal を含める
+    4. imported binding は直接 capture 許可せず、handler 内で再評価できる literal / primitive const 経由に限定する
+    5. DOM node、class instance、mutable object、non-serializable value を参照した場合は transform error にする
+    6. unsupported capture が 1 つでもあれば action artifact を生成せず、diagnostic を返して変換を中断する
+  ],
+  postconditions: [
+    - v2 では author が書ける handler の範囲が明確になる
+    - runtime は serializable / replayable な action artifact だけを受け取る
+  ],
+  errors: [
+    - `const button = document.createElement("button")` のような DOM capture を含む handler は transform error
+    - object / array literal を mutable に保持して capture する handler は transform error
+    - class instance や `new` されたオブジェクトを capture する handler は transform error
+    - runtime 値を埋め込む template literal や mutable tuple/object を capture する handler は transform error
+  ],
+)
+
+#feature_spec(
+  name: "colocated client handlers v1 (proposal)",
+  summary: [
+    初期バージョンでは click-first の DX 改善を優先し、HTML 要素上の inline client handler を render replay ベースの host island hydration へ落とし込む。
+  ],
+  edge_cases: [
+    - 同じ要素に複数の `<strategy>:on*` を書く場合の strategy 一貫性
+    - `interaction:onClick` の first event replay
+    - setup rerender で inline closure がそのまま再生成されること
+    - nested JSX expression や loop 内 target に stable id をどう振るか
+  ],
+  test_cases: [
+    - `<button load:onClick={...}>` を target marker + strategy metadata へ変換する
+    - `<button interaction:onClick={...}>` を interaction metadata 付き transform output へ変換する
+    - 同一 JSX root 内で `load:onClick` と `interaction:onClick` を混在させると transform error にする
+    - colocated handler は通常の `onClick` binding として CSR setup に残る
+    - target element に stable id marker が付与される
+  ],
+  impl_notes: [
+    - colocated syntax は user-facing には 1 箇所に見えるが、MVP 実装では handler 自体は通常の render/setup に残す
+    - v1 は HTML 要素 target のみを扱い、component target や custom event は後続検討に回す
+    - strategy の host boundary 解決は `defineComponent()` 単位を基本とする
+    - compile-time capture validation は v2 の artifact-based action extraction 時に導入する
+  ],
+)
+
+== 検討事項
+
+- imported function や module-level binding を v2 以降でどこまで許可するか
+- readonly object literal の許容範囲を shallow に留めるか nested readonly まで広げるか
+- loop / conditional 内 target の stable id を DOM path で表すか marker で表すか
+- 複数 strategy を 1 component 内で許可するか、sub-island 分割を別機能にするか
+- custom event や form submit の replay semantics を v1 へ含めるか

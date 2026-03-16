@@ -5,6 +5,15 @@ import { renderPlaygroundPage } from "./App";
 import { createDemoStore } from "./demoStore";
 import type { PlaygroundRoutePath } from "./routes";
 
+function renderSSRPlaygroundContent(props: {
+  requestId: string;
+  requestStoreAppId: string;
+  routePath: PlaygroundRoutePath;
+  pagePayloadJson: string;
+}) {
+  return renderPlaygroundPage(props);
+}
+
 export const SSRAppRoot = defineComponent(
   "playground-ssr-app",
   ({ props }) => {
@@ -16,7 +25,7 @@ export const SSRAppRoot = defineComponent(
     });
 
     return withStore(store, () =>
-      renderPlaygroundPage({
+      renderSSRPlaygroundContent({
         requestId: props.requestId.value,
         requestStoreAppId: props.requestStoreAppId.value,
         routePath: props.routePath.value as PlaygroundRoutePath,
@@ -25,6 +34,29 @@ export const SSRAppRoot = defineComponent(
     );
   },
   {
+    hydrate: ({ host, props, store }) => {
+      const routePath = props.routePath.value as PlaygroundRoutePath;
+      if (routePath === "/islands-runtime") {
+        return;
+      }
+
+      const shadowRoot = host.shadowRoot;
+      if (shadowRoot === null) {
+        return;
+      }
+
+      shadowRoot.innerHTML = "";
+      shadowRoot.append(
+        withStore(store, () =>
+          renderSSRPlaygroundContent({
+            requestId: props.requestId.value,
+            requestStoreAppId: props.requestStoreAppId.value,
+            routePath,
+            pagePayloadJson: props.pagePayloadJson.value,
+          }),
+        ),
+      );
+    },
     props: {
       requestId: { type: String, default: "client-hydration" },
       requestStoreAppId: {

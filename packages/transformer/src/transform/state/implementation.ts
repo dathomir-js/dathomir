@@ -7,6 +7,7 @@ import type { RuntimeImportName } from "@/transform/runtimeImports/implementatio
 
 interface TransformState {
   templateCount: number;
+  clientTargetCount: number;
   templates: VariableDeclaration[];
   runtimeImports: Set<RuntimeImportName>;
   mode: "csr" | "ssr";
@@ -18,6 +19,7 @@ interface TransformState {
 function createInitialState(mode: "csr" | "ssr"): TransformState {
   return {
     templateCount: 0,
+    clientTargetCount: 0,
     templates: [],
     runtimeImports: new Set(),
     mode,
@@ -31,5 +33,10 @@ function createTemplateId(state: TransformState): Identifier {
   return nId(`_t${++state.templateCount}`);
 }
 
-export { createInitialState, createTemplateId };
+function createClientTargetId(state: TransformState): string {
+  state.clientTargetCount += 1;
+  return `dh-ct-${state.clientTargetCount}`;
+}
+
+export { createClientTargetId, createInitialState, createTemplateId };
 export type { TransformState };

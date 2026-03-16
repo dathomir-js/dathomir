@@ -91,7 +91,9 @@ describe("transform/tree", () => {
       },
     ];
 
-    processAttributes(attributes, dynamicParts, [0]);
+    processAttributes(attributes, dynamicParts, [0], createInitialState("csr"), {
+      strategy: null,
+    });
 
     expect(dynamicParts).toHaveLength(1);
     expect(dynamicParts[0]?.type).toBe("attr");
@@ -108,7 +110,13 @@ describe("transform/tree", () => {
       },
     ];
 
-    const result = processAttributes(attributes, dynamicParts, [0]);
+    const result = processAttributes(
+      attributes,
+      dynamicParts,
+      [0],
+      createInitialState("csr"),
+      { strategy: null },
+    );
 
     expect(result.attrs).toEqual(nLit(null));
     expect(dynamicParts).toHaveLength(1);
@@ -169,7 +177,13 @@ describe("transform/tree", () => {
       },
     ];
 
-    const result = processAttributes(attributes, dynamicParts, [0]);
+    const result = processAttributes(
+      attributes,
+      dynamicParts,
+      [0],
+      createInitialState("csr"),
+      { strategy: null },
+    );
 
     expect(result.attrs.type).toBe("ObjectExpression");
     const objectExpression = result.attrs as {
@@ -494,6 +508,52 @@ describe("transform/tree", () => {
     expect(() => jsxToTree(element, state, nested)).toThrow(
       "Unknown client:* directive",
     );
+  });
+
+   it("processAttributes turns load:onClick into metadata attrs plus click event", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+    const attributes: Parameters<typeof processAttributes>[0] = [
+      {
+        type: "JSXAttribute",
+        name: {
+          type: "JSXNamespacedName",
+          namespace: { type: "JSXIdentifier", name: "load" },
+          name: { type: "JSXIdentifier", name: "onClick" },
+        },
+        value: expr(nId("handleClick")),
+      },
+    ];
+
+    const result = processAttributes(attributes, dynamicParts, [0], state, {
+      strategy: null,
+    });
+
+    expect(result.attrs.type).toBe("ObjectExpression");
+    expect(result.events).toEqual([
+      {
+        type: "click",
+        handler: nId("handleClick"),
+      },
+    ]);
+    const objectExpression = result.attrs as {
+      properties: Array<{ key: { type: string; value?: unknown }; value: { value?: unknown } }>;
+    };
+    expect(
+      objectExpression.properties.some(
+        (property) =>
+          property.key.type === "Literal" &&
+          property.key.value === "data-dh-client-target",
+      ),
+    ).toBe(true);
+    expect(
+      objectExpression.properties.some(
+        (property) =>
+          property.key.type === "Literal" &&
+          property.key.value === "data-dh-client-strategy" &&
+          property.value.value === "load",
+      ),
+    ).toBe(true);
   });
 
   it("buildComponentCall throws for invalid media directive values", () => {

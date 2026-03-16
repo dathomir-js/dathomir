@@ -473,6 +473,82 @@ describe("transform", () => {
         "client:* directives cannot be combined with explicit data-dh-island metadata",
       );
     });
+
+    it("should transform load:onClick on html elements into client target metadata plus click binding", () => {
+      const code = `
+        const element = <button load:onClick={() => doThing()}>Run</button>;
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('"data-dh-client-target"');
+      expect(result.code).toContain('"data-dh-client-strategy"');
+      expect(result.code).toContain('"load"');
+      expect(result.code).toContain("event");
+      expect(result.code).toContain('"click"');
+    });
+
+    it("should transform interaction:onClick on html elements into interaction target metadata plus click binding", () => {
+      const code = `
+        const element = <button interaction:onClick={() => doThing()}>Run</button>;
+      `;
+
+      const result = transform(code, { mode: "ssr" });
+
+      expect(result.code).toContain('"data-dh-client-target"');
+      expect(result.code).toContain('"data-dh-client-strategy"');
+      expect(result.code).toContain('"interaction"');
+    });
+
+    it("should throw when load:onClick and interaction:onClick are mixed in one jsx root", () => {
+      const code = `
+        const element = (
+          <div>
+            <button load:onClick={() => a()} />
+            <button interaction:onClick={() => b()} />
+          </div>
+        );
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "Mixed colocated client strategies are not supported in one JSX root",
+      );
+    });
+
+    it("should throw for unsupported colocated directives on html elements", () => {
+      const code = `
+        const element = <button load:onMouseEnter={() => doThing()}>Run</button>;
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "Unsupported colocated client directive: load:onMouseEnter",
+      );
+    });
+
+    it("should throw when colocated directives are used on component elements", () => {
+      const code = `
+        const element = <Counter load:onClick={() => doThing()} />;
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "Unsupported colocated client directive: load:onClick",
+      );
+    });
+
+    it("should throw when mixed colocated strategies appear across nested jsx transforms", () => {
+      const code = `
+        const element = (
+          <div>
+            <button load:onClick={() => a()} />
+            {condition ? <button interaction:onClick={() => b()} /> : null}
+          </div>
+        );
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "Mixed colocated client strategies are not supported in one JSX root",
+      );
+    });
   });
 
   describe("Fragment dynamic content", () => {

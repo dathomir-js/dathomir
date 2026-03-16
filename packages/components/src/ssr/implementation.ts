@@ -126,6 +126,11 @@ function renderComponentContent(
   const ctx = {
     host: {} as HTMLElement,
     props: propSignals,
+    client: {
+      strategy: null,
+      value: null,
+      hydrated: false,
+    },
     get store() {
       if (resolvedStore === undefined) {
         throw new Error(

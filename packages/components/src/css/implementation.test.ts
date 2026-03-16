@@ -104,7 +104,11 @@ describe("css", () => {
 
   it("adoptGlobalStyles() should dedupe duplicate css text", () => {
     const a = ":host { color: tomato; }";
-    const b = css`:host { color: tomato; }`;
+    const b = css`
+      :host {
+        color: tomato;
+      }
+    `;
 
     adoptGlobalStyles(a, b, a);
 

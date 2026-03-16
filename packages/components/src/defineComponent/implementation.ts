@@ -261,7 +261,9 @@ function getEventType(key: string): string {
   return key.slice(2).toLowerCase();
 }
 
-function isIslandsDirectiveProp(key: string): key is keyof IslandsDirectiveJSXProps {
+function isIslandsDirectiveProp(
+  key: string,
+): key is keyof IslandsDirectiveJSXProps {
   return (
     key === "client:load" ||
     key === "client:visible" ||
@@ -664,7 +666,7 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
     Record<string, Signal<unknown>>
   >();
 
-class Component extends HTMLElement {
+  class Component extends HTMLElement {
     static observedAttributes = observedAttrNames;
     #dispose: RootDispose | undefined;
     #islandHydrationAccepted = false;
@@ -696,7 +698,9 @@ class Component extends HTMLElement {
           const rawAttr =
             attrName !== null ? this.getAttribute(attrName) : null;
           const initialValue =
-            attrName !== null ? coerceValue(def, rawAttr) : getDefaultValue(def);
+            attrName !== null
+              ? coerceValue(def, rawAttr)
+              : getDefaultValue(def);
           signals[propName] = signal(initialValue);
         }
         propSignalMap.set(this, signals);
@@ -707,8 +711,9 @@ class Component extends HTMLElement {
       const propSignals = propSignalMap.get(this) ?? {};
       const shadowRoot = this.shadowRoot!;
       const hasDSD = shadowRoot.childNodes.length > 0;
-      let colocatedStrategy =
-        hasDSD ? getColocatedClientStrategyFromShadowRoot(shadowRoot) : null;
+      let colocatedStrategy = hasDSD
+        ? getColocatedClientStrategyFromShadowRoot(shadowRoot)
+        : null;
 
       if (colocatedStrategy !== null && hydrateSetup !== undefined) {
         console.error(
@@ -745,7 +750,8 @@ class Component extends HTMLElement {
 
       this.#islandHydrationAccepted = false;
       (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = undefined;
-      (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] = undefined;
+      (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
+        undefined;
       connectGlobalStyles(shadowRoot, sheets ?? []);
 
       const retryIfStoreEventuallyBinds = (run: () => void): boolean => {
@@ -837,7 +843,8 @@ class Component extends HTMLElement {
         }
 
         if (shouldDeferIslandHydration) {
-          (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] = "idle";
+          (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
+            "idle";
           (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = (
             trigger?: IslandHydrationTrigger,
           ) => {
@@ -848,9 +855,7 @@ class Component extends HTMLElement {
             (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
               "hydrated";
             const didHydrate =
-              hydrateSetup !== undefined
-                ? runHydrate()
-                : runSetup(trigger);
+              hydrateSetup !== undefined ? runHydrate() : runSetup(trigger);
             if (didHydrate) {
               (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
                 "hydrated";
@@ -876,7 +881,8 @@ class Component extends HTMLElement {
       this.#dispose = undefined;
       this.#islandHydrationAccepted = false;
       (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = undefined;
-      (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] = undefined;
+      (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
+        undefined;
       disconnectGlobalStyles(this.shadowRoot!);
     }
 

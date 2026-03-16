@@ -155,8 +155,16 @@ describe("defineComponent", () => {
 
   it("should include adopted global styles before local styles", async () => {
     const tag = uniqueTag();
-    const globalSheet = css`:host { color: rebeccapurple; }`;
-    const localSheet = css`:host { display: block; }`;
+    const globalSheet = css`
+      :host {
+        color: rebeccapurple;
+      }
+    `;
+    const localSheet = css`
+      :host {
+        display: block;
+      }
+    `;
 
     adoptGlobalStyles(globalSheet);
 
@@ -185,7 +193,11 @@ describe("defineComponent", () => {
 
     expect(el.shadowRoot!.adoptedStyleSheets).toHaveLength(0);
 
-    const globalSheet = css`:host { color: steelblue; }`;
+    const globalSheet = css`
+      :host {
+        color: steelblue;
+      }
+    `;
     adoptGlobalStyles(globalSheet);
     await waitForMicrotask();
 
@@ -196,8 +208,16 @@ describe("defineComponent", () => {
 
   it("should resync latest global styles after disconnect and reconnect", async () => {
     const tag = uniqueTag();
-    const firstGlobalSheet = css`:host { color: salmon; }`;
-    const secondGlobalSheet = css`:host { background: beige; }`;
+    const firstGlobalSheet = css`
+      :host {
+        color: salmon;
+      }
+    `;
+    const secondGlobalSheet = css`
+      :host {
+        background: beige;
+      }
+    `;
 
     adoptGlobalStyles(firstGlobalSheet);
 
@@ -485,7 +505,8 @@ describe("defineComponent", () => {
       {
         props: {
           mode: {
-            type: (value: string | null) => (value === null ? "fallback" : value),
+            type: (value: string | null) =>
+              value === null ? "fallback" : value,
           },
         },
       },
@@ -612,7 +633,9 @@ describe("defineComponent", () => {
 
   it("should expose client context defaults for non-island components", async () => {
     const tag = uniqueTag();
-    let capturedClient: { strategy: string | null; value: string | null; hydrated: boolean } | undefined;
+    let capturedClient:
+      | { strategy: string | null; value: string | null; hydrated: boolean }
+      | undefined;
 
     defineComponent(tag, ({ client }) => {
       capturedClient = {
@@ -764,7 +787,7 @@ describe("defineComponent", () => {
       host.setAttribute("data-hydrated", "true");
     });
 
-    defineComponent(tag, () => "<button type=\"button\">SSR</button>", {
+    defineComponent(tag, () => '<button type="button">SSR</button>', {
       hydrate: hydrateFn,
     });
 
@@ -793,7 +816,7 @@ describe("defineComponent", () => {
       host.setAttribute("data-hydrated", "true");
     });
 
-    defineComponent(tag, () => "<button type=\"button\">SSR</button>", {
+    defineComponent(tag, () => '<button type="button">SSR</button>', {
       hydrate: hydrateFn,
     });
 
@@ -816,7 +839,7 @@ describe("defineComponent", () => {
     const store = createAtomStore({ appId: `late-store-island-${tag}` });
     let capturedStore: ReturnType<typeof createAtomStore> | undefined;
 
-    defineComponent(tag, () => "<button type=\"button\">SSR</button>", {
+    defineComponent(tag, () => '<button type="button">SSR</button>', {
       hydrate: ({ host, store: ctxStore }) => {
         capturedStore = ctxStore;
         host.setAttribute("data-hydrated", "true");
@@ -846,9 +869,9 @@ describe("defineComponent", () => {
     expect(capturedStore).toBe(store);
     expect(el.getAttribute("data-hydrated")).toBe("true");
     expect(el.getAttribute("data-count")).toBe("12");
-    expect(
-      (el as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS],
-    ).toBe("hydrated");
+    expect((el as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS]).toBe(
+      "hydrated",
+    );
 
     el.remove();
   });
@@ -880,7 +903,9 @@ describe("defineComponent", () => {
 
     hydrateIslands(document);
     const ssrButton = el.shadowRoot?.querySelector("button");
-    ssrButton?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    ssrButton?.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
     await waitForMicrotask();
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
@@ -935,7 +960,9 @@ describe("defineComponent", () => {
 
     hydrateIslands(document);
     const ssrButton = el.shadowRoot?.querySelector("button");
-    ssrButton?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    ssrButton?.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
     await waitForMicrotask();
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
@@ -949,7 +976,7 @@ describe("defineComponent", () => {
       host.setAttribute("data-hydrated", "true");
     });
 
-    defineComponent(tag, () => "<button type=\"button\">SSR</button>", {
+    defineComponent(tag, () => '<button type="button">SSR</button>', {
       hydrate: hydrateFn,
     });
 
@@ -1040,8 +1067,16 @@ describe("defineComponent", () => {
 
   it("should replace SSR style tags with adoptedStyleSheets during DSD hydrate", async () => {
     const tag = uniqueTag();
-    const globalSheet = css`:host { color: navy; }`;
-    const localSheet = css`:host { display: block; }`;
+    const globalSheet = css`
+      :host {
+        color: navy;
+      }
+    `;
+    const localSheet = css`
+      :host {
+        display: block;
+      }
+    `;
 
     adoptGlobalStyles(globalSheet);
 

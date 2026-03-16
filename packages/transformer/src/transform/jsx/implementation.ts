@@ -228,7 +228,9 @@ function normalizeIslandsDirectiveValue(
   }
 
   if (directive === "interaction") {
-    invalidValueError("client:interaction accepts only string literal event types");
+    invalidValueError(
+      "client:interaction accepts only string literal event types",
+    );
   }
 
   invalidValueError("client:media requires a string literal media query");

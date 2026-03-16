@@ -292,7 +292,11 @@ function collectIslandHosts(
   root: Document | ShadowRoot | Element,
   hosts: IslandHost[] = [],
 ): IslandHost[] {
-  if (root instanceof Element && isIslandHost(root) && getIslandStrategy(root)) {
+  if (
+    root instanceof Element &&
+    isIslandHost(root) &&
+    getIslandStrategy(root)
+  ) {
     hosts.push(root);
   }
 
@@ -301,7 +305,9 @@ function collectIslandHosts(
   }
 
   const children =
-    root instanceof Document || root instanceof ShadowRoot || root instanceof Element
+    root instanceof Document ||
+    root instanceof ShadowRoot ||
+    root instanceof Element
       ? Array.from(root.children)
       : [];
 

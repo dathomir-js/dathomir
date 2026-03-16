@@ -91,9 +91,15 @@ describe("transform/tree", () => {
       },
     ];
 
-    processAttributes(attributes, dynamicParts, [0], createInitialState("csr"), {
-      strategy: null,
-    });
+    processAttributes(
+      attributes,
+      dynamicParts,
+      [0],
+      createInitialState("csr"),
+      {
+        strategy: null,
+      },
+    );
 
     expect(dynamicParts).toHaveLength(1);
     expect(dynamicParts[0]?.type).toBe("attr");
@@ -510,7 +516,7 @@ describe("transform/tree", () => {
     );
   });
 
-   it("processAttributes turns load:onClick into metadata attrs plus click event", () => {
+  it("processAttributes turns load:onClick into metadata attrs plus click event", () => {
     const state = createInitialState("csr");
     const dynamicParts: Parameters<typeof processAttributes>[1] = [];
     const attributes: Parameters<typeof processAttributes>[0] = [
@@ -537,7 +543,10 @@ describe("transform/tree", () => {
       },
     ]);
     const objectExpression = result.attrs as {
-      properties: Array<{ key: { type: string; value?: unknown }; value: { value?: unknown } }>;
+      properties: Array<{
+        key: { type: string; value?: unknown };
+        value: { value?: unknown };
+      }>;
     };
     expect(
       objectExpression.properties.some(

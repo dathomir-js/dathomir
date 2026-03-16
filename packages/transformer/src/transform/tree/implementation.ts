@@ -420,7 +420,10 @@ function processAttributes(
 
     const colocatedClientDirective = getColocatedClientDirective(attr.name);
     if (colocatedClientDirective !== null) {
-      if (!isJSXExpressionContainer(attr.value) || isJSXEmptyExpression(attr.value.expression)) {
+      if (
+        !isJSXExpressionContainer(attr.value) ||
+        isJSXEmptyExpression(attr.value.expression)
+      ) {
         throw new Error(
           `[dathomir] ${colocatedClientDirective.strategy}:onClick requires an inline handler expression`,
         );

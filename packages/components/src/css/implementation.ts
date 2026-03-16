@@ -27,7 +27,9 @@ const trackedRoots = new Set<ShadowRoot>();
 
 function readCssRulesText(sheet: CSSStyleSheet): string | undefined {
   try {
-    const cssText = Array.from(sheet.cssRules, (rule) => rule.cssText).join("\n");
+    const cssText = Array.from(sheet.cssRules, (rule) => rule.cssText).join(
+      "\n",
+    );
     (sheet as DathomirStyleSheet).__cssText = cssText;
     return cssText;
   } catch {
@@ -83,8 +85,11 @@ function mergeStyleSheets(
 function applyGlobalStylesToTrackedRoots(): void {
   for (const root of trackedRoots) {
     const localSheets =
-      (root as ShadowRoot & { __dathomirLocalSheets?: readonly CSSStyleSheet[] })
-        .__dathomirLocalSheets ?? [];
+      (
+        root as ShadowRoot & {
+          __dathomirLocalSheets?: readonly CSSStyleSheet[];
+        }
+      ).__dathomirLocalSheets ?? [];
     root.adoptedStyleSheets = [...mergeStyleSheets(localSheets)];
   }
 }
@@ -138,7 +143,9 @@ function getCssText(sheet: CSSStyleSheet | string): string | undefined {
   return readCssRulesText(sheet);
 }
 
-function adoptGlobalStyles(...styles: readonly (CSSStyleSheet | string)[]): void {
+function adoptGlobalStyles(
+  ...styles: readonly (CSSStyleSheet | string)[]
+): void {
   for (const style of styles) {
     if (typeof style !== "string" && globalStyleSheets.has(style)) {
       continue;
@@ -171,8 +178,9 @@ function connectGlobalStyles(
   root: ShadowRoot,
   localSheets: readonly CSSStyleSheet[] = [],
 ): void {
-  (root as ShadowRoot & { __dathomirLocalSheets?: readonly CSSStyleSheet[] }).__dathomirLocalSheets =
-    localSheets;
+  (
+    root as ShadowRoot & { __dathomirLocalSheets?: readonly CSSStyleSheet[] }
+  ).__dathomirLocalSheets = localSheets;
   trackedRoots.add(root);
   root.adoptedStyleSheets = [...mergeStyleSheets(localSheets)];
 }
@@ -192,8 +200,11 @@ function clearGlobalStyles(): void {
 
   for (const root of trackedRoots) {
     const localSheets =
-      (root as ShadowRoot & { __dathomirLocalSheets?: readonly CSSStyleSheet[] })
-        .__dathomirLocalSheets ?? [];
+      (
+        root as ShadowRoot & {
+          __dathomirLocalSheets?: readonly CSSStyleSheet[];
+        }
+      ).__dathomirLocalSheets ?? [];
     root.adoptedStyleSheets = [...localSheets];
   }
 

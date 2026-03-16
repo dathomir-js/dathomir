@@ -365,7 +365,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "load");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);
@@ -383,7 +384,9 @@ describe("hydrateIslands", () => {
 
     class MockIntersectionObserver {
       constructor(
-        callback: (entries: Array<{ isIntersecting: boolean; target: Element }>) => void,
+        callback: (
+          entries: Array<{ isIntersecting: boolean; target: Element }>,
+        ) => void,
       ) {
         observerCallback = callback;
       }
@@ -400,7 +403,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "visible");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);
@@ -430,7 +434,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "idle");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);
@@ -446,7 +451,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "idle");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);
@@ -462,7 +468,8 @@ describe("hydrateIslands", () => {
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "interaction");
     island.setAttribute("data-dh-island-value", "mouseenter");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);
@@ -479,7 +486,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "interaction");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);
@@ -492,7 +500,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "interaction");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
 
     const button = document.createElement("button");
     button.setAttribute("data-dh-client-target", "cta");
@@ -500,7 +509,9 @@ describe("hydrateIslands", () => {
     host.appendChild(island);
 
     hydrateIslands(document);
-    button.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    button.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
 
     expect(hydrateHook).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -512,16 +523,17 @@ describe("hydrateIslands", () => {
   });
 
   it("hydrates media islands after the media query matches", () => {
-    let changeListener:
-      | ((event: { matches: boolean }) => void)
-      | undefined;
+    let changeListener: ((event: { matches: boolean }) => void) | undefined;
 
     vi.stubGlobal(
       "matchMedia",
       vi.fn(() => ({
         matches: false,
         media: "(max-width: 720px)",
-        addEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => {
+        addEventListener: (
+          _type: string,
+          listener: (event: { matches: boolean }) => void,
+        ) => {
           changeListener = listener;
         },
         removeEventListener: vi.fn(),
@@ -532,7 +544,8 @@ describe("hydrateIslands", () => {
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "media");
     island.setAttribute("data-dh-island-value", "(max-width: 720px)");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);
@@ -546,7 +559,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "interaction");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);
@@ -563,7 +577,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "interaction");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     wrapperShadowRoot.appendChild(island);
     host.appendChild(wrapper);
 
@@ -581,7 +596,9 @@ describe("hydrateIslands", () => {
 
     class MockIntersectionObserver {
       constructor(
-        callback: (entries: Array<{ isIntersecting: boolean; target: Element }>) => void,
+        callback: (
+          entries: Array<{ isIntersecting: boolean; target: Element }>,
+        ) => void,
       ) {
         observerCallback = callback;
       }
@@ -598,7 +615,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "visible");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     const dispose = hydrateIslands(document);
@@ -613,7 +631,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "interaction");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);
@@ -634,7 +653,8 @@ describe("hydrateIslands", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "visible");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);
@@ -649,7 +669,8 @@ describe("hydrateIslands", () => {
     const hydrateHook = vi.fn(() => true);
     island.setAttribute("data-dh-island", "media");
     island.setAttribute("data-dh-island-value", "(max-width: 720px)");
-    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = hydrateHook;
+    (island as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
+      hydrateHook;
     host.appendChild(island);
 
     hydrateIslands(document);

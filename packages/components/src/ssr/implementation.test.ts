@@ -10,10 +10,7 @@ import type {
   ComponentClass,
   ComponentContext,
 } from "@/defineComponent/implementation";
-import {
-  adoptGlobalStyles,
-  clearGlobalStyles,
-} from "@/css/implementation";
+import { adoptGlobalStyles, clearGlobalStyles } from "@/css/implementation";
 import { defineComponent } from "@/defineComponent/implementation";
 import { clearRegistry, registerComponent } from "@/registry/implementation";
 import {
@@ -125,15 +122,17 @@ describe("ssr", () => {
 
     it("should render adopted global styles before component local styles", () => {
       adoptGlobalStyles(":host { color: seagreen; }");
-      registerComponent(
-        "global-style-order",
-        () => "<div>Order</div>",
-        [":host { display: block; }"],
-      );
+      registerComponent("global-style-order", () => "<div>Order</div>", [
+        ":host { display: block; }",
+      ]);
 
       const html = renderDSD("global-style-order", {});
-      const globalIndex = html.indexOf("<style>:host { color: seagreen; }</style>");
-      const localIndex = html.indexOf("<style>:host { display: block; }</style>");
+      const globalIndex = html.indexOf(
+        "<style>:host { color: seagreen; }</style>",
+      );
+      const localIndex = html.indexOf(
+        "<style>:host { display: block; }</style>",
+      );
 
       expect(globalIndex).toBeGreaterThanOrEqual(0);
       expect(localIndex).toBeGreaterThan(globalIndex);
@@ -141,15 +140,16 @@ describe("ssr", () => {
 
     it("should dedupe duplicate global and local css texts in SSR output", () => {
       adoptGlobalStyles(":host { color: seagreen; }");
-      registerComponent(
-        "global-style-dedupe",
-        () => "<div>Dedupe</div>",
-        [":host { color: seagreen; }", ":host { display: block; }"],
-      );
+      registerComponent("global-style-dedupe", () => "<div>Dedupe</div>", [
+        ":host { color: seagreen; }",
+        ":host { display: block; }",
+      ]);
 
       const html = renderDSD("global-style-dedupe", {});
 
-      expect(html.match(/<style>:host \{ color: seagreen; \}<\/style>/g)).toHaveLength(1);
+      expect(
+        html.match(/<style>:host \{ color: seagreen; \}<\/style>/g),
+      ).toHaveLength(1);
       expect(html).toContain("<style>:host { display: block; }</style>");
     });
 
@@ -392,8 +392,12 @@ describe("ssr", () => {
       );
 
       const html = renderDSDContent("template-global-style-order", {});
-      const globalIndex = html.indexOf("<style>:host { color: seagreen; }</style>");
-      const localIndex = html.indexOf("<style>:host { display: block; }</style>");
+      const globalIndex = html.indexOf(
+        "<style>:host { color: seagreen; }</style>",
+      );
+      const localIndex = html.indexOf(
+        "<style>:host { display: block; }</style>",
+      );
 
       expect(globalIndex).toBeGreaterThanOrEqual(0);
       expect(localIndex).toBeGreaterThan(globalIndex);
@@ -409,7 +413,9 @@ describe("ssr", () => {
 
       const html = renderDSDContent("template-global-style-dedupe", {});
 
-      expect(html.match(/<style>:host \{ color: seagreen; \}<\/style>/g)).toHaveLength(1);
+      expect(
+        html.match(/<style>:host \{ color: seagreen; \}<\/style>/g),
+      ).toHaveLength(1);
     });
   });
 
@@ -439,11 +445,15 @@ describe("ssr", () => {
       registerComponent("runtime-reset-test", () => "<div>Reset</div>", []);
 
       ensureComponentRenderer();
-      expect(renderToString([["runtime-reset-test", null]])).toContain("<div>Reset</div>");
+      expect(renderToString([["runtime-reset-test", null]])).toContain(
+        "<div>Reset</div>",
+      );
 
       _resetRendererState();
 
-      expect(renderToString([["runtime-reset-test", null]])).toBe("<runtime-reset-test></runtime-reset-test>");
+      expect(renderToString([["runtime-reset-test", null]])).toBe(
+        "<runtime-reset-test></runtime-reset-test>",
+      );
     });
   });
 

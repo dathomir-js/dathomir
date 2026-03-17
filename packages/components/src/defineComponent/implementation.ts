@@ -169,8 +169,9 @@ type JSXComponent<S extends PropsSchema = EmptyPropsSchema> = (
 ) => Node;
 
 /** Public object returned by defineComponent. */
-interface DefinedComponent<S extends PropsSchema = EmptyPropsSchema>
-  extends ComponentMetadata<S> {
+interface DefinedComponent<
+  S extends PropsSchema = EmptyPropsSchema,
+> extends ComponentMetadata<S> {
   (props: JSXComponentProps<S> | null): Node;
   readonly webComponent: ComponentConstructor<S>;
   readonly jsx: JSXComponent<S>;
@@ -304,7 +305,9 @@ function getColocatedClientStrategyFromShadowRoot(
   let strategy: ColocatedClientStrategyName | null = null;
 
   for (const target of targets) {
-    const nextStrategy = target.getAttribute(CLIENT_STRATEGY_METADATA_ATTRIBUTE);
+    const nextStrategy = target.getAttribute(
+      CLIENT_STRATEGY_METADATA_ATTRIBUTE,
+    );
     if (!isIslandStrategyName(nextStrategy) || nextStrategy === "media") {
       continue;
     }
@@ -343,7 +346,7 @@ function createClientContext(host: HTMLElement): ComponentClientContext {
       ? null
       : normalizedStrategy === "interaction"
         ? (host.getAttribute(ISLAND_VALUE_METADATA_ATTRIBUTE) ??
-            DEFAULT_INTERACTION_EVENT_TYPE)
+          DEFAULT_INTERACTION_EVENT_TYPE)
         : host.getAttribute(ISLAND_VALUE_METADATA_ATTRIBUTE);
   return {
     strategy: normalizedStrategy,
@@ -762,7 +765,10 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
         colocatedStrategy !== null &&
         this.getAttribute(ISLAND_METADATA_ATTRIBUTE) === null
       ) {
-        this.setAttribute(ISLAND_METADATA_ATTRIBUTE, colocatedStrategy.strategy);
+        this.setAttribute(
+          ISLAND_METADATA_ATTRIBUTE,
+          colocatedStrategy.strategy,
+        );
         if (colocatedStrategy.value !== null) {
           this.setAttribute(
             ISLAND_VALUE_METADATA_ATTRIBUTE,
@@ -826,7 +832,9 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
             hydrateSetup!(ctx);
           });
           this.#islandHydrationAccepted = true;
-          if (isKnownIslandStrategy(this.getAttribute(ISLAND_METADATA_ATTRIBUTE))) {
+          if (
+            isKnownIslandStrategy(this.getAttribute(ISLAND_METADATA_ATTRIBUTE))
+          ) {
             (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
               "hydrated";
           }
@@ -854,7 +862,9 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
             replayHydrationTrigger(shadowRoot, trigger);
           });
           this.#islandHydrationAccepted = true;
-          if (isKnownIslandStrategy(this.getAttribute(ISLAND_METADATA_ATTRIBUTE))) {
+          if (
+            isKnownIslandStrategy(this.getAttribute(ISLAND_METADATA_ATTRIBUTE))
+          ) {
             (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
               "hydrated";
           }

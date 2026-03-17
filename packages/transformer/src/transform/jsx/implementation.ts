@@ -150,9 +150,7 @@ function getRawAttributeName(name: JSXAttribute["name"]): string | null {
   return null;
 }
 
-function getColocatedClientDirective(
-  name: JSXAttribute["name"],
-): {
+function getColocatedClientDirective(name: JSXAttribute["name"]): {
   strategy: ColocatedClientStrategyName;
   event: typeof DEFAULT_INTERACTION_EVENT_TYPE;
 } | null {
@@ -162,10 +160,7 @@ function getColocatedClientDirective(
   }
 
   const [strategy, event] = rawName.split(":");
-  if (
-    !isColocatedClientStrategyName(strategy ?? null) ||
-    event !== "onClick"
-  ) {
+  if (!isColocatedClientStrategyName(strategy ?? null) || event !== "onClick") {
     return null;
   }
 

@@ -467,9 +467,9 @@ describe("transform/tree", () => {
 
     const props = result.arguments[0];
     const interactionValue = props?.properties.find(
-        (property) =>
-          property.key.type === "Literal" &&
-          property.key.value === ISLAND_VALUE_METADATA_ATTRIBUTE,
+      (property) =>
+        property.key.type === "Literal" &&
+        property.key.value === ISLAND_VALUE_METADATA_ATTRIBUTE,
     );
 
     expect(interactionValue?.value?.type).toBe("Literal");

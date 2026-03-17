@@ -25,16 +25,16 @@ type ColocatedClientStrategyName = (typeof COLOCATED_CLIENT_STRATEGIES)[number];
 const islandStrategySet = new Set<string>(ISLAND_STRATEGIES);
 const colocatedClientStrategySet = new Set<string>(COLOCATED_CLIENT_STRATEGIES);
 
-function isIslandStrategyName(value: string | null): value is IslandStrategyName {
+function isIslandStrategyName(
+  value: string | null,
+): value is IslandStrategyName {
   return typeof value === "string" && islandStrategySet.has(value);
 }
 
 function isColocatedClientStrategyName(
   value: string | null,
 ): value is ColocatedClientStrategyName {
-  return (
-    typeof value === "string" && colocatedClientStrategySet.has(value)
-  );
+  return typeof value === "string" && colocatedClientStrategySet.has(value);
 }
 
 export {

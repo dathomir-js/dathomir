@@ -928,9 +928,7 @@ describe("defineComponent", () => {
     expect(capturedStore).toBe(store);
     expect(el.getAttribute("data-hydrated")).toBe("true");
     expect(el.getAttribute("data-count")).toBe("12");
-    expect(Reflect.get(el, HYDRATE_ISLANDS_STATUS)).toBe(
-      "hydrated",
-    );
+    expect(Reflect.get(el, HYDRATE_ISLANDS_STATUS)).toBe("hydrated");
 
     el.remove();
   });

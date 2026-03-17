@@ -2,93 +2,93 @@
   "folders": [
     {
       "name": "<root>",
-      "path": "."
+      "path": ".",
     },
     {
       "name": "=== ⚙️ config ===",
-      "path": "=== ⚙️ config ==="
+      "path": "=== ⚙️ config ===",
     },
     {
       "name": "⚙️ .workspace",
-      "path": ".workspace"
+      "path": ".workspace",
     },
     {
       "name": "⚙️ .github",
-      "path": ".github"
+      "path": ".github",
     },
     {
       "name": "⚙️ config",
-      "path": "./config"
+      "path": "./config",
     },
     {
       "name": "⚙️ SPEC",
-      "path": "./SPEC"
+      "path": "./SPEC",
     },
     {
       "name": "=== 📦 packages ===",
-      "path": "=== 📦 packages ==="
+      "path": "=== 📦 packages ===",
     },
     {
       "name": "📦 @dathomir/components",
-      "path": "./packages/components"
+      "path": "./packages/components",
     },
     {
       "name": "📦 @dathomir/core",
-      "path": "./packages/core"
+      "path": "./packages/core",
     },
     {
       "name": "📦 @dathomir/plugin",
-      "path": "./packages/plugin"
+      "path": "./packages/plugin",
     },
     {
       "name": "📦 @dathomir/reactivity",
-      "path": "./packages/reactivity"
+      "path": "./packages/reactivity",
     },
     {
       "name": "📦 @dathomir/runtime",
-      "path": "./packages/runtime"
+      "path": "./packages/runtime",
     },
     {
       "name": "📦 @dathomir/shared",
-      "path": "./packages/shared"
+      "path": "./packages/shared",
     },
     {
       "name": "📦 @dathomir/store",
-      "path": "./packages/store"
+      "path": "./packages/store",
     },
     {
       "name": "📦 @dathomir/transformer",
-      "path": "./packages/transformer"
+      "path": "./packages/transformer",
     },
     {
       "name": "=== 🎮 playgrounds ===",
-      "path": "=== 🎮 playgrounds ==="
+      "path": "=== 🎮 playgrounds ===",
     },
     {
       "name": "🎮 vanilla",
-      "path": "./playgrounds/vanilla"
+      "path": "./playgrounds/vanilla",
     },
     {
       "name": "🎮 ssr",
-      "path": "./playgrounds/ssr"
+      "path": "./playgrounds/ssr",
     },
     {
       "name": "🎮 nuxt",
-      "path": "./playgrounds/nuxt"
-    }
+      "path": "./playgrounds/nuxt",
+    },
   ],
   "settings": {
     "biome.enabled": false,
-    "prettier.enable": true,
+    "prettier.enable": false,
     "oxc.enable": true,
-    "oxc.enable.oxfmt": false,
+    "oxc.enable.oxfmt": true,
     "eslint.enable": true,
     "chat.useAgentsMdFile": true,
     "chat.useNestedAgentsMdFiles": true,
     "chat.agentSkillsLocations": {
-      ".agents/skills": true
+      ".agents/skills": true,
     },
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "oxc.oxc-vscode",
     "editor.inlineSuggest.enabled": true,
     "github.copilot.nextEditSuggestions.enabled": true,
     "js/ts.experimental.useTsgo": false,
@@ -96,32 +96,28 @@
       "source.fixAll.oxc": "explicit",
       "source.fixAll.eslint": "explicit",
       "source.addMissingImports.ts": "always",
-      "source.organizeImports": "always"
+      "source.organizeImports": "always",
     },
     "[typescript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "js/ts.preferences.importModuleSpecifier": "non-relative"
+      "editor.defaultFormatter": "oxc.oxc-vscode",
+      "js/ts.preferences.importModuleSpecifier": "non-relative",
     },
     "[typescriptreact]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
-      "js/ts.preferences.importModuleSpecifier": "non-relative"
+      "editor.defaultFormatter": "oxc.oxc-vscode",
+      "js/ts.preferences.importModuleSpecifier": "non-relative",
     },
     "[typst]": {
-      "editor.defaultFormatter": "myriad-dreamin.tinymist"
+      "editor.defaultFormatter": "myriad-dreamin.tinymist",
     },
     "github.copilot.chat.commitMessageGeneration.instructions": [
       {
         "file": "commit-message-instructions.md",
-      }
+      },
     ],
-    "cSpell.words": [
-      "dathomir",
-      "opencode",
-      "Unreactive"
-    ],
+    "cSpell.words": ["dathomir", "opencode", "Unreactive"],
     "eslint.useFlatConfig": true,
     "typst.fontPaths": ["SPEC/fonts"],
-    "json.schemaDownload.enable": true
+    "json.schemaDownload.enable": true,
   },
   "tasks": {
     "version": "2.0.0",
@@ -133,15 +129,15 @@
         "args": ["dev"],
         "group": {
           "kind": "build",
-          "isDefault": true
+          "isDefault": true,
         },
         "presentation": {
           "reveal": "always",
-          "panel": "new"
+          "panel": "new",
         },
-        "problemMatcher": []
-      }
-    ]
+        "problemMatcher": [],
+      },
+    ],
   },
   "launch": {
     "version": "0.2.0",
@@ -150,8 +146,8 @@
         "command": "pnpm dev",
         "name": "Launch Dev Script",
         "request": "launch",
-        "type": "node-terminal"
-      }
-    ]
-  }
+        "type": "node-terminal",
+      },
+    ],
+  },
 }

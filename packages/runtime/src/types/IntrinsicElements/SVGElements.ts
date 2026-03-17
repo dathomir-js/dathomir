@@ -139,8 +139,7 @@ interface SvgPresentationAttributes {
 }
 
 interface SvgGraphicsIntrinsicElements
-  extends SvgBaseIntrinsicElements,
-    SvgPresentationAttributes {}
+  extends SvgBaseIntrinsicElements, SvgPresentationAttributes {}
 
 interface SvgFitToViewBoxAttributes {
   preserveAspectRatio?: string;
@@ -212,22 +211,19 @@ interface SvgTransferFunctionAttributes {
 }
 
 interface SvgAAttributes
-  extends SvgGraphicsIntrinsicElements,
-    SvgXLinkAttributes {
+  extends SvgGraphicsIntrinsicElements, SvgXLinkAttributes {
   hreflang?: string;
 }
 
 interface SvgScriptAttributes
-  extends SvgBaseIntrinsicElements,
-    SvgHrefAttributes {
+  extends SvgBaseIntrinsicElements, SvgHrefAttributes {
   crossOrigin?: "anonymous" | "use-credentials";
   crossorigin?: "anonymous" | "use-credentials";
   type?: string;
 }
 
 interface SvgSvgAttributes
-  extends SvgGraphicsIntrinsicElements,
-    SvgFitToViewBoxAttributes {
+  extends SvgGraphicsIntrinsicElements, SvgFitToViewBoxAttributes {
   baseProfile?: string;
   height?: SvgNumberish;
   version?: string;
@@ -239,14 +235,16 @@ interface SvgSvgAttributes
 }
 
 interface AnimateIntrinsicElements
-  extends SvgBaseIntrinsicElements,
+  extends
+    SvgBaseIntrinsicElements,
     SvgAnimationTargetAttributes,
     SvgAnimationTimingAttributes,
     SvgAnimationValueAttributes,
     SvgAnimationAdditionAttributes {}
 
 interface AnimateMotionIntrinsicElements
-  extends SvgBaseIntrinsicElements,
+  extends
+    SvgBaseIntrinsicElements,
     SvgHrefAttributes,
     SvgAnimationTimingAttributes,
     SvgAnimationValueAttributes,
@@ -258,7 +256,8 @@ interface AnimateMotionIntrinsicElements
 }
 
 interface AnimateTransformIntrinsicElements
-  extends SvgBaseIntrinsicElements,
+  extends
+    SvgBaseIntrinsicElements,
     SvgAnimationTargetAttributes,
     SvgAnimationTimingAttributes,
     SvgAnimationValueAttributes,
@@ -282,8 +281,7 @@ interface DefsIntrinsicElements extends SvgGraphicsIntrinsicElements {}
 interface DescIntrinsicElements extends SvgBaseIntrinsicElements {}
 
 interface DiscardIntrinsicElements
-  extends SvgBaseIntrinsicElements,
-    SvgHrefAttributes {
+  extends SvgBaseIntrinsicElements, SvgHrefAttributes {
   begin?: string;
 }
 
@@ -307,8 +305,7 @@ interface FeColorMatrixIntrinsicElements extends SvgFilterPrimitiveAttributes {
   values?: string;
 }
 
-interface FeComponentTransferIntrinsicElements
-  extends SvgFilterPrimitiveAttributes {
+interface FeComponentTransferIntrinsicElements extends SvgFilterPrimitiveAttributes {
   in?: string;
 }
 
@@ -322,8 +319,7 @@ interface FeCompositeIntrinsicElements extends SvgFilterPrimitiveAttributes {
   operator?: SvgCompositeOperator;
 }
 
-interface FeConvolveMatrixIntrinsicElements
-  extends SvgFilterPrimitiveAttributes {
+interface FeConvolveMatrixIntrinsicElements extends SvgFilterPrimitiveAttributes {
   bias?: SvgNumberish;
   divisor?: SvgNumberish;
   edgeMode?: SvgEdgeMode;
@@ -336,16 +332,14 @@ interface FeConvolveMatrixIntrinsicElements
   targetY?: SvgNumberish;
 }
 
-interface FeDiffuseLightingIntrinsicElements
-  extends SvgFilterPrimitiveAttributes {
+interface FeDiffuseLightingIntrinsicElements extends SvgFilterPrimitiveAttributes {
   diffuseConstant?: SvgNumberish;
   in?: string;
   kernelUnitLength?: SvgNumberish | string;
   surfaceScale?: SvgNumberish;
 }
 
-interface FeDisplacementMapIntrinsicElements
-  extends SvgFilterPrimitiveAttributes {
+interface FeDisplacementMapIntrinsicElements extends SvgFilterPrimitiveAttributes {
   in?: string;
   in2?: string;
   scale?: SvgNumberish;
@@ -367,20 +361,16 @@ interface FeDropShadowIntrinsicElements extends SvgFilterPrimitiveAttributes {
 interface FeFloodIntrinsicElements extends SvgFilterPrimitiveAttributes {}
 
 interface FeFuncAIntrinsicElements
-  extends SvgBaseIntrinsicElements,
-    SvgTransferFunctionAttributes {}
+  extends SvgBaseIntrinsicElements, SvgTransferFunctionAttributes {}
 
 interface FeFuncBIntrinsicElements
-  extends SvgBaseIntrinsicElements,
-    SvgTransferFunctionAttributes {}
+  extends SvgBaseIntrinsicElements, SvgTransferFunctionAttributes {}
 
 interface FeFuncGIntrinsicElements
-  extends SvgBaseIntrinsicElements,
-    SvgTransferFunctionAttributes {}
+  extends SvgBaseIntrinsicElements, SvgTransferFunctionAttributes {}
 
 interface FeFuncRIntrinsicElements
-  extends SvgBaseIntrinsicElements,
-    SvgTransferFunctionAttributes {}
+  extends SvgBaseIntrinsicElements, SvgTransferFunctionAttributes {}
 
 interface FeGaussianBlurIntrinsicElements extends SvgFilterPrimitiveAttributes {
   edgeMode?: SvgEdgeMode;
@@ -389,8 +379,7 @@ interface FeGaussianBlurIntrinsicElements extends SvgFilterPrimitiveAttributes {
 }
 
 interface FeImageIntrinsicElements
-  extends SvgFilterPrimitiveAttributes,
-    SvgXLinkAttributes {
+  extends SvgFilterPrimitiveAttributes, SvgXLinkAttributes {
   crossOrigin?: "anonymous" | "use-credentials";
   crossorigin?: "anonymous" | "use-credentials";
   preserveAspectRatio?: string;
@@ -420,8 +409,7 @@ interface FePointLightIntrinsicElements extends SvgBaseIntrinsicElements {
   z?: SvgNumberish;
 }
 
-interface FeSpecularLightingIntrinsicElements
-  extends SvgFilterPrimitiveAttributes {
+interface FeSpecularLightingIntrinsicElements extends SvgFilterPrimitiveAttributes {
   in?: string;
   kernelUnitLength?: SvgNumberish | string;
   specularConstant?: SvgNumberish;
@@ -453,8 +441,7 @@ interface FeTurbulenceIntrinsicElements extends SvgFilterPrimitiveAttributes {
 }
 
 interface FilterIntrinsicElements
-  extends SvgGraphicsIntrinsicElements,
-    SvgXLinkAttributes {
+  extends SvgGraphicsIntrinsicElements, SvgXLinkAttributes {
   filterUnits?: SvgUnits;
   height?: SvgNumberish;
   primitiveUnits?: SvgUnits;
@@ -473,8 +460,7 @@ interface ForeignObjectIntrinsicElements extends SvgGraphicsIntrinsicElements {
 interface GIntrinsicElements extends SvgGraphicsIntrinsicElements {}
 
 interface ImageIntrinsicElements
-  extends SvgGraphicsIntrinsicElements,
-    SvgXLinkAttributes {
+  extends SvgGraphicsIntrinsicElements, SvgXLinkAttributes {
   crossOrigin?: "anonymous" | "use-credentials";
   crossorigin?: "anonymous" | "use-credentials";
   decoding?: "sync" | "async" | "auto";
@@ -494,8 +480,7 @@ interface LineIntrinsicElements extends SvgGraphicsIntrinsicElements {
 }
 
 interface LinearGradientIntrinsicElements
-  extends SvgGraphicsIntrinsicElements,
-    SvgXLinkAttributes {
+  extends SvgGraphicsIntrinsicElements, SvgXLinkAttributes {
   gradientTransform?: string;
   gradientUnits?: SvgUnits;
   spreadMethod?: SvgSpreadMethod;
@@ -506,8 +491,7 @@ interface LinearGradientIntrinsicElements
 }
 
 interface MarkerIntrinsicElements
-  extends SvgGraphicsIntrinsicElements,
-    SvgFitToViewBoxAttributes {
+  extends SvgGraphicsIntrinsicElements, SvgFitToViewBoxAttributes {
   markerHeight?: SvgNumberish;
   markerUnits?: SvgMarkerUnits;
   markerWidth?: SvgNumberish;
@@ -528,8 +512,7 @@ interface MaskIntrinsicElements extends SvgGraphicsIntrinsicElements {
 interface MetadataIntrinsicElements extends SvgBaseIntrinsicElements {}
 
 interface MpathIntrinsicElements
-  extends SvgBaseIntrinsicElements,
-    SvgXLinkAttributes {}
+  extends SvgBaseIntrinsicElements, SvgXLinkAttributes {}
 
 interface PathIntrinsicElements extends SvgGraphicsIntrinsicElements {
   d?: string;
@@ -537,7 +520,8 @@ interface PathIntrinsicElements extends SvgGraphicsIntrinsicElements {
 }
 
 interface PatternIntrinsicElements
-  extends SvgGraphicsIntrinsicElements,
+  extends
+    SvgGraphicsIntrinsicElements,
     SvgFitToViewBoxAttributes,
     SvgXLinkAttributes {
   height?: SvgNumberish;
@@ -560,8 +544,7 @@ interface PolylineIntrinsicElements extends SvgGraphicsIntrinsicElements {
 }
 
 interface RadialGradientIntrinsicElements
-  extends SvgGraphicsIntrinsicElements,
-    SvgXLinkAttributes {
+  extends SvgGraphicsIntrinsicElements, SvgXLinkAttributes {
   cx?: SvgNumberish;
   cy?: SvgNumberish;
   fr?: SvgNumberish;
@@ -584,7 +567,8 @@ interface RectIntrinsicElements extends SvgGraphicsIntrinsicElements {
 }
 
 interface SetIntrinsicElements
-  extends SvgBaseIntrinsicElements,
+  extends
+    SvgBaseIntrinsicElements,
     SvgAnimationTargetAttributes,
     SvgAnimationTimingAttributes {
   to?: SvgNumberish | string;
@@ -597,8 +581,7 @@ interface StopIntrinsicElements extends SvgGraphicsIntrinsicElements {
 interface SwitchIntrinsicElements extends SvgGraphicsIntrinsicElements {}
 
 interface SymbolIntrinsicElements
-  extends SvgGraphicsIntrinsicElements,
-    SvgFitToViewBoxAttributes {
+  extends SvgGraphicsIntrinsicElements, SvgFitToViewBoxAttributes {
   height?: SvgNumberish;
   refX?: SvgNumberish | "left" | "center" | "right" | (string & {});
   refY?: SvgNumberish | "top" | "center" | "bottom" | (string & {});
@@ -618,8 +601,7 @@ interface TextIntrinsicElements extends SvgGraphicsIntrinsicElements {
 }
 
 interface TextPathIntrinsicElements
-  extends SvgGraphicsIntrinsicElements,
-    SvgXLinkAttributes {
+  extends SvgGraphicsIntrinsicElements, SvgXLinkAttributes {
   lengthAdjust?: SvgLengthAdjust;
   method?: SvgTextPathMethod;
   path?: string;
@@ -640,8 +622,7 @@ interface TspanIntrinsicElements extends SvgGraphicsIntrinsicElements {
 }
 
 interface UseIntrinsicElements
-  extends SvgGraphicsIntrinsicElements,
-    SvgXLinkAttributes {
+  extends SvgGraphicsIntrinsicElements, SvgXLinkAttributes {
   height?: SvgNumberish;
   width?: SvgNumberish;
   x?: SvgNumberish;
@@ -649,8 +630,7 @@ interface UseIntrinsicElements
 }
 
 interface ViewIntrinsicElements
-  extends SvgBaseIntrinsicElements,
-    SvgFitToViewBoxAttributes {
+  extends SvgBaseIntrinsicElements, SvgFitToViewBoxAttributes {
   zoomAndPan?: "disable" | "magnify" | (string & {});
 }
 

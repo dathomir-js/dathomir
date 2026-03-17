@@ -29,8 +29,10 @@ type InputType =
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
  */
-interface InputIntrinsicElements
-  extends Omit<CommonIntrinsicElements, "onInput" | "onChange"> {
+interface InputIntrinsicElements extends Omit<
+  CommonIntrinsicElements,
+  "onInput" | "onChange"
+> {
   // Override event handlers with more specific types for input elements
   /** Input event handler with HTMLInputElement target */
   onInput?: (event: InputEvent & { target: HTMLInputElement | null }) => void;

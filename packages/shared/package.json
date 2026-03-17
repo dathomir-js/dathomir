@@ -42,8 +42,8 @@
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
-    "fmt": "prettier --ignore-path ../../.gitignore --write .",
-    "fmt:check": "prettier --ignore-path ../../.gitignore --check .",
+    "fmt": "oxfmt --ignore-path ../../.gitignore --write .",
+    "fmt:check": "oxfmt --ignore-path ../../.gitignore --check .",
     "test": "vitest run --coverage",
     "release": "rlse"
   },

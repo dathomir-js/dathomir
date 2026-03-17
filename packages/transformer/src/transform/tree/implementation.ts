@@ -489,7 +489,9 @@ function processAttributes(
     const colocatedClientDirective = getColocatedClientDirective(attr.name);
     if (colocatedClientDirective !== null) {
       const value = attr.value;
-      if (shouldRejectColocatedDirectiveInNamespace(state.currentElementNamespace)) {
+      if (
+        shouldRejectColocatedDirectiveInNamespace(state.currentElementNamespace)
+      ) {
         throw new Error(
           `[dathomir] ${getRawAttributeNameForDiagnostics(attr.name)} is only supported on HTML elements`,
         );

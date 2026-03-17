@@ -52,7 +52,9 @@ function toStyleSheet(style: CSSStyleSheet | string): CSSStyleSheet {
   return sheet;
 }
 
-function normalizeCssTextForDedupe(sheet: CSSStyleSheet | string): string | undefined {
+function normalizeCssTextForDedupe(
+  sheet: CSSStyleSheet | string,
+): string | undefined {
   if (typeof sheet === "string") {
     if (typeof CSSStyleSheet === "undefined") {
       return sheet.trim();

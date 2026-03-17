@@ -8,8 +8,10 @@ type BodyEventHandler<E extends Event = Event> = (event: E) => void;
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/body
  */
-interface BodyIntrinsicElements
-  extends Omit<CommonIntrinsicElements, "onError"> {
+interface BodyIntrinsicElements extends Omit<
+  CommonIntrinsicElements,
+  "onError"
+> {
   /** Fired after the print dialog is closed */
   onAfterPrint?: BodyEventHandler;
   /** Fired right before the print dialog is shown */

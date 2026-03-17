@@ -5,8 +5,10 @@ import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea
  */
-interface TextareaIntrinsicElements
-  extends Omit<CommonIntrinsicElements, "onInput" | "onChange"> {
+interface TextareaIntrinsicElements extends Omit<
+  CommonIntrinsicElements,
+  "onInput" | "onChange"
+> {
   // Override event handlers with more specific types for textarea elements
   /** Input event handler with HTMLTextAreaElement target */
   onInput?: (

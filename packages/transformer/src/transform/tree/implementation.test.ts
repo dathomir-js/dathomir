@@ -415,7 +415,9 @@ describe("transform/tree", () => {
       closingElement: null,
     };
 
-    const result = asCallExpressionLike(buildComponentCall(component, state, nested));
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
 
     const props = result.arguments[0];
     expect(props?.type).toBe("ObjectExpression");
@@ -452,7 +454,9 @@ describe("transform/tree", () => {
       closingElement: null,
     };
 
-    const result = asCallExpressionLike(buildComponentCall(component, state, nested));
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
 
     const props = result.arguments[0];
     const interactionValue = props?.properties.find(

@@ -5,8 +5,10 @@ import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/select
  */
-interface SelectIntrinsicElements
-  extends Omit<CommonIntrinsicElements, "onChange"> {
+interface SelectIntrinsicElements extends Omit<
+  CommonIntrinsicElements,
+  "onChange"
+> {
   // Override event handlers with more specific types for select elements
   /** Change event handler with HTMLSelectElement target */
   onChange?: (event: Event & { target: HTMLSelectElement | null }) => void;

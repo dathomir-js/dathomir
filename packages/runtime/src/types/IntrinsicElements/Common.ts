@@ -307,13 +307,7 @@ interface HTMLOnlyIntrinsicAttributes {
   /** Tab order position */
   tabIndex?: number;
   /** Autocapitalization behavior for text input */
-  autocapitalize?:
-    | "off"
-    | "none"
-    | "on"
-    | "sentences"
-    | "words"
-    | "characters";
+  autocapitalize?: "off" | "none" | "on" | "sentences" | "words" | "characters";
   /** Autocorrect behavior for text input */
   autocorrect?: "on" | "off";
   /** Hint for virtual keyboard enter key label */
@@ -365,8 +359,7 @@ interface HTMLOnlyIntrinsicAttributes {
  * Backward-compatible alias for the full HTML attribute surface.
  */
 interface CommonAttributes
-  extends GlobalIntrinsicAttributes,
-    HTMLOnlyIntrinsicAttributes {}
+  extends GlobalIntrinsicAttributes, HTMLOnlyIntrinsicAttributes {}
 
 interface HTMLOnlyColocatedClientHandlers {
   /** Deferred client click hydration on load (MVP) */
@@ -380,12 +373,10 @@ interface HTMLOnlyColocatedClientHandlers {
 }
 
 interface SharedIntrinsicElements
-  extends GlobalIntrinsicAttributes,
-    CommonEventHandlers {}
+  extends GlobalIntrinsicAttributes, CommonEventHandlers {}
 
 interface CommonIntrinsicElements
-  extends SharedIntrinsicElements,
-    HTMLOnlyColocatedClientHandlers {}
+  extends SharedIntrinsicElements, HTMLOnlyColocatedClientHandlers {}
 
 export {
   CommonAttributes,

@@ -949,11 +949,15 @@ describe("defineComponent", () => {
 
     class MockIntersectionObserver {
       static callback:
-        | ((entries: Array<{ isIntersecting: boolean; target: Element }>) => void)
+        | ((
+            entries: Array<{ isIntersecting: boolean; target: Element }>,
+          ) => void)
         | undefined;
 
       constructor(
-        callback: (entries: Array<{ isIntersecting: boolean; target: Element }>) => void,
+        callback: (
+          entries: Array<{ isIntersecting: boolean; target: Element }>,
+        ) => void,
       ) {
         MockIntersectionObserver.callback = callback;
       }
@@ -989,7 +993,9 @@ describe("defineComponent", () => {
     expect(clickSpy).not.toHaveBeenCalled();
 
     const ssrButton = el.shadowRoot?.querySelector("button");
-    ssrButton?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    ssrButton?.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
     await waitForMicrotask();
     expect(clickSpy).not.toHaveBeenCalled();
 
@@ -997,7 +1003,9 @@ describe("defineComponent", () => {
     await waitForMicrotask();
 
     const button = el.shadowRoot?.querySelector("button");
-    button?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    button?.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
     await waitForMicrotask();
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
@@ -1043,7 +1051,9 @@ describe("defineComponent", () => {
     expect(clickSpy).not.toHaveBeenCalled();
 
     const ssrButton = el.shadowRoot?.querySelector("button");
-    ssrButton?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    ssrButton?.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
     await waitForMicrotask();
     expect(clickSpy).not.toHaveBeenCalled();
 
@@ -1051,7 +1061,9 @@ describe("defineComponent", () => {
     await waitForMicrotask();
 
     const button = el.shadowRoot?.querySelector("button");
-    button?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    button?.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
     await waitForMicrotask();
 
     expect(clickSpy).toHaveBeenCalledTimes(1);

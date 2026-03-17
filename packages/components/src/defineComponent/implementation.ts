@@ -149,8 +149,7 @@ interface ComponentMetadata<S extends PropsSchema = PropsSchema> {
 
 /** Component class with tag name and schema metadata. */
 interface ComponentClass<S extends PropsSchema = PropsSchema>
-  extends Function,
-    ComponentMetadata<S> {}
+  extends Function, ComponentMetadata<S> {}
 
 /** Constructor type returned by defineComponent. */
 type ComponentConstructor<S extends PropsSchema = PropsSchema> = {
@@ -164,8 +163,9 @@ type JSXComponent<S extends PropsSchema = Record<string, never>> = (
 ) => Node;
 
 /** Public object returned by defineComponent. */
-interface DefinedComponent<S extends PropsSchema = Record<string, never>>
-  extends ComponentMetadata<S> {
+interface DefinedComponent<
+  S extends PropsSchema = Record<string, never>,
+> extends ComponentMetadata<S> {
   (props: JSXComponentProps<S> | null): Node;
   readonly webComponent: ComponentConstructor<S>;
   readonly jsx: JSXComponent<S>;
@@ -719,7 +719,8 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
         ? getColocatedClientStrategyFromShadowRoot(shadowRoot)
         : null;
 
-      const hasHostIslandMetadata = this.getAttribute("data-dh-island") !== null;
+      const hasHostIslandMetadata =
+        this.getAttribute("data-dh-island") !== null;
 
       if (colocatedStrategy !== null && hydrateSetup !== undefined) {
         console.error(

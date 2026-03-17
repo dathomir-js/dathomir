@@ -1,14 +1,17 @@
 import type { Plugin } from "@opencode-ai/plugin";
 
-export const FormatLintPlugin: Plugin = async ({ $, directory: _directory }) => {
+export const FormatLintPlugin: Plugin = async ({
+  $,
+  directory: _directory,
+}) => {
   return {
     event: async ({ event }) => {
-      if (event.type !== "session.idle") return
+      if (event.type !== "session.idle") return;
 
-      // Run formatter via config package where prettier is installed
+      // Run formatter via config package where oxfmt is installed
       // await $`pnpm `.catch(() => {})
       // Run linter via config package where oxlint is installed
-      await $`pnpm lint`.catch(() => {})
+      await $`pnpm lint`.catch(() => {});
     },
-  }
-}
+  };
+};

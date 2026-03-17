@@ -10,14 +10,14 @@
     "tsc": "./bin/tsc.js",
     "eslint": "./bin/eslint.js",
     "oxlint": "./bin/oxlint.js",
+    "oxfmt": "./bin/oxfmt.js",
     "tsgolint": "./bin/tsgolint.js",
-    "prettier": "./bin/prettier.js",
     "tsdown": "./bin/tsdown.js",
     "stryker": "./bin/stryker.js"
   },
   "exports": {
     "./templates/oxlint.template.ts": "./templates/oxlint.template.ts",
-    "./templates/prettier.template.js": "./templates/prettier.template.js",
+    "./templates/oxfmt.template.ts": "./templates/oxfmt.template.ts",
     "./templates/tsconfig.template.json": "./templates/tsconfig.template.json",
     "./templates/eslint.template.js": "./templates/eslint.template.js",
     "./tsdown": {
@@ -46,8 +46,8 @@
     "eslint-plugin-oxlint": "^1.24.0",
     "globals": "^16.4.0",
     "oxlint": "catalog:",
+    "oxfmt": "catalog:",
     "oxlint-tsgolint": "catalog:",
-    "prettier": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:"
   }

@@ -244,7 +244,9 @@ function normalizeIslandsDirectiveValue(
     );
   }
 
-  return invalidValueError("client:media requires a string literal media query");
+  return invalidValueError(
+    "client:media requires a string literal media query",
+  );
 }
 
 export {

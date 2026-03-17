@@ -10,7 +10,12 @@ function PlaygroundShell(props: {
   renderPage: () => JSX.Element;
 }) {
   const currentRoute = getPlaygroundRouteOrDefault(props.routePath);
-  const renderMode = typeof document === "undefined" ? "SSR" : "CSR";
+  const renderMode =
+    currentRoute.path === "/islands-runtime"
+      ? "SSR shell + islands hydration"
+      : typeof document === "undefined"
+        ? "SSR"
+        : "CSR";
 
   return (
     <main>

@@ -84,7 +84,7 @@ function runWatcher(node: WatcherNode, flags: number): void {
   if (
     flags & ReactiveFlags.Dirty ||
     (flags & ReactiveFlags.Pending &&
-      (checkDirty(node.deps!, node) ||
+      (checkDirty(node.deps as Link, node) ||
         ((node.flags = flags & ~ReactiveFlags.Pending), false)))
   ) {
     incrementCycle();
@@ -118,7 +118,7 @@ function runWatcher(node: WatcherNode, flags: number): void {
 
 function flush(): void {
   while (notifyIndex < queuedEffectsLength) {
-    const watcher = queuedEffects[notifyIndex]!;
+    const watcher = queuedEffects[notifyIndex] as WatcherNode;
     queuedEffects[notifyIndex++] = undefined;
     runWatcher(watcher, (watcher.flags &= ~QUEUED_FLAG));
   }

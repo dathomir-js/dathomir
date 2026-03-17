@@ -442,7 +442,7 @@ describe("transform", () => {
 
     it("should throw when valueless directives receive a value", () => {
       const code = `
-        const element = <Counter client:visible=\"later\" />;
+        const element = <Counter client:visible="later" />;
       `;
 
       expect(() => transform(code)).toThrow(

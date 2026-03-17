@@ -22,13 +22,13 @@ describe("computed", () => {
 
       const doubled = computed(getter);
 
-      doubled.value;
+      void doubled.value;
       expect(getter).toHaveBeenCalledTimes(1);
 
       count.set(5);
       expect(getter).toHaveBeenCalledTimes(1);
 
-      doubled.value;
+      void doubled.value;
       expect(getter).toHaveBeenCalledTimes(2);
     });
   });
@@ -56,7 +56,7 @@ describe("computed", () => {
 
       const doubled = computed(getter);
 
-      doubled.value;
+      void doubled.value;
       expect(getter).toHaveBeenCalledTimes(1);
 
       count.set(3);
@@ -110,7 +110,7 @@ describe("computed", () => {
         return count.value * 2;
       });
 
-      doubled.value;
+      void doubled.value;
       expect(receivedPrev).toEqual([undefined]);
     });
 
@@ -123,15 +123,15 @@ describe("computed", () => {
         return count.value * 2;
       });
 
-      doubled.value;
+      void doubled.value;
       expect(receivedPrev).toEqual([undefined]);
 
       count.set(5);
-      doubled.value;
+      void doubled.value;
       expect(receivedPrev).toEqual([undefined, 2]);
 
       count.set(10);
-      doubled.value;
+      void doubled.value;
       expect(receivedPrev).toEqual([undefined, 2, 10]);
     });
   });

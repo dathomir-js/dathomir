@@ -314,10 +314,6 @@ function collectIslandHosts(
   return hosts;
 }
 
-function runIslandHydration(host: IslandHost): boolean {
-  return runIslandHydrationWithTrigger(host);
-}
-
 function runIslandHydrationWithTrigger(
   host: IslandHost,
   trigger?: IslandHydrationTrigger,

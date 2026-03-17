@@ -22,7 +22,7 @@ function computedOper<T>(node: ComputedNode<T>): T {
   if (
     flags & ReactiveFlags.Dirty ||
     (flags & ReactiveFlags.Pending &&
-      (checkDirty(node.deps!, node) ||
+      (checkDirty(node.deps as Link, node) ||
         ((node.flags = flags & ~ReactiveFlags.Pending), false)))
   ) {
     if (updateComputed(node)) {

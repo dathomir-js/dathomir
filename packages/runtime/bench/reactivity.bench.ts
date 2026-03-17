@@ -15,7 +15,7 @@ describe("signal - read/write", () => {
   bench("read signal 1000 times", () => {
     const s = signal(0);
     for (let i = 0; i < 1000; i++) {
-      s.value;
+      void s.value;
     }
   });
 
@@ -33,7 +33,7 @@ describe("computed - derivation", () => {
     const derived = computed(() => s.value * 2);
     for (let i = 0; i < 1000; i++) {
       s.set(i);
-      derived.value;
+      void derived.value;
     }
   });
 
@@ -44,7 +44,7 @@ describe("computed - derivation", () => {
     const c = computed(() => b.value + 10);
     for (let i = 0; i < 1000; i++) {
       s.set(i);
-      c.value;
+      void c.value;
     }
   });
 
@@ -57,7 +57,7 @@ describe("computed - derivation", () => {
       sA.set(i);
       sB.set(i);
       sC.set(i);
-      derived.value;
+      void derived.value;
     }
   });
 });
@@ -107,7 +107,7 @@ describe("batch - grouped updates", () => {
           s.set(i);
         }
       });
-      derived.value;
+      void derived.value;
     }
   });
 
@@ -122,7 +122,7 @@ describe("batch - grouped updates", () => {
           s.set(i);
         }
       });
-      derived.value;
+      void derived.value;
     }
   });
 });

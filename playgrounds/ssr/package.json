@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @dathomir/store build && pnpm --filter @dathomir/runtime build && pnpm --filter @dathomir/components build && pnpm --filter @dathomir/core build && tsx server.ts",
+    "dev": "tsx server.ts",
     "build:client": "vite build --outDir dist/client",
     "build:server": "vite build --outDir dist/server --ssr src/entry-server.tsx",
     "build": "pnpm build:client && pnpm build:server",

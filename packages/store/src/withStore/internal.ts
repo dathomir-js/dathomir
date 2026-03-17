@@ -28,14 +28,21 @@ function getCurrentStore(): AtomStore | undefined {
  */
 function runWithStoreContext<T>(store: AtomStore, fn: () => T): T {
   storeStack.push(store);
+  let fnError: unknown;
+  let result: T | undefined;
   try {
-    return fn();
-  } finally {
-    const popped = storeStack.pop();
-    if (popped !== store) {
-      throw new Error("Store boundary stack is corrupted");
-    }
+    result = fn();
+  } catch (e: unknown) {
+    fnError = e;
   }
+  const popped = storeStack.pop();
+  if (popped !== store) {
+    throw new Error("Store boundary stack is corrupted");
+  }
+  if (fnError !== undefined) {
+    throw fnError;
+  }
+  return result as T;
 }
 
 export { getCurrentStore, runWithStoreContext };

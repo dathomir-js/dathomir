@@ -355,24 +355,6 @@ function createClientContext(host: HTMLElement): ComponentClientContext {
   };
 }
 
-function getReplayTargetIdFromEvent(event: Event): string | null {
-  const path =
-    typeof event.composedPath === "function" ? event.composedPath() : [];
-
-  for (const item of path) {
-    if (!(item instanceof HTMLElement)) {
-      continue;
-    }
-
-    const targetId = item.getAttribute(CLIENT_TARGET_METADATA_ATTRIBUTE);
-    if (targetId !== null) {
-      return targetId;
-    }
-  }
-
-  return null;
-}
-
 function replayHydrationTrigger(
   shadowRoot: ShadowRoot,
   trigger: IslandHydrationTrigger | undefined,

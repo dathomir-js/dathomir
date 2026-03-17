@@ -50,7 +50,7 @@ function insert(
   if (anchor) {
     if (insertedContent.has(anchor)) {
       // Remove previously inserted dynamic content
-      const previousNodes = insertedContent.get(anchor)!;
+      const previousNodes = insertedContent.get(anchor) as Node[];
       for (const node of previousNodes) {
         if (node.parentNode) {
           node.parentNode.removeChild(node);

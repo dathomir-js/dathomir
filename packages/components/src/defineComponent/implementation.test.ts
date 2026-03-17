@@ -851,7 +851,7 @@ describe("defineComponent", () => {
     });
 
     const container = document.createElement("div");
-    container.innerHTML = `<${tag} data-dh-island=\"interaction\"><template shadowrootmode=\"open\"><button type=\"button\">SSR</button></template></${tag}>`;
+    container.innerHTML = `<${tag} data-dh-island="interaction"><template shadowrootmode="open"><button type="button">SSR</button></template></${tag}>`;
     const el = container.firstElementChild as HTMLElement;
 
     document.body.appendChild(el);
@@ -1189,7 +1189,7 @@ describe("defineComponent", () => {
 
     const createIslandElement = () => {
       const container = document.createElement("div");
-      container.innerHTML = `<${tag} data-dh-island=\"interaction\"><template shadowrootmode=\"open\"><button type=\"button\">SSR</button></template></${tag}>`;
+      container.innerHTML = `<${tag} data-dh-island="interaction"><template shadowrootmode="open"><button type="button">SSR</button></template></${tag}>`;
       return container.firstElementChild as HTMLElement;
     };
 

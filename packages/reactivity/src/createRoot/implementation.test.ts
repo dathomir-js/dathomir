@@ -73,7 +73,8 @@ describe("createRoot", () => {
     count.set(1);
     expect(spy).toHaveBeenCalledTimes(2);
 
-    internalDispose!();
+    // biome-ignore lint: variable is assigned in createRoot callback
+    internalDispose?.();
 
     count.set(2);
     expect(spy).toHaveBeenCalledTimes(2);
@@ -97,13 +98,13 @@ describe("createRoot", () => {
     expect(innerSpy).toHaveBeenLastCalledWith(1);
 
     // Dispose inner only
-    innerDispose!();
+    innerDispose?.();
     count.set(2);
     expect(outerSpy).toHaveBeenLastCalledWith(2);
     expect(innerSpy).toHaveBeenLastCalledWith(1); // Should not update
 
     // Dispose outer
-    outerDispose!();
+    outerDispose?.();
     count.set(3);
     expect(outerSpy).toHaveBeenLastCalledWith(2); // Should not update
   });
@@ -175,7 +176,7 @@ describe("createRoot - nested scopes", () => {
     expect(outerSpy).toHaveBeenLastCalledWith(1);
     expect(innerSpy).toHaveBeenLastCalledWith(1);
 
-    innerDispose!();
+    innerDispose?.();
 
     count.set(2);
     expect(outerSpy).toHaveBeenLastCalledWith(2);

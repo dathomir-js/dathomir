@@ -195,7 +195,7 @@ describe("templateEffect", () => {
       });
 
       count.set(1);
-      dispose!();
+      dispose?.();
       count.set(2);
       expect(spy).toHaveBeenCalledTimes(2); // Only 0 and 1
     });

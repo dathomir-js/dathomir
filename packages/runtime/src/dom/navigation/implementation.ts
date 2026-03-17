@@ -16,7 +16,7 @@ function firstChild(node: Node, isText?: boolean): Node {
       child = child.nextSibling;
     }
   }
-  return child!;
+  return child as Node;
 }
 
 /**
@@ -29,7 +29,7 @@ function firstChild(node: Node, isText?: boolean): Node {
  * @returns The next sibling node.
  */
 function nextSibling(node: Node): Node {
-  return node.nextSibling!;
+  return node.nextSibling as Node;
 }
 
 export { firstChild, nextSibling };

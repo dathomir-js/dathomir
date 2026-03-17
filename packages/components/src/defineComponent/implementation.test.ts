@@ -659,6 +659,36 @@ describe("defineComponent", () => {
     el.remove();
   });
 
+  it("should normalize unknown client metadata to null in client context", async () => {
+    const tag = uniqueTag();
+    let capturedClient:
+      | { strategy: string | null; value: string | null; hydrated: boolean }
+      | undefined;
+
+    defineComponent(tag, ({ client }) => {
+      capturedClient = {
+        strategy: client.strategy,
+        value: client.value,
+        hydrated: client.hydrated,
+      };
+      return document.createTextNode("test");
+    });
+
+    const el = document.createElement(tag);
+    el.setAttribute("data-dh-island", "typo");
+    el.setAttribute("data-dh-island-value", "mouseenter");
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(capturedClient).toEqual({
+      strategy: null,
+      value: null,
+      hydrated: false,
+    });
+
+    el.remove();
+  });
+
   // Test case #18: Number prop: null attribute uses default value (not Number(null) = 0)
   it("should use default value for Number prop when attribute is absent, not Number(null)", async () => {
     const tag = uniqueTag();
@@ -913,6 +943,122 @@ describe("defineComponent", () => {
     el.remove();
   });
 
+  it("should derive host visible metadata from colocated target markers and defer setup until hydrateIslands runs visibility scheduling", async () => {
+    const tag = uniqueTag();
+    const clickSpy = vi.fn();
+
+    class MockIntersectionObserver {
+      static callback:
+        | ((entries: Array<{ isIntersecting: boolean; target: Element }>) => void)
+        | undefined;
+
+      constructor(
+        callback: (entries: Array<{ isIntersecting: boolean; target: Element }>) => void,
+      ) {
+        MockIntersectionObserver.callback = callback;
+      }
+
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+
+    defineComponent(tag, () => {
+      const button = document.createElement("button");
+      button.setAttribute("data-dh-client-target", "cta");
+      button.setAttribute("data-dh-client-strategy", "visible");
+      button.textContent = "Visible click";
+      button.addEventListener("click", () => {
+        clickSpy();
+      });
+      return button;
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><button data-dh-client-target="cta" data-dh-client-strategy="visible">Visible click</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.getAttribute("data-dh-island")).toBe("visible");
+
+    hydrateIslands(document);
+    expect(clickSpy).not.toHaveBeenCalled();
+
+    const ssrButton = el.shadowRoot?.querySelector("button");
+    ssrButton?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await waitForMicrotask();
+    expect(clickSpy).not.toHaveBeenCalled();
+
+    MockIntersectionObserver.callback?.([{ isIntersecting: true, target: el }]);
+    await waitForMicrotask();
+
+    const button = el.shadowRoot?.querySelector("button");
+    button?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await waitForMicrotask();
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    el.remove();
+  });
+
+  it("should derive host idle metadata from colocated target markers and enable click after idle scheduling", async () => {
+    const tag = uniqueTag();
+    const clickSpy = vi.fn();
+    let idleCallback: (() => void) | undefined;
+
+    vi.stubGlobal(
+      "requestIdleCallback",
+      vi.fn((callback: () => void) => {
+        idleCallback = callback;
+        return 1;
+      }),
+    );
+    vi.stubGlobal("cancelIdleCallback", vi.fn());
+
+    defineComponent(tag, () => {
+      const button = document.createElement("button");
+      button.setAttribute("data-dh-client-target", "cta");
+      button.setAttribute("data-dh-client-strategy", "idle");
+      button.textContent = "Idle click";
+      button.addEventListener("click", () => {
+        clickSpy();
+      });
+      return button;
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><button data-dh-client-target="cta" data-dh-client-strategy="idle">Idle click</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.getAttribute("data-dh-island")).toBe("idle");
+
+    hydrateIslands(document);
+    expect(clickSpy).not.toHaveBeenCalled();
+
+    const ssrButton = el.shadowRoot?.querySelector("button");
+    ssrButton?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await waitForMicrotask();
+    expect(clickSpy).not.toHaveBeenCalled();
+
+    idleCallback?.();
+    await waitForMicrotask();
+
+    const button = el.shadowRoot?.querySelector("button");
+    button?.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await waitForMicrotask();
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    el.remove();
+  });
+
   it("should reject colocated client markers when the component also defines hydrate", async () => {
     const tag = uniqueTag();
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -929,9 +1075,31 @@ describe("defineComponent", () => {
     await waitForMicrotask();
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "[dathomir] colocated load:onClick / interaction:onClick cannot be combined with a hydrate option in the same component",
+      "[dathomir] colocated load:onClick / interaction:onClick / idle:onClick / visible:onClick cannot be combined with a hydrate option in the same component",
     );
     expect(el.getAttribute("data-dh-island")).toBeNull();
+
+    el.remove();
+    errorSpy.mockRestore();
+  });
+
+  it("should reject colocated client markers when host-level island metadata is already present", async () => {
+    const tag = uniqueTag();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    defineComponent(tag, () => document.createElement("button"));
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag} data-dh-island="load"><template shadowrootmode="open"><button data-dh-client-target="cta" data-dh-client-strategy="idle">Click me</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[dathomir] host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
+    );
+    expect(el.getAttribute("data-dh-island")).toBe("load");
 
     el.remove();
     errorSpy.mockRestore();

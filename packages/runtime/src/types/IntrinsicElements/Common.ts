@@ -240,13 +240,10 @@ interface CommonEventHandlers {
 }
 
 /**
- * Common attributes for all HTML elements.
- * These attributes are defined as global attributes in the HTML specification
- * and can be used on all HTML elements.
- *
- * @see https://html.spec.whatwg.org/multipage/dom.html#global-attributes
+ * Global attributes that this runtime allows across HTML, SVG, and MathML
+ * intrinsic elements.
  */
-interface CommonAttributes {
+interface GlobalIntrinsicAttributes {
   // Core Attributes
   /** CSS class names (space-separated if multiple) */
   class?: string;
@@ -260,6 +257,37 @@ interface CommonAttributes {
   lang?: string;
   /** Text directionality */
   dir?: "ltr" | "rtl" | "auto";
+  // Styling
+  /** Inline CSS styles */
+  style?: Partial<CSSStyleDeclaration>;
+  /** Cryptographic nonce for CSP */
+  nonce?: string;
+
+  // Shadow DOM
+  /** Assigns a slot in a shadow DOM */
+  slot?: string;
+
+  // ARIA Attributes (all aria-* attributes)
+  /** ARIA role */
+  role?: string;
+  /** Any aria-* attribute */
+  [ariaAttr: `aria-${string}`]: string | undefined;
+
+  // Custom Data Attributes (all data-* attributes)
+  /** Any data-* attribute */
+  [dataAttr: `data-${string}`]: string | undefined;
+
+  // Children
+  /** Children nodes */
+  children?: dathomirNode;
+}
+
+/**
+ * HTML-only global attributes. These should not automatically flow into SVG or
+ * MathML intrinsic surfaces.
+ */
+interface HTMLOnlyIntrinsicAttributes {
+  // Language and Direction
   /** Whether element's text should be translated */
   translate?: "yes" | "no";
 
@@ -279,7 +307,13 @@ interface CommonAttributes {
   /** Tab order position */
   tabIndex?: number;
   /** Autocapitalization behavior for text input */
-  autocapitalize?: "off" | "none" | "on" | "sentences" | "words" | "characters";
+  autocapitalize?:
+    | "off"
+    | "none"
+    | "on"
+    | "sentences"
+    | "words"
+    | "characters";
   /** Autocorrect behavior for text input */
   autocorrect?: "on" | "off";
   /** Hint for virtual keyboard enter key label */
@@ -310,16 +344,6 @@ interface CommonAttributes {
   /** Popover state */
   popover?: "auto" | "manual";
 
-  // Styling
-  /** Inline CSS styles */
-  style?: Partial<CSSStyleDeclaration>;
-  /** Cryptographic nonce for CSP */
-  nonce?: string;
-
-  // Shadow DOM
-  /** Assigns a slot in a shadow DOM */
-  slot?: string;
-
   // Custom Elements
   /** Custom element name for customized built-in elements */
   is?: string;
@@ -335,29 +359,40 @@ interface CommonAttributes {
   itemscope?: boolean;
   /** Microdata item type */
   itemtype?: string;
+}
 
-  // ARIA Attributes (all aria-* attributes)
-  /** ARIA role */
-  role?: string;
-  /** Any aria-* attribute */
-  [ariaAttr: `aria-${string}`]: string | undefined;
+/**
+ * Backward-compatible alias for the full HTML attribute surface.
+ */
+interface CommonAttributes
+  extends GlobalIntrinsicAttributes,
+    HTMLOnlyIntrinsicAttributes {}
 
-  // Custom Data Attributes (all data-* attributes)
-  /** Any data-* attribute */
-  [dataAttr: `data-${string}`]: string | undefined;
-
+interface HTMLOnlyColocatedClientHandlers {
   /** Deferred client click hydration on load (MVP) */
   "load:onClick"?: (event: MouseEvent) => void;
   /** Deferred client click hydration on first interaction (MVP) */
   "interaction:onClick"?: (event: MouseEvent) => void;
-
-  // Children
-  /** Children nodes */
-  children?: dathomirNode;
+  /** Deferred client click hydration on idle (phase 2) */
+  "idle:onClick"?: (event: MouseEvent) => void;
+  /** Deferred client click hydration on visibility (phase 2) */
+  "visible:onClick"?: (event: MouseEvent) => void;
 }
 
-interface CommonIntrinsicElements
-  extends CommonAttributes,
+interface SharedIntrinsicElements
+  extends GlobalIntrinsicAttributes,
     CommonEventHandlers {}
 
-export { CommonAttributes, CommonEventHandlers, CommonIntrinsicElements };
+interface CommonIntrinsicElements
+  extends SharedIntrinsicElements,
+    HTMLOnlyColocatedClientHandlers {}
+
+export {
+  CommonAttributes,
+  GlobalIntrinsicAttributes,
+  CommonEventHandlers,
+  CommonIntrinsicElements,
+  HTMLOnlyIntrinsicAttributes,
+  HTMLOnlyColocatedClientHandlers,
+  SharedIntrinsicElements,
+};

@@ -57,7 +57,7 @@ interface ProcessedAttributes {
 }
 
 interface ColocatedClientState {
-  strategy: "load" | "interaction" | null;
+  strategy: "load" | "interaction" | "visible" | "idle" | null;
 }
 
 interface IslandsDirectiveMetadata {
@@ -68,6 +68,11 @@ interface IslandsDirectiveMetadata {
 const RESERVED_ISLAND_METADATA_KEYS = new Set([
   "data-dh-island",
   "data-dh-island-value",
+]);
+
+const RESERVED_CLIENT_METADATA_KEYS = new Set([
+  "data-dh-client-target",
+  "data-dh-client-strategy",
 ]);
 
 function throwUnknownClientDirective(name: JSXAttribute["name"]): never {
@@ -102,11 +107,55 @@ function getUnsupportedColocatedDirectiveError(
     return null;
   }
 
-  if (rawName.startsWith("load:") || rawName.startsWith("interaction:")) {
+  if (
+    rawName.startsWith("load:") ||
+    rawName.startsWith("interaction:") ||
+    rawName.startsWith("visible:") ||
+    rawName.startsWith("idle:")
+  ) {
     return `Unsupported colocated client directive: ${rawName}`;
   }
 
   return null;
+}
+
+function getElementNamespace(tagName: string): "html" | "svg" | "math" {
+  if (tagName === "svg") {
+    return "svg";
+  }
+
+  if (tagName === "math") {
+    return "math";
+  }
+
+  return "html";
+}
+
+function shouldRejectColocatedDirectiveInNamespace(
+  namespace: "html" | "svg" | "math" | undefined,
+): boolean {
+  return namespace === "svg" || namespace === "math";
+}
+
+function getReservedClientMetadataError(key: string): string | null {
+  if (!RESERVED_CLIENT_METADATA_KEYS.has(key)) {
+    return null;
+  }
+
+  return `[dathomir] ${key} is compiler-reserved metadata and cannot be authored directly`;
+}
+
+function assertNoHostIslandsMixing(
+  hasHostIslandMetadata: boolean | undefined,
+  strategy: ColocatedClientState["strategy"],
+): void {
+  if (!hasHostIslandMetadata || strategy === null) {
+    return;
+  }
+
+  throw new Error(
+    "[dathomir] host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
+  );
 }
 
 interface NestedTransformers {
@@ -164,6 +213,7 @@ function buildComponentCall(
   const propsProperties: ESTNode[] = [];
   let islandsDirective: IslandsDirectiveMetadata | null = null;
   let hasExplicitReservedIslandMetadata = false;
+  let hasExplicitHostIslandMetadata = false;
 
   for (const attr of opening.attributes) {
     if (attr.type === "JSXSpreadAttribute") {
@@ -201,6 +251,12 @@ function buildComponentCall(
 
     if (RESERVED_ISLAND_METADATA_KEYS.has(key)) {
       hasExplicitReservedIslandMetadata = true;
+      hasExplicitHostIslandMetadata = true;
+    }
+
+    const reservedClientMetadataError = getReservedClientMetadataError(key);
+    if (reservedClientMetadataError !== null) {
+      throw new Error(reservedClientMetadataError);
     }
 
     const keyNode = isValidIdentifier(key) ? nId(key) : nLit(key);
@@ -241,107 +297,119 @@ function buildComponentCall(
     }
   }
 
-  const significantChildren = node.children.filter((child) => {
-    if (child.type === "JSXText") return child.value.trim() !== "";
-    if (isJSXExpressionContainer(child))
-      return !isJSXEmptyExpression(child.expression);
-    return true;
-  });
+  const previousHostIslandMetadata = state.currentHostIslandMetadata;
+  const nextHostIslandMetadata =
+    previousHostIslandMetadata === true ||
+    islandsDirective !== null ||
+    hasExplicitHostIslandMetadata;
+  state.currentHostIslandMetadata = nextHostIslandMetadata;
 
-  if (significantChildren.length > 0) {
-    const childExprs: ESTNode[] = [];
-
-    for (const child of significantChildren) {
-      if (child.type === "JSXText") {
-        const text = child.value.trim();
-        if (text) childExprs.push(nLit(text));
-        continue;
-      }
-
+  try {
+    const significantChildren = node.children.filter((child) => {
+      if (child.type === "JSXText") return child.value.trim() !== "";
       if (isJSXExpressionContainer(child)) {
-        if (!isJSXEmptyExpression(child.expression)) {
-          childExprs.push(
-            containsJSXNode(child.expression)
-              ? transformNestedJSX(child.expression, state, nested)
-              : child.expression,
-          );
+        return !isJSXEmptyExpression(child.expression);
+      }
+      return true;
+    });
+
+    if (significantChildren.length > 0) {
+      const childExprs: ESTNode[] = [];
+
+      for (const child of significantChildren) {
+        if (child.type === "JSXText") {
+          const text = child.value.trim();
+          if (text) childExprs.push(nLit(text));
+          continue;
         }
-        continue;
-      }
 
-      if (isJSXSpreadChild(child)) {
-        childExprs.push(transformNestedJSX(child.expression, state, nested));
-        continue;
-      }
-
-      if (isJSXElement(child)) {
-        if (isComponentTag(child.openingElement.name)) {
-          childExprs.push(buildComponentCall(child, state, nested));
-        } else {
-          childExprs.push(
-            state.mode === "ssr"
-              ? nested.transformJSXForSSRNode(child, state, nested)
-              : nested.transformJSXNode(child, state, nested),
-          );
-        }
-        continue;
-      }
-
-      if (isJSXFragment(child)) {
-        for (const fragChild of child.children) {
-          if (fragChild.type === "JSXText") {
-            const text = fragChild.value.trim();
-            if (text) childExprs.push(nLit(text));
-            continue;
-          }
-
-          if (isJSXExpressionContainer(fragChild)) {
-            if (!isJSXEmptyExpression(fragChild.expression)) {
-              childExprs.push(
-                containsJSXNode(fragChild.expression)
-                  ? transformNestedJSX(fragChild.expression, state, nested)
-                  : fragChild.expression,
-              );
-            }
-            continue;
-          }
-
-          if (isJSXSpreadChild(fragChild)) {
+        if (isJSXExpressionContainer(child)) {
+          if (!isJSXEmptyExpression(child.expression)) {
             childExprs.push(
-              transformNestedJSX(fragChild.expression, state, nested),
+              containsJSXNode(child.expression)
+                ? transformNestedJSX(child.expression, state, nested)
+                : child.expression,
             );
-            continue;
           }
+          continue;
+        }
 
-          if (isJSXElement(fragChild)) {
-            if (isComponentTag(fragChild.openingElement.name)) {
-              childExprs.push(buildComponentCall(fragChild, state, nested));
-            } else {
+        if (isJSXSpreadChild(child)) {
+          childExprs.push(transformNestedJSX(child.expression, state, nested));
+          continue;
+        }
+
+        if (isJSXElement(child)) {
+          if (isComponentTag(child.openingElement.name)) {
+            childExprs.push(buildComponentCall(child, state, nested));
+          } else {
+            childExprs.push(
+              state.mode === "ssr"
+                ? nested.transformJSXForSSRNode(child, state, nested)
+                : nested.transformJSXNode(child, state, nested),
+            );
+          }
+          continue;
+        }
+
+        if (isJSXFragment(child)) {
+          for (const fragChild of child.children) {
+            if (fragChild.type === "JSXText") {
+              const text = fragChild.value.trim();
+              if (text) childExprs.push(nLit(text));
+              continue;
+            }
+
+            if (isJSXExpressionContainer(fragChild)) {
+              if (!isJSXEmptyExpression(fragChild.expression)) {
+                childExprs.push(
+                  containsJSXNode(fragChild.expression)
+                    ? transformNestedJSX(fragChild.expression, state, nested)
+                    : fragChild.expression,
+                );
+              }
+              continue;
+            }
+
+            if (isJSXSpreadChild(fragChild)) {
               childExprs.push(
-                state.mode === "ssr"
-                  ? nested.transformJSXForSSRNode(fragChild, state, nested)
-                  : nested.transformJSXNode(fragChild, state, nested),
+                transformNestedJSX(fragChild.expression, state, nested),
               );
+              continue;
+            }
+
+            if (isJSXElement(fragChild)) {
+              if (isComponentTag(fragChild.openingElement.name)) {
+                childExprs.push(buildComponentCall(fragChild, state, nested));
+              } else {
+                childExprs.push(
+                  state.mode === "ssr"
+                    ? nested.transformJSXForSSRNode(fragChild, state, nested)
+                    : nested.transformJSXNode(fragChild, state, nested),
+                );
+              }
             }
           }
         }
       }
+
+      const onlyChild = childExprs[0];
+      if (childExprs.length === 1 && onlyChild !== undefined) {
+        propsProperties.push(nProp(nId("children"), onlyChild));
+      } else if (childExprs.length > 1) {
+        propsProperties.push(nProp(nId("children"), nArr(childExprs)));
+      }
     }
 
-    const onlyChild = childExprs[0];
-    if (childExprs.length === 1 && onlyChild !== undefined) {
-      propsProperties.push(nProp(nId("children"), onlyChild));
-    } else if (childExprs.length > 1) {
-      propsProperties.push(nProp(nId("children"), nArr(childExprs)));
-    }
+    return {
+      type: "CallExpression",
+      callee: componentRef,
+      arguments: [nObj(propsProperties)],
+      optional: false,
+    };
+  } finally {
+    state.currentHostIslandMetadata = previousHostIslandMetadata;
   }
-
-  return {
-    type: "CallExpression",
-    callee: componentRef,
-    arguments: [nObj(propsProperties)],
-    optional: false,
-  };
 }
 
 /**
@@ -420,14 +488,27 @@ function processAttributes(
 
     const colocatedClientDirective = getColocatedClientDirective(attr.name);
     if (colocatedClientDirective !== null) {
+      const value = attr.value;
+      if (shouldRejectColocatedDirectiveInNamespace(state.currentElementNamespace)) {
+        throw new Error(
+          `[dathomir] ${getRawAttributeNameForDiagnostics(attr.name)} is only supported on HTML elements`,
+        );
+      }
+
       if (
-        !isJSXExpressionContainer(attr.value) ||
-        isJSXEmptyExpression(attr.value.expression)
+        value === null ||
+        !isJSXExpressionContainer(value) ||
+        isJSXEmptyExpression(value.expression)
       ) {
         throw new Error(
           `[dathomir] ${colocatedClientDirective.strategy}:onClick requires an inline handler expression`,
         );
       }
+
+      assertNoHostIslandsMixing(
+        state.currentHostIslandMetadata,
+        colocatedClientDirective.strategy,
+      );
 
       if (
         colocatedClientState.strategy !== null &&
@@ -449,7 +530,7 @@ function processAttributes(
       );
       events.push({
         type: colocatedClientDirective.event,
-        handler: attr.value.expression,
+        handler: value.expression,
       });
       continue;
     }
@@ -466,6 +547,12 @@ function processAttributes(
 
     const key = getAttributeName(attr.name);
     if (key === null) continue;
+
+    const reservedClientMetadataError = getReservedClientMetadataError(key);
+    if (reservedClientMetadataError !== null) {
+      throw new Error(reservedClientMetadataError);
+    }
+
     const keyNode = isValidIdentifier(key) ? nId(key) : nLit(key);
     const computed = !isValidIdentifier(key);
     const value = attr.value;
@@ -513,48 +600,58 @@ function jsxElementToTree(
 ): TreeResult {
   const opening = node.openingElement;
   const tagName = getTagName(opening.name);
+  const previousElementNamespace = state.currentElementNamespace;
+  const nextElementNamespace =
+    previousElementNamespace === "html"
+      ? getElementNamespace(tagName)
+      : previousElementNamespace;
+  state.currentElementNamespace = nextElementNamespace;
 
-  const { attrs, events, spreads } = processAttributes(
-    opening.attributes,
-    dynamicParts,
-    path,
-    state,
-    state.currentColocatedClientState ?? { strategy: null },
-  );
-
-  const children = processChildren(
-    node.children,
-    state,
-    dynamicParts,
-    path,
-    nested,
-  );
-
-  const treeElements: ESTNode[] = [
-    nLit(tagName),
-    attrs,
-    ...children.map((c) => c.tree),
-  ];
-
-  for (const evt of events) {
-    dynamicParts.push({
-      type: "event",
+  try {
+    const { attrs, events, spreads } = processAttributes(
+      opening.attributes,
+      dynamicParts,
       path,
-      expression: evt.handler,
-      key: evt.type,
-    });
-  }
+      state,
+      state.currentColocatedClientState ?? { strategy: null },
+    );
 
-  for (const spread of spreads) {
-    dynamicParts.push({ type: "spread", path, expression: spread });
-  }
+    const children = processChildren(
+      node.children,
+      state,
+      dynamicParts,
+      path,
+      nested,
+    );
 
-  return {
-    tree: nArr(treeElements),
-    // Dynamic parts are collected via the `dynamicParts` parameter (by reference).
-    // The returned array is unused by callers; kept empty for TreeResult conformance.
-    dynamicParts: [],
-  };
+    const treeElements: ESTNode[] = [
+      nLit(tagName),
+      attrs,
+      ...children.map((c) => c.tree),
+    ];
+
+    for (const evt of events) {
+      dynamicParts.push({
+        type: "event",
+        path,
+        expression: evt.handler,
+        key: evt.type,
+      });
+    }
+
+    for (const spread of spreads) {
+      dynamicParts.push({ type: "spread", path, expression: spread });
+    }
+
+    return {
+      tree: nArr(treeElements),
+      // Dynamic parts are collected via the `dynamicParts` parameter (by reference).
+      // The returned array is unused by callers; kept empty for TreeResult conformance.
+      dynamicParts: [],
+    };
+  } finally {
+    state.currentElementNamespace = previousElementNamespace;
+  }
 }
 
 /**
@@ -702,14 +799,16 @@ function jsxToTree(
   nested: NestedTransformers,
 ): { tree: ESTNode; dynamicParts: DynamicPart[] } {
   const dynamicParts: DynamicPart[] = [];
-  const scopedState = state as TransformState & {
-    currentColocatedClientState?: ColocatedClientState;
-  };
+  const scopedState = state;
   const previousColocatedClientState = scopedState.currentColocatedClientState;
+  const previousHostIslandMetadata = scopedState.currentHostIslandMetadata;
+  const previousElementNamespace = scopedState.currentElementNamespace;
   const colocatedClientState = previousColocatedClientState ?? {
     strategy: null,
   };
   scopedState.currentColocatedClientState = colocatedClientState;
+  scopedState.currentHostIslandMetadata = previousHostIslandMetadata ?? false;
+  scopedState.currentElementNamespace = previousElementNamespace ?? "html";
 
   if (node.type === "JSXFragment") {
     const children = processChildren(
@@ -724,11 +823,15 @@ function jsxToTree(
       dynamicParts,
     };
     scopedState.currentColocatedClientState = previousColocatedClientState;
+    scopedState.currentHostIslandMetadata = previousHostIslandMetadata;
+    scopedState.currentElementNamespace = previousElementNamespace;
     return result;
   }
 
   const result = jsxElementToTree(node, scopedState, dynamicParts, [0], nested);
   scopedState.currentColocatedClientState = previousColocatedClientState;
+  scopedState.currentHostIslandMetadata = previousHostIslandMetadata;
+  scopedState.currentElementNamespace = previousElementNamespace;
   return { tree: nArr([result.tree]), dynamicParts };
 }
 

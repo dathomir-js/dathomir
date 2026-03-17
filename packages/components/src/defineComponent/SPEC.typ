@@ -376,6 +376,21 @@
 )
 
 #adr(
+  header("visible:onClick と idle:onClick も同じ host replay model へ載せる", Status.Proposed, "2026-03-16"),
+  [
+    colocated click syntax を load / interaction だけに留めると、非同期 scheduler を使いたい UI だけ author 体験が分断される。
+  ],
+  [
+    phase 2 では `visible:onClick` / `idle:onClick` を追加し、component host は shadowRoot marker から `visible` / `idle` island metadata を導出する。strategy 発火後は MVP と同じ render-based setup を実行し、`onClick` binding は rerender 後の button にそのまま有効化される。host-level `client:*` / `data-dh-island*` metadata との混在、および `hydrate` option との併用は引き続き不許可とし、実装は dev diagnostics を出して colocated path を無効化する。
+  ],
+  [
+    - author は strategy だけを差し替えて同じ書き味を維持できる
+    - replay が必要な `interaction` と不要な `visible` / `idle` を同じ setup path に載せつつ、複雑性を分離できる
+    - host-level scheduler / store boundary / cleanup は既存 islands integration のまま再利用できる
+  ],
+)
+
+#adr(
   header("colocated client handler の capture は v1 で厳格に制限する", Status.Proposed, "2026-03-16"),
   [
     colocated syntax は author 体験を改善する一方で、任意の closure capture を許すと compiler / runtime の責務が急激に肥大化する。
@@ -505,5 +520,6 @@
      33. colocated client handler MVP は host-level island metadata により setup を遅延実行する
      34. artifact-based client handler へ進む段階では capture model を `props` / `store` / signal / serializable local `const` へ制限する
      35. `interaction:onClick` は host setup 完了後に target click を replay する
+     36. `visible:onClick` / `idle:onClick` は replay を行わず、strategy 発火後の setup rerender で click handler を有効化する
   ],
 )

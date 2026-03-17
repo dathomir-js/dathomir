@@ -19,6 +19,26 @@ import {
 } from "./implementation";
 import type { NestedTransformers } from "./implementation";
 
+interface ObjectExpressionLike {
+  type: "ObjectExpression";
+  properties: Array<{
+    key: { type: string; value?: unknown };
+    value?: { type?: string; value?: unknown };
+  }>;
+}
+
+interface CallExpressionLike {
+  arguments: ObjectExpressionLike[];
+}
+
+function asCallExpressionLike(node: ESTNode): CallExpressionLike {
+  return node as unknown as CallExpressionLike;
+}
+
+function asObjectExpressionLike(node: ESTNode): ObjectExpressionLike {
+  return node as unknown as ObjectExpressionLike;
+}
+
 const nested: NestedTransformers = {
   transformJSXNode: () => nId("CSR_NODE"),
   transformJSXForSSRNode: () => nId("SSR_NODE"),
@@ -395,12 +415,7 @@ describe("transform/tree", () => {
       closingElement: null,
     };
 
-    const result = buildComponentCall(component, state, nested) as {
-      arguments: Array<{
-        type: "ObjectExpression";
-        properties: Array<{ key: { type: string; value?: unknown } }>;
-      }>;
-    };
+    const result = asCallExpressionLike(buildComponentCall(component, state, nested));
 
     const props = result.arguments[0];
     expect(props?.type).toBe("ObjectExpression");
@@ -437,15 +452,7 @@ describe("transform/tree", () => {
       closingElement: null,
     };
 
-    const result = buildComponentCall(component, state, nested) as {
-      arguments: Array<{
-        type: "ObjectExpression";
-        properties: Array<{
-          key: { type: string; value?: unknown };
-          value: { type: string; value?: unknown };
-        }>;
-      }>;
-    };
+    const result = asCallExpressionLike(buildComponentCall(component, state, nested));
 
     const props = result.arguments[0];
     const interactionValue = props?.properties.find(
@@ -454,8 +461,8 @@ describe("transform/tree", () => {
         property.key.value === "data-dh-island-value",
     );
 
-    expect(interactionValue?.value.type).toBe("Literal");
-    expect(interactionValue?.value.value).toBe("click");
+    expect(interactionValue?.value?.type).toBe("Literal");
+    expect(interactionValue?.value?.value).toBe("click");
   });
 
   it("jsxToTree throws when client directive is used on html element", () => {
@@ -542,12 +549,7 @@ describe("transform/tree", () => {
         handler: nId("handleClick"),
       },
     ]);
-    const objectExpression = result.attrs as {
-      properties: Array<{
-        key: { type: string; value?: unknown };
-        value: { value?: unknown };
-      }>;
-    };
+    const objectExpression = asObjectExpressionLike(result.attrs);
     expect(
       objectExpression.properties.some(
         (property) =>
@@ -560,9 +562,32 @@ describe("transform/tree", () => {
         (property) =>
           property.key.type === "Literal" &&
           property.key.value === "data-dh-client-strategy" &&
-          property.value.value === "load",
+          property.value?.value === "load",
       ),
     ).toBe(true);
+  });
+
+  it("processAttributes throws when author supplies compiler-reserved client metadata", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    expect(() =>
+      processAttributes(
+        [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "data-dh-client-target" },
+            value: { type: "Literal", value: "author", raw: '"author"' },
+          },
+        ],
+        dynamicParts,
+        [0],
+        state,
+        { strategy: null },
+      ),
+    ).toThrow(
+      "data-dh-client-target is compiler-reserved metadata and cannot be authored directly",
+    );
   });
 
   it("buildComponentCall throws for invalid media directive values", () => {

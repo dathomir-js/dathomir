@@ -24,7 +24,7 @@
     - 必要なランタイムインポートを自動的に追加する
     - bare host-level `client:*` directive はコンポーネント要素でのみ許可する
     - `client:*` directive は 1 要素につき 1 つまでとし、内部 metadata は予約属性 `data-dh-island` / `data-dh-island-value` に正規化する
-    - colocated client handler MVP では `load:onClick` / `interaction:onClick` を HTML 要素でのみ許可する
+    - colocated client handler は HTML 要素でのみ許可する。MVP は `load:onClick` / `interaction:onClick`、phase 2 は `visible:onClick` / `idle:onClick` を追加対象とする
   ],
 )
 
@@ -150,6 +150,42 @@
   errors: [
     - `onClick` 以外の colocated client handler は transform error
     - 同一 component render subtree に `load` と `interaction` を混在させた場合は transform error
+  ],
+)
+
+#feature_spec(
+  name: "colocated client handlers phase 2 (proposal)",
+  summary: [
+    MVP の `load:onClick` / `interaction:onClick` が安定した後、同じ colocated syntax surface を `visible:onClick` / `idle:onClick` へ拡張する。
+  ],
+  constraints: [
+    - phase 2 でも `onClick` のみを対象とする
+    - 1 component render subtree 内では 1 種類の strategy のみ許可する
+    - `visible:onClick` / `idle:onClick` は trigger event replay を持たない
+    - host-level `client:*` directive または explicit `data-dh-island*` metadata と同じ component render subtree で混在させてはならない
+    - rollout 中に `visible:onClick` / `idle:onClick` を解釈できない transformer/runtime へ部分導入してはならず、未対応フェーズでは transform error とする
+  ],
+  steps: [
+    1. transformer は `visible:onClick` / `idle:onClick` を MVP と同じ namespaced 属性として認識する
+    2. target HTML 要素へ `data-dh-client-target` と `data-dh-client-strategy` を付与する
+    3. handler は通常の `onClick` binding として CSR setup に残す
+    4. SSR 出力では `defineComponent()` host が shadowRoot marker から `visible` / `idle` island metadata を導出できる
+  ],
+  test_cases: [
+    - `<button visible:onClick={...}>` を target marker + `visible` strategy metadata へ変換する
+    - `<button idle:onClick={...}>` を target marker + `idle` strategy metadata へ変換する
+    - `visible:onClick` と `load:onClick` を同一 JSX root で混在させると transform error にする
+    - `idle:onClick` と `interaction:onClick` を同一 JSX root で混在させると transform error にする
+    - host-level `client:load` と subtree `visible:onClick` を同一 component render subtree で混在させると transform error にする
+    - explicit `data-dh-island="load"` と subtree `idle:onClick` を同一 component render subtree で混在させると transform error にする
+    - author が `data-dh-client-target` / `data-dh-client-strategy` を明示指定した場合は transform error にする
+    - SVG / MathML 要素上の `visible:onClick` / `idle:onClick` は transform error にする
+  ],
+  impl_notes: [
+    - syntax surface は広げるが、event 種別は引き続き `click` に固定する
+    - visible / idle は hydrate trigger が click ではないため replay は不要
+    - phase 2 でも target marker 形式は MVP と共通にして、artifact-based action plan への移行余地を残す
+    - `data-dh-client-target` / `data-dh-client-strategy` は compiler-reserved metadata として扱い、author からの直接入力を禁止する
   ],
 )
 
@@ -417,6 +453,21 @@
   ],
 )
 
+#adr(
+  header("colocated syntax の第 2 段階は non-interaction scheduler へ広げる", Status.Proposed, "2026-03-16"),
+  [
+    MVP だけでは click-trigger hydration の UX は検証できるが、below-the-fold や idle-priority UI に同じ書き味を適用できない。
+  ],
+  [
+    phase 2 では `visible:onClick` / `idle:onClick` を追加し、event binding の colocated 体験を保ったまま既存 islands scheduler の `visible` / `idle` 戦略へ接続する。
+  ],
+  [
+    - author は strategy の違いだけを変えて同じ mental model で書ける
+    - runtime の replay 複雑性は `interaction` に閉じ込められる
+    - parser / transformer / component host 側の marker surface を使い回せる
+  ],
+)
+
 #behavior_spec(
   name: "colocated client handler transform (proposal)",
   summary: [
@@ -509,3 +560,5 @@
 - loop / conditional 内 target の stable id を DOM path で表すか marker で表すか
 - 複数 strategy を 1 component 内で許可するか、sub-island 分割を別機能にするか
 - custom event や form submit の replay semantics を v1 へ含めるか
+- `visible:onClick` の observer options（threshold / rootMargin）を syntax に露出するか、runtime default に固定するか
+- `idle:onClick` の timeout hint を将来 syntax へ含めるか

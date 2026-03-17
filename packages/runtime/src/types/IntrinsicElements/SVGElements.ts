@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import { SharedIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 /**
  * Shared SVG attribute definitions derived from the SVG 2 element index and
@@ -58,7 +58,7 @@ type SvgTransferType =
   | "gamma"
   | (string & {});
 
-interface SvgBaseIntrinsicElements extends CommonIntrinsicElements {
+interface SvgBaseIntrinsicElements extends SharedIntrinsicElements {
   tabindex?: number;
   requiredExtensions?: string;
   requiredFeatures?: string;

@@ -238,19 +238,100 @@ const PlaygroundColocatedInteractionCard = defineComponent(
   },
 );
 
+const PlaygroundColocatedIdleCard = defineComponent(
+  "playground-colocated-idle-card",
+  ({ client }) => {
+    const count = signal(0);
+
+    return (
+      <article>
+        <p class="syntax-chip">idle:onClick</p>
+        <h3>Colocated idle click</h3>
+        <p>
+          The host waits for idle time before rerendering setup. Once idle work completes, the
+          colocated click handler starts incrementing the counter.
+        </p>
+        <p>Active strategy in setup: {client.strategy ?? "none"}</p>
+        <button
+          class="demo-button"
+          type="button"
+          idle:onClick={() => {
+            count.set(count.value + 1);
+          }}
+        >
+          Increment after idle
+        </button>
+        <p>
+          Count after hydration: <span class="count">{count.value}</span>
+        </p>
+      </article>
+    );
+  },
+  {
+    styles: [colocatedCardStyles],
+  },
+);
+
+const PlaygroundColocatedVisibleCard = defineComponent(
+  "playground-colocated-visible-card",
+  ({ client }) => {
+    const count = signal(0);
+
+    return (
+      <article>
+        <p class="syntax-chip">visible:onClick</p>
+        <h3>Colocated visible click</h3>
+        <p>
+          This card waits off-screen until it enters the viewport. After the host rerenders on
+          visibility, the colocated click handler becomes active.
+        </p>
+        <p>Active strategy in setup: {client.strategy ?? "none"}</p>
+        <button
+          class="demo-button"
+          type="button"
+          visible:onClick={() => {
+            count.set(count.value + 1);
+          }}
+        >
+          Increment after visible
+        </button>
+        <p>
+          Count after hydration: <span class="count">{count.value}</span>
+        </p>
+      </article>
+    );
+  },
+  {
+    styles: [colocatedCardStyles],
+  },
+);
+
 function IslandsRuntimePage() {
   return (
     <>
       <section>
-        <h2>Colocated click MVP</h2>
+        <h2>Colocated click strategies</h2>
         <p>
-          These two cards use the new HTML-element syntax directly inside the render function.
+          These cards use the new HTML-element syntax directly inside the render function.
           The strategy and click behavior stay in one place instead of splitting into manual
           <code>hydrate</code> code.
         </p>
         <div class="route-grid">
           <PlaygroundColocatedLoadCard />
           <PlaygroundColocatedInteractionCard />
+          <PlaygroundColocatedIdleCard />
+        </div>
+      </section>
+
+      <section>
+        <h2>Viewport-driven colocated click</h2>
+        <p>
+          Scroll past the spacer before clicking this card so that <code>visible:onClick</code>
+          has a chance to rerender the host setup first.
+        </p>
+        <div style="height: 60vh" aria-hidden="true" />
+        <div class="route-grid">
+          <PlaygroundColocatedVisibleCard />
         </div>
       </section>
 

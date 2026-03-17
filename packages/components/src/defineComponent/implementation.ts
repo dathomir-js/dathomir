@@ -320,9 +320,13 @@ function getColocatedClientStrategyFromShadowRoot(
 
 function createClientContext(host: HTMLElement): ComponentClientContext {
   const strategy = host.getAttribute("data-dh-island");
+  const normalizedStrategy = isKnownIslandStrategy(strategy) ? strategy : null;
   return {
-    strategy: isKnownIslandStrategy(strategy) ? strategy : null,
-    value: host.getAttribute("data-dh-island-value"),
+    strategy: normalizedStrategy,
+    value:
+      normalizedStrategy === null
+        ? null
+        : host.getAttribute("data-dh-island-value"),
     hydrated:
       (host as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] ===
       "hydrated",
@@ -715,9 +719,18 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
         ? getColocatedClientStrategyFromShadowRoot(shadowRoot)
         : null;
 
+      const hasHostIslandMetadata = this.getAttribute("data-dh-island") !== null;
+
       if (colocatedStrategy !== null && hydrateSetup !== undefined) {
         console.error(
-          "[dathomir] colocated load:onClick / interaction:onClick cannot be combined with a hydrate option in the same component",
+          "[dathomir] colocated load:onClick / interaction:onClick / idle:onClick / visible:onClick cannot be combined with a hydrate option in the same component",
+        );
+        colocatedStrategy = null;
+      }
+
+      if (colocatedStrategy !== null && hasHostIslandMetadata) {
+        console.error(
+          "[dathomir] host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
         );
         colocatedStrategy = null;
       }

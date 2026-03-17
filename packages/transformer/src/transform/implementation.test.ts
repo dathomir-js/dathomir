@@ -500,6 +500,33 @@ describe("transform", () => {
       expect(result.code).toContain('"interaction"');
     });
 
+    it("should transform visible:onClick on html elements into visible target metadata plus click binding", () => {
+      const code = `
+        const element = <button visible:onClick={() => doThing()}>Run</button>;
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('"data-dh-client-target"');
+      expect(result.code).toContain('"data-dh-client-strategy"');
+      expect(result.code).toContain('"visible"');
+      expect(result.code).toContain('"click"');
+      expect(result.code).not.toContain("visible:onClick");
+    });
+
+    it("should transform idle:onClick on html elements into idle target metadata plus click binding", () => {
+      const code = `
+        const element = <button idle:onClick={() => doThing()}>Run</button>;
+      `;
+
+      const result = transform(code, { mode: "ssr" });
+
+      expect(result.code).toContain('"data-dh-client-target"');
+      expect(result.code).toContain('"data-dh-client-strategy"');
+      expect(result.code).toContain('"idle"');
+      expect(result.code).not.toContain("idle:onClick");
+    });
+
     it("should throw when load:onClick and interaction:onClick are mixed in one jsx root", () => {
       const code = `
         const element = (
@@ -515,6 +542,101 @@ describe("transform", () => {
       );
     });
 
+    it("should throw when visible:onClick and idle:onClick are mixed in one jsx root", () => {
+      const code = `
+        const element = (
+          <div>
+            <button visible:onClick={() => a()} />
+            <button idle:onClick={() => b()} />
+          </div>
+        );
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "Mixed colocated client strategies are not supported in one JSX root",
+      );
+    });
+
+    it("should throw when visible:onClick and load:onClick are mixed in one jsx root", () => {
+      const code = `
+        const element = (
+          <div>
+            <button visible:onClick={() => a()} />
+            <button load:onClick={() => b()} />
+          </div>
+        );
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "Mixed colocated client strategies are not supported in one JSX root",
+      );
+    });
+
+    it("should throw when idle:onClick and interaction:onClick are mixed in one jsx root", () => {
+      const code = `
+        const element = (
+          <div>
+            <button idle:onClick={() => a()} />
+            <button interaction:onClick={() => b()} />
+          </div>
+        );
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "Mixed colocated client strategies are not supported in one JSX root",
+      );
+    });
+
+    it("should throw when host level client directives mix with colocated client directives in one component render subtree", () => {
+      const clientDirectiveCode = `
+        const element = (
+          <Panel client:load>
+            <button visible:onClick={() => doThing()}>Run</button>
+          </Panel>
+        );
+      `;
+      const explicitMetadataCode = `
+        const element = (
+          <Panel data-dh-island="load">
+            <button idle:onClick={() => doThing()}>Run</button>
+          </Panel>
+        );
+      `;
+
+      expect(() => transform(clientDirectiveCode)).toThrow(
+        "host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
+      );
+      expect(() => transform(explicitMetadataCode)).toThrow(
+        "host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
+      );
+    });
+
+    it("should throw when author supplies compiler reserved client metadata", () => {
+      const targetCode = `
+        const element = <button data-dh-client-target="author" load:onClick={() => doThing()}>Run</button>;
+      `;
+      const strategyCode = `
+        const element = <button data-dh-client-strategy="idle" idle:onClick={() => doThing()}>Run</button>;
+      `;
+
+      expect(() => transform(targetCode)).toThrow(
+        "data-dh-client-target is compiler-reserved metadata and cannot be authored directly",
+      );
+      expect(() => transform(strategyCode)).toThrow(
+        "data-dh-client-strategy is compiler-reserved metadata and cannot be authored directly",
+      );
+    });
+
+    it("should throw when colocated directives are used on svg elements", () => {
+      const code = `
+        const element = <svg visible:onClick={() => doThing()}><circle /></svg>;
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "visible:onClick is only supported on HTML elements",
+      );
+    });
+
     it("should throw for unsupported colocated directives on html elements", () => {
       const code = `
         const element = <button load:onMouseEnter={() => doThing()}>Run</button>;
@@ -522,6 +644,22 @@ describe("transform", () => {
 
       expect(() => transform(code)).toThrow(
         "Unsupported colocated client directive: load:onMouseEnter",
+      );
+    });
+
+    it("should throw for unsupported visible and idle colocated directives on html elements", () => {
+      const visibleCode = `
+        const element = <button visible:onMouseEnter={() => doThing()}>Run</button>;
+      `;
+      const idleCode = `
+        const element = <button idle:onFocus={() => doThing()}>Run</button>;
+      `;
+
+      expect(() => transform(visibleCode)).toThrow(
+        "Unsupported colocated client directive: visible:onMouseEnter",
+      );
+      expect(() => transform(idleCode)).toThrow(
+        "Unsupported colocated client directive: idle:onFocus",
       );
     });
 

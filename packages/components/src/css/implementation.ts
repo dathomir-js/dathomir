@@ -52,6 +52,20 @@ function toStyleSheet(style: CSSStyleSheet | string): CSSStyleSheet {
   return sheet;
 }
 
+function normalizeCssTextForDedupe(sheet: CSSStyleSheet | string): string | undefined {
+  if (typeof sheet === "string") {
+    if (typeof CSSStyleSheet === "undefined") {
+      return sheet.trim();
+    }
+
+    const normalizedSheet = new CSSStyleSheet();
+    normalizedSheet.replaceSync(sheet);
+    return readCssRulesText(normalizedSheet) ?? sheet.trim();
+  }
+
+  return readCssRulesText(sheet) ?? getCssText(sheet)?.trim();
+}
+
 function mergeStyleSheets(
   localSheets: readonly CSSStyleSheet[] = [],
 ): readonly CSSStyleSheet[] {
@@ -60,7 +74,7 @@ function mergeStyleSheets(
   const seenCssTexts = new Set<string>();
 
   const pushSheet = (sheet: CSSStyleSheet) => {
-    const cssText = getCssText(sheet);
+    const cssText = normalizeCssTextForDedupe(sheet);
     if (cssText !== undefined) {
       if (seenCssTexts.has(cssText)) return;
       seenCssTexts.add(cssText);
@@ -153,21 +167,22 @@ function adoptGlobalStyles(
 
     const sheet = toStyleSheet(style);
     const cssText = getCssText(sheet);
+    const normalizedCssText = normalizeCssTextForDedupe(sheet);
 
     if (typeof style !== "string") {
       globalStyleSheets.add(style);
     }
 
-    if (cssText === undefined) {
+    if (cssText === undefined || normalizedCssText === undefined) {
       continue;
     }
 
-    if (globalStyleTexts.has(cssText)) {
+    if (globalStyleTexts.has(normalizedCssText)) {
       continue;
     }
 
     globalStyleSheets.add(sheet);
-    globalStyleTexts.add(cssText);
+    globalStyleTexts.add(normalizedCssText);
     globalStyles.push({ cssText, sheet });
   }
 

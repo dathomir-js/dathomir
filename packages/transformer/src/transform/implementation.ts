@@ -33,7 +33,8 @@ function adaptParsedProgram(
 }
 
 function toPrintableProgram(program: Program): Parameters<typeof print>[0] {
-  return program as Parameters<typeof print>[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- internal ESTree-like program is structurally compatible with esrap's expected node type
+  return program as any;
 }
 
 function isJSXElement(node: ESTNode): node is JSXElement {
@@ -139,8 +140,10 @@ function transform(
 
   addRuntimeImports(transformedProgram, state.runtimeImports, runtimeModule);
 
+  const printableProgram = toPrintableProgram(transformedProgram);
+
   const { code: outputCode, map: outputMap } = print(
-    toPrintableProgram(transformedProgram),
+    printableProgram as never,
     ts(),
     sourceMap
       ? { sourceMapSource: filename, sourceMapContent: code }

@@ -11,6 +11,11 @@ interface TransformState {
   templates: VariableDeclaration[];
   runtimeImports: Set<RuntimeImportName>;
   mode: "csr" | "ssr";
+  currentColocatedClientState?: {
+    strategy: "load" | "interaction" | "visible" | "idle" | null;
+  };
+  currentElementNamespace?: "html" | "svg" | "math";
+  currentHostIslandMetadata?: boolean;
 }
 
 /**
@@ -23,6 +28,8 @@ function createInitialState(mode: "csr" | "ssr"): TransformState {
     templates: [],
     runtimeImports: new Set(),
     mode,
+    currentElementNamespace: "html",
+    currentHostIslandMetadata: false,
   };
 }
 

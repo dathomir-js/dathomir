@@ -25,7 +25,7 @@ type IslandsDirectiveName =
   | "idle"
   | "interaction"
   | "media";
-type ColocatedClientStrategyName = "load" | "interaction";
+type ColocatedClientStrategyName = "load" | "interaction" | "visible" | "idle";
 
 interface JSXOpeningElement {
   type: "JSXOpeningElement";
@@ -163,6 +163,16 @@ function getColocatedClientDirective(
         strategy: "interaction",
         event: "click",
       };
+    case "visible:onClick":
+      return {
+        strategy: "visible",
+        event: "click",
+      };
+    case "idle:onClick":
+      return {
+        strategy: "idle",
+        event: "click",
+      };
     default:
       return null;
   }
@@ -211,14 +221,15 @@ function normalizeIslandsDirectiveValue(
     invalidValueError(`client:${directive} does not accept a value`);
   }
 
-  const normalizedValue =
-    value.type === "Literal"
-      ? value
-      : value.type === "JSXExpressionContainer"
-        ? value.expression.type === "JSXEmptyExpression"
-          ? null
-          : value.expression
-        : null;
+  let normalizedValue: ESTNode | null = null;
+
+  if (value.type === "Literal") {
+    normalizedValue = value;
+  } else if (value.type === "JSXExpressionContainer") {
+    const expression = value.expression as ESTNode;
+    normalizedValue =
+      expression.type === "JSXEmptyExpression" ? null : expression;
+  }
 
   if (
     normalizedValue?.type === "Literal" &&
@@ -233,7 +244,7 @@ function normalizeIslandsDirectiveValue(
     );
   }
 
-  invalidValueError("client:media requires a string literal media query");
+  return invalidValueError("client:media requires a string literal media query");
 }
 
 export {

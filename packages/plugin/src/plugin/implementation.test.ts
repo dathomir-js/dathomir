@@ -23,6 +23,10 @@ import {
   dathomirWebpackPlugin,
 } from "./implementation";
 
+const actualTransformer = await vi.importActual<typeof import("@dathomir/transformer")>(
+  "@dathomir/transformer",
+);
+
 type RollupLikePlugin = {
   transformInclude: (id: string) => boolean;
   transform: (
@@ -266,6 +270,23 @@ describe("plugin", () => {
 
       expect(result).toBeDefined();
       expect(result.map).toBeUndefined();
+    });
+
+    it("should preserve the islands metadata contract through real transformer output", () => {
+      vi.mocked(transform).mockImplementation(actualTransformer.transform);
+
+      const plugin = dathomirVitePlugin();
+      const result = (plugin.transform as Function)(
+        'const island = <Counter client:interaction="mouseenter" />; const button = <button visible:onClick={() => doThing()}>Run</button>;',
+        "component.tsx",
+        {},
+      );
+
+      expect(result.code).toContain('"data-dh-island": "interaction"');
+      expect(result.code).toContain('"data-dh-island-value": "mouseenter"');
+      expect(result.code).toContain('"data-dh-client-target"');
+      expect(result.code).toContain('"data-dh-client-strategy"');
+      expect(result.code).toContain('"visible"');
     });
 
     it("should resolve package-local @/ imports using the nearest tsconfig paths", async () => {

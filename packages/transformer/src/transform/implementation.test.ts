@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { COLOCATED_CLIENT_STRATEGIES } from "@dathomir/shared";
 import { transform } from "../index";
 
 describe("transform", () => {
@@ -416,6 +417,19 @@ describe("transform", () => {
       expect(result.code).toContain('"data-dh-island-value": "click"');
     });
 
+    it("should preserve the canonical host metadata contract keys", () => {
+      const code = `
+        const element = <Counter client:media="(max-width: 720px)" />;
+      `;
+
+      const result = transform(code, { mode: "ssr" });
+
+      expect(result.code).toContain('"data-dh-island"');
+      expect(result.code).toContain('"data-dh-island-value"');
+      expect(result.code).toContain('"media"');
+      expect(result.code).toContain('"(max-width: 720px)"');
+    });
+
     it("should throw when client:media is missing a string literal value", () => {
       const code = `
         const element = <Counter client:media />;
@@ -525,6 +539,33 @@ describe("transform", () => {
       expect(result.code).toContain('"data-dh-client-strategy"');
       expect(result.code).toContain('"idle"');
       expect(result.code).not.toContain("idle:onClick");
+    });
+
+    it("should preserve the canonical colocated metadata contract keys", () => {
+      const code = `
+        const element = <button idle:onClick={() => doThing()}>Run</button>;
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('"data-dh-client-target"');
+      expect(result.code).toContain('"data-dh-client-strategy"');
+      expect(result.code).toContain('"idle"');
+    });
+
+    it("should support all canonical colocated strategies for onClick", () => {
+      for (const strategy of COLOCATED_CLIENT_STRATEGIES) {
+        const code = `
+          const element = <button ${strategy}:onClick={() => doThing()}>Run</button>;
+        `;
+
+        const result = transform(code, { mode: "csr" });
+
+        expect(result.code).toContain('"data-dh-client-target"');
+        expect(result.code).toContain('"data-dh-client-strategy"');
+        expect(result.code).toContain(`"${strategy}"`);
+        expect(result.code).toContain('"click"');
+      }
     });
 
     it("should throw when load:onClick and interaction:onClick are mixed in one jsx root", () => {

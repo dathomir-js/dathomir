@@ -1,4 +1,12 @@
 import { walk } from "zimmerframe";
+import {
+  COLOCATED_CLIENT_STRATEGIES,
+  CLIENT_STRATEGY_METADATA_ATTRIBUTE,
+  CLIENT_TARGET_METADATA_ATTRIBUTE,
+  ISLAND_METADATA_ATTRIBUTE,
+  ISLAND_VALUE_METADATA_ATTRIBUTE,
+} from "@dathomir/shared";
+import type { ColocatedClientStrategyName } from "@dathomir/shared";
 
 import {
   isCallExpression,
@@ -57,7 +65,7 @@ interface ProcessedAttributes {
 }
 
 interface ColocatedClientState {
-  strategy: "load" | "interaction" | "visible" | "idle" | null;
+  strategy: ColocatedClientStrategyName | null;
 }
 
 interface IslandsDirectiveMetadata {
@@ -66,14 +74,18 @@ interface IslandsDirectiveMetadata {
 }
 
 const RESERVED_ISLAND_METADATA_KEYS = new Set([
-  "data-dh-island",
-  "data-dh-island-value",
+  ISLAND_METADATA_ATTRIBUTE,
+  ISLAND_VALUE_METADATA_ATTRIBUTE,
 ]);
 
 const RESERVED_CLIENT_METADATA_KEYS = new Set([
-  "data-dh-client-target",
-  "data-dh-client-strategy",
+  CLIENT_TARGET_METADATA_ATTRIBUTE,
+  CLIENT_STRATEGY_METADATA_ATTRIBUTE,
 ]);
+
+const colocatedDirectivePrefixes = new Set(
+  COLOCATED_CLIENT_STRATEGIES.map((strategy) => `${strategy}:`),
+);
 
 function throwUnknownClientDirective(name: JSXAttribute["name"]): never {
   if (name.type !== "JSXNamespacedName") {
@@ -108,10 +120,9 @@ function getUnsupportedColocatedDirectiveError(
   }
 
   if (
-    rawName.startsWith("load:") ||
-    rawName.startsWith("interaction:") ||
-    rawName.startsWith("visible:") ||
-    rawName.startsWith("idle:")
+    Array.from(colocatedDirectivePrefixes).some((prefix) =>
+      rawName.startsWith(prefix),
+    )
   ) {
     return `Unsupported colocated client directive: ${rawName}`;
   }
@@ -138,7 +149,7 @@ function shouldRejectColocatedDirectiveInNamespace(
 }
 
 function getReservedClientMetadataError(key: string): string | null {
-  if (!RESERVED_CLIENT_METADATA_KEYS.has(key)) {
+  if (!RESERVED_CLIENT_METADATA_KEYS.has(key as never)) {
     return null;
   }
 
@@ -249,7 +260,7 @@ function buildComponentCall(
     const key = getAttributeName(attr.name);
     if (key === null) continue;
 
-    if (RESERVED_ISLAND_METADATA_KEYS.has(key)) {
+    if (RESERVED_ISLAND_METADATA_KEYS.has(key as never)) {
       hasExplicitReservedIslandMetadata = true;
       hasExplicitHostIslandMetadata = true;
     }
@@ -287,12 +298,12 @@ function buildComponentCall(
     }
 
     propsProperties.push(
-      nProp(nLit("data-dh-island"), nLit(islandsDirective.strategy)),
+      nProp(nLit(ISLAND_METADATA_ATTRIBUTE), nLit(islandsDirective.strategy)),
     );
 
     if (islandsDirective.value !== null) {
       propsProperties.push(
-        nProp(nLit("data-dh-island-value"), islandsDirective.value),
+        nProp(nLit(ISLAND_VALUE_METADATA_ATTRIBUTE), islandsDirective.value),
       );
     }
   }
@@ -524,9 +535,9 @@ function processAttributes(
       colocatedClientState.strategy = colocatedClientDirective.strategy;
       const targetId = createClientTargetId(state);
       staticProps.push(
-        nProp(nLit("data-dh-client-target"), nLit(targetId)),
+        nProp(nLit(CLIENT_TARGET_METADATA_ATTRIBUTE), nLit(targetId)),
         nProp(
-          nLit("data-dh-client-strategy"),
+          nLit(CLIENT_STRATEGY_METADATA_ATTRIBUTE),
           nLit(colocatedClientDirective.strategy),
         ),
       );

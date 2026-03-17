@@ -26,6 +26,17 @@ import {
   HYDRATE_ISLANDS_STATUS,
 } from "@dathomir/runtime/hydration";
 import { insert, setAttr } from "@dathomir/runtime";
+import {
+  CLIENT_STRATEGY_METADATA_ATTRIBUTE,
+  CLIENT_TARGET_METADATA_ATTRIBUTE,
+  DEFAULT_INTERACTION_EVENT_TYPE,
+  ISLAND_METADATA_ATTRIBUTE,
+  ISLAND_STRATEGIES,
+  ISLAND_VALUE_METADATA_ATTRIBUTE,
+  isIslandStrategyName,
+  type ColocatedClientStrategyName,
+  type IslandStrategyName,
+} from "@dathomir/shared";
 import type { AtomStore } from "@dathomir/store";
 
 // ── Type definitions ────────────────────────────────────────────────
@@ -49,6 +60,7 @@ interface PropDefinition {
 
 /** Schema mapping prop names to their definitions. */
 type PropsSchema = Record<string, PropDefinition>;
+type EmptyPropsSchema = Record<never, never>;
 
 /** Infer the runtime type from a PropDefinition's type field. */
 type InferPropType<D extends PropDefinition> = D extends {
@@ -91,7 +103,7 @@ interface ComponentContext<S extends PropsSchema = PropsSchema> {
 }
 
 interface ComponentClientContext {
-  readonly strategy: string | null;
+  readonly strategy: IslandStrategyName | null;
   readonly value: string | null;
   readonly hydrated: boolean;
 }
@@ -110,22 +122,16 @@ interface IslandsDirectiveJSXProps {
   readonly "client:media"?: string;
 }
 
-const KNOWN_ISLAND_STRATEGIES = new Set([
-  "load",
-  "visible",
-  "idle",
-  "interaction",
-  "media",
-]);
+const KNOWN_ISLAND_STRATEGIES = new Set(ISLAND_STRATEGIES);
 
 interface IslandHydrationTrigger {
-  readonly strategy: string;
+  readonly strategy: ColocatedClientStrategyName;
   readonly eventType?: string;
   readonly replayTargetId?: string | null;
 }
 
 /** Props accepted by the JSX helper component returned from defineComponent. */
-type JSXComponentProps<S extends PropsSchema = Record<string, never>> = {
+type JSXComponentProps<S extends PropsSchema = EmptyPropsSchema> = {
   readonly [K in keyof S]?: JSXPropValue<InferPropType<S[K]>>;
 } & {
   readonly children?: unknown;
@@ -158,14 +164,13 @@ type ComponentConstructor<S extends PropsSchema = PropsSchema> = {
 } & ComponentClass<S>;
 
 /** JSX helper component returned by defineComponent. */
-type JSXComponent<S extends PropsSchema = Record<string, never>> = (
+type JSXComponent<S extends PropsSchema = EmptyPropsSchema> = (
   props: JSXComponentProps<S> | null,
 ) => Node;
 
 /** Public object returned by defineComponent. */
-interface DefinedComponent<
-  S extends PropsSchema = Record<string, never>,
-> extends ComponentMetadata<S> {
+interface DefinedComponent<S extends PropsSchema = EmptyPropsSchema>
+  extends ComponentMetadata<S> {
   (props: JSXComponentProps<S> | null): Node;
   readonly webComponent: ComponentConstructor<S>;
   readonly jsx: JSXComponent<S>;
@@ -274,25 +279,33 @@ function isIslandsDirectiveProp(
 }
 
 function isKnownIslandStrategy(value: string | null): boolean {
-  return value !== null && KNOWN_ISLAND_STRATEGIES.has(value);
+  return isIslandStrategyName(value) && KNOWN_ISLAND_STRATEGIES.has(value);
+}
+
+function getNormalizedIslandStrategy(
+  value: string | null,
+): IslandStrategyName | null {
+  return isIslandStrategyName(value) ? value : null;
 }
 
 function getColocatedClientStrategyFromShadowRoot(
   shadowRoot: ShadowRoot,
-): { strategy: string; value: string | null } | null {
+): { strategy: ColocatedClientStrategyName; value: string | null } | null {
   const targets = Array.from(
-    shadowRoot.querySelectorAll<HTMLElement>("[data-dh-client-strategy]"),
+    shadowRoot.querySelectorAll<HTMLElement>(
+      `[${CLIENT_STRATEGY_METADATA_ATTRIBUTE}]`,
+    ),
   );
 
   if (targets.length === 0) {
     return null;
   }
 
-  let strategy: string | null = null;
+  let strategy: ColocatedClientStrategyName | null = null;
 
   for (const target of targets) {
-    const nextStrategy = target.getAttribute("data-dh-client-strategy");
-    if (nextStrategy === null) {
+    const nextStrategy = target.getAttribute(CLIENT_STRATEGY_METADATA_ATTRIBUTE);
+    if (!isIslandStrategyName(nextStrategy) || nextStrategy === "media") {
       continue;
     }
 
@@ -308,28 +321,34 @@ function getColocatedClientStrategyFromShadowRoot(
     }
   }
 
-  if (!isKnownIslandStrategy(strategy)) {
+  const normalizedStrategy = getNormalizedIslandStrategy(strategy);
+  if (normalizedStrategy === null || normalizedStrategy === "media") {
     return null;
   }
 
   return {
-    strategy,
-    value: strategy === "interaction" ? "click" : null,
+    strategy: normalizedStrategy,
+    value:
+      normalizedStrategy === "interaction"
+        ? DEFAULT_INTERACTION_EVENT_TYPE
+        : null,
   };
 }
 
 function createClientContext(host: HTMLElement): ComponentClientContext {
-  const strategy = host.getAttribute("data-dh-island");
-  const normalizedStrategy = isKnownIslandStrategy(strategy) ? strategy : null;
+  const strategy = host.getAttribute(ISLAND_METADATA_ATTRIBUTE);
+  const normalizedStrategy = getNormalizedIslandStrategy(strategy);
+  const value =
+    normalizedStrategy === null
+      ? null
+      : normalizedStrategy === "interaction"
+        ? (host.getAttribute(ISLAND_VALUE_METADATA_ATTRIBUTE) ??
+            DEFAULT_INTERACTION_EVENT_TYPE)
+        : host.getAttribute(ISLAND_VALUE_METADATA_ATTRIBUTE);
   return {
     strategy: normalizedStrategy,
-    value:
-      normalizedStrategy === null
-        ? null
-        : host.getAttribute("data-dh-island-value"),
-    hydrated:
-      (host as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] ===
-      "hydrated",
+    value,
+    hydrated: Reflect.get(host, HYDRATE_ISLANDS_STATUS) === "hydrated",
   };
 }
 
@@ -342,7 +361,7 @@ function getReplayTargetIdFromEvent(event: Event): string | null {
       continue;
     }
 
-    const targetId = item.getAttribute("data-dh-client-target");
+    const targetId = item.getAttribute(CLIENT_TARGET_METADATA_ATTRIBUTE);
     if (targetId !== null) {
       return targetId;
     }
@@ -355,12 +374,15 @@ function replayHydrationTrigger(
   shadowRoot: ShadowRoot,
   trigger: IslandHydrationTrigger | undefined,
 ): void {
-  if (trigger?.eventType !== "click" || trigger.replayTargetId == null) {
+  if (
+    trigger?.eventType !== DEFAULT_INTERACTION_EVENT_TYPE ||
+    trigger.replayTargetId == null
+  ) {
     return;
   }
 
   const target = shadowRoot.querySelector<HTMLElement>(
-    `[data-dh-client-target="${trigger.replayTargetId}"]`,
+    `[${CLIENT_TARGET_METADATA_ATTRIBUTE}="${trigger.replayTargetId}"]`,
   );
 
   if (target === null) {
@@ -368,7 +390,7 @@ function replayHydrationTrigger(
   }
 
   target.dispatchEvent(
-    new MouseEvent("click", {
+    new MouseEvent(DEFAULT_INTERACTION_EVENT_TYPE, {
       bubbles: true,
       composed: true,
     }),
@@ -593,7 +615,7 @@ function wrapFunctionComponent<S extends PropsSchema>(
  * @param options - Optional configuration for styles, props, and hydration.
  * @returns A component definition object containing the custom element class and JSX helper.
  */
-function defineComponent<const S extends PropsSchema = Record<string, never>>(
+function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
   tagName: string,
   component: FunctionComponent<S>,
   options: ComponentOptions<S> = {},
@@ -720,7 +742,7 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
         : null;
 
       const hasHostIslandMetadata =
-        this.getAttribute("data-dh-island") !== null;
+        this.getAttribute(ISLAND_METADATA_ATTRIBUTE) !== null;
 
       if (colocatedStrategy !== null && hydrateSetup !== undefined) {
         console.error(
@@ -738,11 +760,14 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
 
       if (
         colocatedStrategy !== null &&
-        this.getAttribute("data-dh-island") === null
+        this.getAttribute(ISLAND_METADATA_ATTRIBUTE) === null
       ) {
-        this.setAttribute("data-dh-island", colocatedStrategy.strategy);
+        this.setAttribute(ISLAND_METADATA_ATTRIBUTE, colocatedStrategy.strategy);
         if (colocatedStrategy.value !== null) {
-          this.setAttribute("data-dh-island-value", colocatedStrategy.value);
+          this.setAttribute(
+            ISLAND_VALUE_METADATA_ATTRIBUTE,
+            colocatedStrategy.value,
+          );
         }
       }
 
@@ -756,7 +781,7 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
           return getStoreFromHost(this.host);
         },
       } as ComponentContext<S>;
-      const islandStrategy = this.getAttribute("data-dh-island");
+      const islandStrategy = this.getAttribute(ISLAND_METADATA_ATTRIBUTE);
       const shouldDeferIslandHydration =
         hasDSD &&
         (hydrateSetup !== undefined || colocatedStrategy !== null) &&
@@ -801,7 +826,7 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
             hydrateSetup!(ctx);
           });
           this.#islandHydrationAccepted = true;
-          if (isKnownIslandStrategy(this.getAttribute("data-dh-island"))) {
+          if (isKnownIslandStrategy(this.getAttribute(ISLAND_METADATA_ATTRIBUTE))) {
             (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
               "hydrated";
           }
@@ -829,7 +854,7 @@ function defineComponent<const S extends PropsSchema = Record<string, never>>(
             replayHydrationTrigger(shadowRoot, trigger);
           });
           this.#islandHydrationAccepted = true;
-          if (isKnownIslandStrategy(this.getAttribute("data-dh-island"))) {
+          if (isKnownIslandStrategy(this.getAttribute(ISLAND_METADATA_ATTRIBUTE))) {
             (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
               "hydrated";
           }

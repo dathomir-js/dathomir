@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
+import {
+  COLOCATED_CLIENT_STRATEGIES,
+  DEFAULT_INTERACTION_EVENT_TYPE,
+} from "@dathomir/shared";
 
 import { nId, nLit } from "@/transform/ast/implementation";
 
 import {
+  getColocatedClientDirective,
   getIslandsDirectiveName,
   getTagName,
   isClientDirectiveNamespace,
@@ -89,8 +94,20 @@ describe("transform/jsx", () => {
 
   it("normalizeIslandsDirectiveValue defaults bare client:interaction to click", () => {
     expect(normalizeIslandsDirectiveValue("interaction", null)).toEqual(
-      nLit("click"),
+      nLit(DEFAULT_INTERACTION_EVENT_TYPE),
     );
+  });
+
+  it("getColocatedClientDirective supports all canonical colocated strategies", () => {
+    for (const strategy of COLOCATED_CLIENT_STRATEGIES) {
+      expect(
+        getColocatedClientDirective({
+          type: "JSXNamespacedName",
+          namespace: { type: "JSXIdentifier", name: strategy },
+          name: { type: "JSXIdentifier", name: "onClick" },
+        }),
+      ).toEqual({ strategy, event: "click" });
+    }
   });
 
   it("normalizeIslandsDirectiveValue throws for invalid directive values", () => {

@@ -35,6 +35,23 @@ export type {
 // Component types
 export type { FC, FCWithChildren } from "./types/FC";
 
+// Islands metadata contract
+export {
+  CLIENT_STRATEGY_METADATA_ATTRIBUTE,
+  CLIENT_TARGET_METADATA_ATTRIBUTE,
+  COLOCATED_CLIENT_STRATEGIES,
+  DEFAULT_INTERACTION_EVENT_TYPE,
+  ISLAND_METADATA_ATTRIBUTE,
+  ISLAND_STRATEGIES,
+  ISLAND_VALUE_METADATA_ATTRIBUTE,
+  isColocatedClientStrategyName,
+  isIslandStrategyName,
+} from "@dathomir/shared";
+export type {
+  ColocatedClientStrategyName,
+  IslandStrategyName,
+} from "@dathomir/shared";
+
 // Tree types
 export { Namespace } from "./types/tree";
 export type {

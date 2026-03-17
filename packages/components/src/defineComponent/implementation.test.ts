@@ -689,6 +689,35 @@ describe("defineComponent", () => {
     el.remove();
   });
 
+  it("should default bare interaction host metadata to click in client context", async () => {
+    const tag = uniqueTag();
+    let capturedClient:
+      | { strategy: string | null; value: string | null; hydrated: boolean }
+      | undefined;
+
+    defineComponent(tag, ({ client }) => {
+      capturedClient = {
+        strategy: client.strategy,
+        value: client.value,
+        hydrated: client.hydrated,
+      };
+      return document.createTextNode("test");
+    });
+
+    const el = document.createElement(tag);
+    el.setAttribute("data-dh-island", "interaction");
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(capturedClient).toEqual({
+      strategy: "interaction",
+      value: "click",
+      hydrated: false,
+    });
+
+    el.remove();
+  });
+
   // Test case #18: Number prop: null attribute uses default value (not Number(null) = 0)
   it("should use default value for Number prop when attribute is absent, not Number(null)", async () => {
     const tag = uniqueTag();
@@ -899,7 +928,7 @@ describe("defineComponent", () => {
     expect(capturedStore).toBe(store);
     expect(el.getAttribute("data-hydrated")).toBe("true");
     expect(el.getAttribute("data-count")).toBe("12");
-    expect((el as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS]).toBe(
+    expect(Reflect.get(el, HYDRATE_ISLANDS_STATUS)).toBe(
       "hydrated",
     );
 

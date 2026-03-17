@@ -1,4 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {
+  CLIENT_STRATEGY_METADATA_ATTRIBUTE,
+  CLIENT_TARGET_METADATA_ATTRIBUTE,
+  DEFAULT_INTERACTION_EVENT_TYPE,
+  ISLAND_METADATA_ATTRIBUTE,
+  ISLAND_VALUE_METADATA_ATTRIBUTE,
+} from "@dathomir/shared";
 
 import { nId, nLit } from "@/transform/ast/implementation";
 import { createInitialState } from "@/transform/state/implementation";
@@ -425,7 +432,7 @@ describe("transform/tree", () => {
       props?.properties.some(
         (property) =>
           property.key.type === "Literal" &&
-          property.key.value === "data-dh-island",
+          property.key.value === ISLAND_METADATA_ATTRIBUTE,
       ),
     ).toBe(true);
   });
@@ -460,13 +467,13 @@ describe("transform/tree", () => {
 
     const props = result.arguments[0];
     const interactionValue = props?.properties.find(
-      (property) =>
-        property.key.type === "Literal" &&
-        property.key.value === "data-dh-island-value",
+        (property) =>
+          property.key.type === "Literal" &&
+          property.key.value === ISLAND_VALUE_METADATA_ATTRIBUTE,
     );
 
     expect(interactionValue?.value?.type).toBe("Literal");
-    expect(interactionValue?.value?.value).toBe("click");
+    expect(interactionValue?.value?.value).toBe(DEFAULT_INTERACTION_EVENT_TYPE);
   });
 
   it("jsxToTree throws when client directive is used on html element", () => {
@@ -558,14 +565,14 @@ describe("transform/tree", () => {
       objectExpression.properties.some(
         (property) =>
           property.key.type === "Literal" &&
-          property.key.value === "data-dh-client-target",
+          property.key.value === CLIENT_TARGET_METADATA_ATTRIBUTE,
       ),
     ).toBe(true);
     expect(
       objectExpression.properties.some(
         (property) =>
           property.key.type === "Literal" &&
-          property.key.value === "data-dh-client-strategy" &&
+          property.key.value === CLIENT_STRATEGY_METADATA_ATTRIBUTE &&
           property.value?.value === "load",
       ),
     ).toBe(true);

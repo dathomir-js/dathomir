@@ -1,3 +1,8 @@
+import type {
+  ColocatedClientStrategyName,
+  IslandStrategyName,
+} from "@dathomir/shared";
+
 /**
  * Transform options for the Dathomir transformer.
  */
@@ -41,4 +46,14 @@ interface TransformResult {
   map?: string;
 }
 
-export type { TransformOptions, TransformResult };
+interface IslandsMetadataContract {
+  hostMetadataAttribute: "data-dh-island";
+  hostValueMetadataAttribute: "data-dh-island-value";
+  clientTargetMetadataAttribute: "data-dh-client-target";
+  clientStrategyMetadataAttribute: "data-dh-client-strategy";
+  defaultInteractionEventType: "click";
+  hostStrategies: readonly IslandStrategyName[];
+  colocatedStrategies: readonly ColocatedClientStrategyName[];
+}
+
+export type { IslandsMetadataContract, TransformOptions, TransformResult };

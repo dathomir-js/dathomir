@@ -52,6 +52,7 @@
     "vitest": "catalog:"
   },
   "dependencies": {
+    "@dathomir/shared": "workspace:*",
     "esrap": "^2.2.3",
     "oxc-parser": "^0.116.0",
     "zimmerframe": "^1.1.4"

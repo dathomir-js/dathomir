@@ -68,9 +68,10 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
      - `runtimeModule` オプションが transformer に正しく渡される
      - `filename` が変換対象ファイルの ID として渡される
      - Vite plugin が最寄り `tsconfig.json` の path alias を使って importer 基準で `.ts` / `.tsx` / `index.ts` まで解決する
+     - 実 transformer を使った integration test で islands metadata contract (`data-dh-island*`, `data-dh-client-*`) が plugin 出力に残る
 
-     *エラーハンドリング*:
-     - transform 失敗時にファイル名を含むエラーメッセージをスローする
+      *エラーハンドリング*:
+      - transform 失敗時にファイル名を含むエラーメッセージをスローする
     - 非 Error オブジェクトがスローされた場合はそのまま再スローする
     - transformer がソースマップを返さない場合は `map` を `undefined` にする
 

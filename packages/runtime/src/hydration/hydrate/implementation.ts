@@ -13,6 +13,14 @@ import {
   templateEffect,
   type RootDispose,
 } from "@dathomir/reactivity";
+import {
+  CLIENT_TARGET_METADATA_ATTRIBUTE,
+  DEFAULT_INTERACTION_EVENT_TYPE,
+  ISLAND_METADATA_ATTRIBUTE,
+  ISLAND_STRATEGIES,
+  ISLAND_VALUE_METADATA_ATTRIBUTE,
+  isIslandStrategyName,
+} from "@dathomir/shared";
 import { withStore } from "@dathomir/store";
 
 import { setText } from "@/dom/text/implementation";
@@ -44,12 +52,7 @@ const scheduledIslandCleanups = new WeakMap<HTMLElement, () => void>();
 const HYDRATE_ISLANDS_HOOK = Symbol("dathomir.hydrateIslandsHook");
 const HYDRATE_ISLANDS_STATUS = Symbol("dathomir.hydrateIslandsStatus");
 
-type IslandsStrategyName =
-  | "load"
-  | "visible"
-  | "idle"
-  | "interaction"
-  | "media";
+type IslandsStrategyName = (typeof ISLAND_STRATEGIES)[number];
 type HydrateIslandsStatus = "idle" | "hydrated";
 interface IslandHydrationTrigger {
   readonly strategy: string;
@@ -248,26 +251,19 @@ function isIslandHost(value: Element): value is IslandHost {
 }
 
 function getIslandStrategy(host: Element): IslandsStrategyName | null {
-  const strategy = host.getAttribute("data-dh-island");
-
-  switch (strategy) {
-    case "load":
-    case "visible":
-    case "idle":
-    case "interaction":
-    case "media":
-      return strategy;
-    default:
-      return null;
-  }
+  const strategy = host.getAttribute(ISLAND_METADATA_ATTRIBUTE);
+  return isIslandStrategyName(strategy) ? strategy : null;
 }
 
 function getInteractionEventType(host: Element): string {
-  return host.getAttribute("data-dh-island-value") ?? "click";
+  return (
+    host.getAttribute(ISLAND_VALUE_METADATA_ATTRIBUTE) ??
+    DEFAULT_INTERACTION_EVENT_TYPE
+  );
 }
 
 function getMediaQuery(host: Element): string | null {
-  return host.getAttribute("data-dh-island-value");
+  return host.getAttribute(ISLAND_VALUE_METADATA_ATTRIBUTE);
 }
 
 function getReplayTargetIdFromEvent(event: Event): string | null {
@@ -279,7 +275,7 @@ function getReplayTargetIdFromEvent(event: Event): string | null {
       continue;
     }
 
-    const targetId = item.getAttribute("data-dh-client-target");
+    const targetId = item.getAttribute(CLIENT_TARGET_METADATA_ATTRIBUTE);
     if (targetId !== null) {
       return targetId;
     }

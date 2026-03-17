@@ -1,5 +1,11 @@
 import { nId, nLit, nMember } from "@/transform/ast/implementation";
 import type { ESTNode } from "@/transform/ast/implementation";
+import {
+  COLOCATED_CLIENT_STRATEGIES,
+  DEFAULT_INTERACTION_EVENT_TYPE,
+  ISLAND_STRATEGIES,
+  isColocatedClientStrategyName,
+} from "@dathomir/shared";
 
 interface JSXIdentifier {
   type: "JSXIdentifier";
@@ -19,13 +25,8 @@ interface JSXNamespacedName {
 }
 
 type JSXName = JSXIdentifier | JSXMemberExpression | JSXNamespacedName;
-type IslandsDirectiveName =
-  | "load"
-  | "visible"
-  | "idle"
-  | "interaction"
-  | "media";
-type ColocatedClientStrategyName = "load" | "interaction" | "visible" | "idle";
+type IslandsDirectiveName = (typeof ISLAND_STRATEGIES)[number];
+type ColocatedClientStrategyName = (typeof COLOCATED_CLIENT_STRATEGIES)[number];
 
 interface JSXOpeningElement {
   type: "JSXOpeningElement";
@@ -151,31 +152,27 @@ function getRawAttributeName(name: JSXAttribute["name"]): string | null {
 
 function getColocatedClientDirective(
   name: JSXAttribute["name"],
-): { strategy: ColocatedClientStrategyName; event: "click" } | null {
-  switch (getRawAttributeName(name)) {
-    case "load:onClick":
-      return {
-        strategy: "load",
-        event: "click",
-      };
-    case "interaction:onClick":
-      return {
-        strategy: "interaction",
-        event: "click",
-      };
-    case "visible:onClick":
-      return {
-        strategy: "visible",
-        event: "click",
-      };
-    case "idle:onClick":
-      return {
-        strategy: "idle",
-        event: "click",
-      };
-    default:
-      return null;
+): {
+  strategy: ColocatedClientStrategyName;
+  event: typeof DEFAULT_INTERACTION_EVENT_TYPE;
+} | null {
+  const rawName = getRawAttributeName(name);
+  if (rawName === null) {
+    return null;
   }
+
+  const [strategy, event] = rawName.split(":");
+  if (
+    !isColocatedClientStrategyName(strategy ?? null) ||
+    event !== "onClick"
+  ) {
+    return null;
+  }
+
+  return {
+    strategy: strategy as ColocatedClientStrategyName,
+    event: DEFAULT_INTERACTION_EVENT_TYPE,
+  };
 }
 
 function getIslandsDirectiveName(
@@ -207,7 +204,7 @@ function normalizeIslandsDirectiveValue(
 
   if (value === null) {
     if (directive === "interaction") {
-      return nLit("click");
+      return nLit(DEFAULT_INTERACTION_EVENT_TYPE);
     }
 
     if (directive === "media") {

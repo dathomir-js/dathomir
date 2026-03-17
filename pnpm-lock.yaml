@@ -104,6 +104,9 @@ importers:
       '@dathomir/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@dathomir/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@dathomir/store':
         specifier: workspace:*
         version: link:../store
@@ -308,6 +311,9 @@ importers:
 
   packages/transformer:
     dependencies:
+      '@dathomir/shared':
+        specifier: workspace:*
+        version: link:../shared
       esrap:
         specifier: ^2.2.3
         version: 2.2.3

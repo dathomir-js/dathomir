@@ -189,6 +189,22 @@
   ],
 )
 
+#feature_spec(
+  name: "Phase 1 transformer-runtime islands contract finalization",
+  summary: [
+    islands metadata の key 名・strategy 名・default 値を暗黙の文字列契約ではなく、shared utility を canonical source として固定する。
+  ],
+  test_cases: [
+    - transformer は canonical `data-dh-island` / `data-dh-island-value` / `data-dh-client-target` / `data-dh-client-strategy` を使う
+    - `client:interaction` bare 指定は canonical default event type `click` を使う
+    - colocated strategy 判定は canonical colocated strategy 一覧に従う
+  ],
+  impl_notes: [
+    - strategy 名と metadata key は `@dathomir/shared` の islands contract utility から参照する
+    - tree transform と jsx directive parsing が別々の string literal set を持たないようにする
+  ],
+)
+
 == 設計判断
 
 #adr(

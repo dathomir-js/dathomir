@@ -72,6 +72,7 @@
   "dependencies": {
     "@dathomir/reactivity": "workspace:*",
     "@dathomir/runtime": "workspace:*",
+    "@dathomir/shared": "workspace:*",
     "@dathomir/store": "workspace:*"
   }
 }

@@ -485,6 +485,17 @@ describe("hydrateIslands", () => {
     expect(hydrateHook).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores hosts whose data-dh-island does not match the canonical strategy contract", () => {
+    const island = document.createElement("test-island");
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "legacy-visible");
+    setHydrateHook(island, hydrateHook);
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    expect(hydrateHook).not.toHaveBeenCalled();
+  });
+
   it("defaults interaction islands to click when no value is present", () => {
     const island = document.createElement("test-island");
     const hydrateHook = vi.fn(() => true);

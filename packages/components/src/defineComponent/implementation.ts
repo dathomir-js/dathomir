@@ -626,7 +626,8 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
 ): DefinedComponent<S> {
   const isSSR = typeof window === "undefined";
   const jsx = createJSXComponent(tagName, options.props);
-  const hydrationMetadata = (component as unknown as ComponentMetadata<S>).__hydrationMetadata__;
+  const hydrationMetadata = (component as unknown as ComponentMetadata<S>)
+    .__hydrationMetadata__;
 
   // Wrap function component into SetupFunction
   const resolvedSetup: SetupFunction<S> = wrapFunctionComponent(
@@ -805,7 +806,9 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
           : null;
       const shouldDeferIslandHydration =
         hasDSD &&
-        (hydrateSetup !== undefined || planFactory !== null || colocatedStrategy !== null) &&
+        (hydrateSetup !== undefined ||
+          planFactory !== null ||
+          colocatedStrategy !== null) &&
         isKnownIslandStrategy(islandStrategy);
 
       this.#islandHydrationAccepted = false;

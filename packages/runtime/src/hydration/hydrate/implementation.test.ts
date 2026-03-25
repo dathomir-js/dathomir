@@ -309,13 +309,19 @@ describe("hydrateWithPlan", () => {
   it("hydrates text, attr, and event bindings in place", async () => {
     const count = signal(1);
     const handler = vi.fn();
-    shadowRoot.innerHTML = '<button data-role="counter"><!--dh:t:0-->1</button>';
+    shadowRoot.innerHTML =
+      '<button data-role="counter"><!--dh:t:0-->1</button>';
 
     const plan: GenericHydrationPlan = {
       namespace: "html",
       bindings: [
         { kind: "text", markerId: 0, expression: () => count.value },
-        { kind: "attr", path: [0], key: "data-count", expression: () => count.value },
+        {
+          kind: "attr",
+          path: [0],
+          key: "data-count",
+          expression: () => count.value,
+        },
         { kind: "event", path: [0], eventType: "click", expression: handler },
       ],
       nestedBoundaries: [],
@@ -336,12 +342,18 @@ describe("hydrateWithPlan", () => {
 
   it("does not mutate nested boundary descendants from outer plan", async () => {
     const childText = signal("outer");
-    shadowRoot.innerHTML = '<section><child-box data-dh-island="load"><span>keep me</span></child-box></section>';
+    shadowRoot.innerHTML =
+      '<section><child-box data-dh-island="load"><span>keep me</span></child-box></section>';
 
     const plan: GenericHydrationPlan = {
       namespace: "html",
       bindings: [
-        { kind: "attr", path: [0, 0], key: "data-should-not-change", expression: () => childText.value },
+        {
+          kind: "attr",
+          path: [0, 0],
+          key: "data-should-not-change",
+          expression: () => childText.value,
+        },
       ],
       nestedBoundaries: [
         { path: [0, 0], tagName: "child-box", islandStrategy: "load" },
@@ -357,7 +369,8 @@ describe("hydrateWithPlan", () => {
 
   it("hydrates insert bindings at stable placeholder paths", async () => {
     const value = signal("A");
-    shadowRoot.innerHTML = '<div><span>before</span><!--dh:i:1-->server<!--/dh:i--><span>after</span></div>';
+    shadowRoot.innerHTML =
+      "<div><span>before</span><!--dh:i:1-->server<!--/dh:i--><span>after</span></div>";
 
     const plan: GenericHydrationPlan = {
       namespace: "html",
@@ -388,12 +401,20 @@ describe("hydrateIslands nested hosts", () => {
   it("collects nested island hosts independently", () => {
     const outer = document.createElement("outer-box");
     outer.setAttribute("data-dh-island", "visible");
-    Reflect.set(outer, HYDRATE_ISLANDS_HOOK, vi.fn(() => true));
+    Reflect.set(
+      outer,
+      HYDRATE_ISLANDS_HOOK,
+      vi.fn(() => true),
+    );
 
     const outerShadow = outer.attachShadow({ mode: "open" });
     const inner = document.createElement("inner-box");
     inner.setAttribute("data-dh-island", "load");
-    Reflect.set(inner, HYDRATE_ISLANDS_HOOK, vi.fn(() => true));
+    Reflect.set(
+      inner,
+      HYDRATE_ISLANDS_HOOK,
+      vi.fn(() => true),
+    );
     outerShadow.appendChild(inner);
 
     document.body.appendChild(outer);

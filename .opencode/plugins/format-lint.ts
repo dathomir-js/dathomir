@@ -1,9 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin";
 
-export const FormatLintPlugin: Plugin = async ({
-  $,
-  directory: _directory,
-}) => {
+export const FormatLintPlugin: Plugin = async ({ $, directory }) => {
   return {
     event: async ({ event }) => {
       if (event.type !== "session.idle") return;
@@ -11,7 +8,7 @@ export const FormatLintPlugin: Plugin = async ({
       // Run formatter via config package where oxfmt is installed
       // await $`pnpm `.catch(() => {})
       // Run linter via config package where oxlint is installed
-      await $`pnpm lint`.catch(() => {});
+      await $`cd ${directory} && pnpm lint`.catch(() => {});
     },
   };
 };

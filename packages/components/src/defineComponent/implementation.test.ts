@@ -1414,7 +1414,9 @@ describe("defineComponent", () => {
     expect(setupFn).toHaveBeenCalledTimes(1);
     expect(el.shadowRoot?.textContent).toBe("fallback");
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("compiler-generated hydration is unsupported: imperative-dom-query"),
+      expect.stringContaining(
+        "compiler-generated hydration is unsupported: imperative-dom-query",
+      ),
     );
 
     el.remove();
@@ -1549,7 +1551,9 @@ describe("defineComponent", () => {
             expression: () => ctx.props.label.value,
           },
         ],
-        nestedBoundaries: [{ path: [0, 1], tagName: innerTag, islandStrategy: "load" }],
+        nestedBoundaries: [
+          { path: [0, 1], tagName: innerTag, islandStrategy: "load" },
+        ],
       }),
     };
 
@@ -1571,7 +1575,9 @@ describe("defineComponent", () => {
 
     const innerBeforeOuterHydration = outer.shadowRoot?.querySelector(innerTag);
     expect(innerBeforeOuterHydration).not.toBeNull();
-    expect(innerBeforeOuterHydration?.shadowRoot?.textContent).toContain("inner:load:ready");
+    expect(innerBeforeOuterHydration?.shadowRoot?.textContent).toContain(
+      "inner:load:ready",
+    );
 
     const innerButtonBeforeOuterHydration =
       innerBeforeOuterHydration?.shadowRoot?.querySelector("button");
@@ -1587,7 +1593,9 @@ describe("defineComponent", () => {
 
     const innerAfterOuterHydration = outer.shadowRoot?.querySelector(innerTag);
     expect(innerAfterOuterHydration).toBe(innerBeforeOuterHydration);
-    expect(innerAfterOuterHydration?.shadowRoot?.textContent).toContain("inner:load:ready");
+    expect(innerAfterOuterHydration?.shadowRoot?.textContent).toContain(
+      "inner:load:ready",
+    );
     expect(outer.shadowRoot?.textContent).toContain("outer:visible");
 
     const innerButtonAfterOuterHydration =

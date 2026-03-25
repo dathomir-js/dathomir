@@ -280,7 +280,9 @@ function renderNode(node: Tree, ctx: RenderContext): string {
       const value = ctx.dynamicValues.get(id);
       const content =
         value != null && typeof value === "string" ? value : "<!--empty-->";
-      return createMarker(MarkerType.Insert, id) + content + createInsertEndMarker();
+      return (
+        createMarker(MarkerType.Insert, id) + content + createInsertEndMarker()
+      );
     }
 
     if (type === "{each}") {

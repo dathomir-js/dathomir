@@ -785,16 +785,21 @@ function hydrateWithPlan(
           }
 
           case "attr": {
-            if (isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)) {
+            if (
+              isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)
+            ) {
               continue;
             }
 
             const node = resolveNodeAtPath(root, binding.path);
             if (!(node instanceof Element)) {
-              handleMismatch(`Element not found for attr path ${binding.path.join(".")}`, {
-                expected: "Element at attr binding path",
-                actual: node === null ? "missing node" : node.nodeName,
-              });
+              handleMismatch(
+                `Element not found for attr path ${binding.path.join(".")}`,
+                {
+                  expected: "Element at attr binding path",
+                  actual: node === null ? "missing node" : node.nodeName,
+                },
+              );
               continue;
             }
 
@@ -805,16 +810,21 @@ function hydrateWithPlan(
           }
 
           case "event": {
-            if (isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)) {
+            if (
+              isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)
+            ) {
               continue;
             }
 
             const node = resolveNodeAtPath(root, binding.path);
             if (!(node instanceof Element)) {
-              handleMismatch(`Element not found for event path ${binding.path.join(".")}`, {
-                expected: "Element at event binding path",
-                actual: node === null ? "missing node" : node.nodeName,
-              });
+              handleMismatch(
+                `Element not found for event path ${binding.path.join(".")}`,
+                {
+                  expected: "Element at event binding path",
+                  actual: node === null ? "missing node" : node.nodeName,
+                },
+              );
               continue;
             }
 
@@ -823,7 +833,9 @@ function hydrateWithPlan(
           }
 
           case "insert": {
-            if (isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)) {
+            if (
+              isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)
+            ) {
               continue;
             }
 
@@ -833,13 +845,18 @@ function hydrateWithPlan(
                 markerId: binding.markerId,
                 markerType: HydrationMarkerType.Insert,
                 expected: "existing SSR insert marker",
-                actual: marker === null ? "missing marker" : "marker without parent",
+                actual:
+                  marker === null ? "missing marker" : "marker without parent",
               });
               continue;
             }
 
             const applyInsert = () => {
-              insert(marker.node.parentNode as Node, binding.expression(), marker.node);
+              insert(
+                marker.node.parentNode as Node,
+                binding.expression(),
+                marker.node,
+              );
             };
 
             if (binding.isComponent) {
@@ -851,16 +868,21 @@ function hydrateWithPlan(
           }
 
           case "spread": {
-            if (isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)) {
+            if (
+              isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)
+            ) {
               continue;
             }
 
             const node = resolveNodeAtPath(root, binding.path);
             if (!(node instanceof Element)) {
-              handleMismatch(`Element not found for spread path ${binding.path.join(".")}`, {
-                expected: "Element at spread binding path",
-                actual: node === null ? "missing node" : node.nodeName,
-              });
+              handleMismatch(
+                `Element not found for spread path ${binding.path.join(".")}`,
+                {
+                  expected: "Element at spread binding path",
+                  actual: node === null ? "missing node" : node.nodeName,
+                },
+              );
               continue;
             }
 

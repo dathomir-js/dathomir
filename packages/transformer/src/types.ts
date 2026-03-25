@@ -56,4 +56,32 @@ interface IslandsMetadataContract {
   colocatedStrategies: readonly ColocatedClientStrategyName[];
 }
 
-export type { IslandsMetadataContract, TransformOptions, TransformResult };
+interface NestedBoundaryRef {
+  path: readonly number[];
+  tagName: string;
+  islandStrategy: IslandStrategyName | null;
+}
+
+interface SupportedComponentHydrationMetadata {
+  kind: "generic-plan";
+  planFactory: unknown;
+}
+
+interface UnsupportedComponentHydrationMetadata {
+  kind: "generic-plan";
+  unsupportedReason: string;
+}
+
+type ComponentHydrationMetadata =
+  | SupportedComponentHydrationMetadata
+  | UnsupportedComponentHydrationMetadata;
+
+export type {
+  ComponentHydrationMetadata,
+  IslandsMetadataContract,
+  NestedBoundaryRef,
+  SupportedComponentHydrationMetadata,
+  TransformOptions,
+  TransformResult,
+  UnsupportedComponentHydrationMetadata,
+};

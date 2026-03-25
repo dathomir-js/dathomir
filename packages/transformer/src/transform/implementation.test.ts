@@ -430,6 +430,236 @@ describe("transform", () => {
       expect(result.code).toContain('"(max-width: 720px)"');
     });
 
+    it("should keep explicit nested island metadata on child components", () => {
+      const code = `
+        const element = <Outer client:visible><Inner client:load /></Outer>;
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('"data-dh-island": "visible"');
+      expect(result.code).toContain('"data-dh-island": "load"');
+    });
+
+    it("should attach compiler-generated hydration metadata to defineComponent render functions", () => {
+      const code = `
+        const CounterCard = defineComponent(
+          "counter-card",
+          ({ props }) => <button class={props.variant.value} onClick={() => props.onTap.value()}>{props.label.value}</button>,
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("Object.assign");
+      expect(result.code).toContain("__hydrationMetadata__");
+      expect(result.code).toContain('kind: "generic-plan"');
+      expect(result.code).toContain("planFactory");
+      expect(result.code).toContain('kind: "attr"');
+      expect(result.code).toContain('kind: "event"');
+      expect(result.code).toContain('kind: "text"');
+      expect(result.code).not.toContain("boundaryRefs");
+      expect(result.code).not.toContain("artifact:");
+    });
+
+    it("should include nested boundary refs in compiler-generated hydration metadata", () => {
+      const code = `
+        const OuterCard = defineComponent(
+          "outer-card",
+          ({ props }) => <section><InnerCard client:load label={props.label.value} /></section>,
+        );
+      `;
+
+      const result = transform(code, { mode: "ssr" });
+
+      expect(result.code).toContain("nestedBoundaries");
+      expect(result.code).toContain('tagName: "InnerCard"');
+      expect(result.code).toContain('islandStrategy: "load"');
+      expect(result.code).not.toContain("boundaryRefs");
+    });
+
+    it("should skip hydration metadata emission for unsupported imperative setup bodies", () => {
+      const code = `
+        const ImperativeCard = defineComponent(
+          "imperative-card",
+          ({ host }) => {
+            host.setAttribute("data-ready", "yes");
+            return <div>ready</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("__hydrationMetadata__");
+      expect(result.code).toContain("Object.assign");
+      expect(result.code).toContain('unsupportedReason: "imperative-dom-query"');
+      expect(result.code).not.toContain("planFactory: null");
+    });
+
+    it("should classify runtime branching setup bodies as unsupported", () => {
+      const code = `
+        const BranchingCard = defineComponent(
+          "branching-card",
+          ({ props }) => (props.ready.value ? <div>ready</div> : <span>waiting</span>),
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('__hydrationMetadata__');
+      expect(result.code).toContain('unsupportedReason: "runtime-branching"');
+      expect(result.code).not.toContain("planFactory");
+    });
+
+    it("should classify opaque helper returns as unsupported", () => {
+      const code = `
+        const renderCard = (label, suffix) => <div>{label}{suffix}</div>;
+        const OpaqueCard = defineComponent(
+          "opaque-card",
+          ({ props }) => renderCard(props.label.value),
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('__hydrationMetadata__');
+      expect(result.code).toContain('unsupportedReason: "opaque-helper-call"');
+      expect(result.code).not.toContain("planFactory");
+    });
+
+    it("should support local zero-arg helpers that directly return JSX", () => {
+      const code = `
+        const ready = signal("ready");
+        const renderCard = () => <div>{ready.value}</div>;
+        const SupportedCard = defineComponent(
+          "supported-card",
+          () => renderCard(),
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('__hydrationMetadata__');
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain("unsupportedReason");
+      expect(result.code).toContain('kind: "text"');
+      expect(result.code).toContain("ready.value");
+    });
+
+    it("should support trivial helper argument forwarding into JSX", () => {
+      const code = `
+        const renderCard = (label) => <div>{label}</div>;
+        const ForwardedCard = defineComponent(
+          "forwarded-card",
+          ({ props }) => renderCard(props.label.value),
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('__hydrationMetadata__');
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain("unsupportedReason");
+      expect(result.code).toContain('kind: "text"');
+      expect(result.code).toContain("const label = props.label.value");
+    });
+
+    it("should support helper-local prelude before returning JSX", () => {
+      const code = `
+        const renderCard = (label) => {
+          const text = label.toUpperCase();
+          return <div>{text}</div>;
+        };
+        const PreludeCard = defineComponent(
+          "prelude-card",
+          ({ props }) => renderCard(props.label.value),
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('__hydrationMetadata__');
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain("unsupportedReason");
+      expect(result.code).toContain("const text = label.toUpperCase()");
+      expect(result.code).toContain('kind: "text"');
+    });
+
+    it("should support multi-level local helper chains that end in JSX", () => {
+      const code = `
+        const renderLeaf = (label) => <div>{label}</div>;
+        const renderMiddle = (label) => renderLeaf(label.toUpperCase());
+        const renderTop = (label) => renderMiddle(label);
+        const ChainedCard = defineComponent(
+          "chained-card",
+          ({ props }) => renderTop(props.label.value),
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('__hydrationMetadata__');
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain("unsupportedReason");
+      expect(result.code).toContain("const label = props.label.value");
+      expect(result.code).toContain("const label = label.toUpperCase()");
+      expect(result.code).toContain('kind: "text"');
+    });
+
+    it("should support destructured helper param forwarding", () => {
+      const code = `
+        const renderCard = ({ label, suffix }) => <div>{label}{suffix}</div>;
+        const DestructuredCard = defineComponent(
+          "destructured-card",
+          ({ props }) => renderCard({ label: props.label.value, suffix: props.suffix.value }),
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('__hydrationMetadata__');
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain("unsupportedReason");
+      expect(result.code).toContain('const { label, suffix } = {');
+      expect(result.code).toContain('kind: "text"');
+    });
+
+    it("should classify non-normalizable spread props as unsupported", () => {
+      const code = `
+        const extraProps = { role: "status" };
+        const SpreadCard = defineComponent(
+          "spread-card",
+          () => <div {...{ class: "ready", ...extraProps }}>ready</div>,
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('__hydrationMetadata__');
+      expect(result.code).toContain('unsupportedReason: "non-normalizable-spread"');
+      expect(result.code).not.toContain("planFactory");
+    });
+
+    it("should classify node identity creation outside JSX tree as unsupported", () => {
+      const code = `
+        const NodeCard = defineComponent(
+          "node-card",
+          () => {
+            const node = document.createElement("strong");
+            node.textContent = "ready";
+            return <div>{node}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('__hydrationMetadata__');
+      expect(result.code).toContain('unsupportedReason: "node-identity-reuse"');
+      expect(result.code).not.toContain("planFactory");
+    });
+
     it("should throw when client:media is missing a string literal value", () => {
       const code = `
         const element = <Counter client:media />;

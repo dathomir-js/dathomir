@@ -12,6 +12,12 @@ import type {
   SetupFunction,
 } from "@/defineComponent/implementation";
 
+interface ComponentHydrationMetadata {
+  readonly kind: "generic-plan";
+  readonly planFactory?: unknown;
+  readonly unsupportedReason?: string;
+}
+
 /** Registered component metadata for SSR. */
 interface ComponentRegistration {
   /** Tag name of the custom element. */
@@ -22,6 +28,8 @@ interface ComponentRegistration {
   readonly cssTexts: readonly string[];
   /** Props schema for type coercion in SSR. */
   readonly propsSchema?: PropsSchema;
+  /** Optional compiler-generated hydration metadata. */
+  readonly hydrationMetadata?: ComponentHydrationMetadata;
 }
 
 /** Global registry: tagName → ComponentRegistration */
@@ -39,8 +47,15 @@ function registerComponent(
   setup: SetupFunction,
   cssTexts: readonly string[],
   propsSchema?: PropsSchema,
+  hydrationMetadata?: ComponentHydrationMetadata,
 ): void {
-  registry.set(tagName, { tagName, setup, cssTexts, propsSchema });
+  registry.set(tagName, {
+    tagName,
+    setup,
+    cssTexts,
+    propsSchema,
+    hydrationMetadata,
+  });
 }
 
 /**
@@ -68,4 +83,4 @@ function clearRegistry(): void {
 }
 
 export { clearRegistry, getComponent, hasComponent, registerComponent };
-export type { ComponentRegistration };
+export type { ComponentHydrationMetadata, ComponentRegistration };

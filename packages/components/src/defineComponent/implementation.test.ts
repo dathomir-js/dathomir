@@ -4,6 +4,7 @@ import { atom, createAtomStore, withStore } from "@dathomir/store";
 import { bindStoreToHost, peekStoreFromHost } from "./internal";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  HYDRATE_ISLANDS_HOOK,
   hydrateIslands,
   HYDRATE_ISLANDS_STATUS,
 } from "@dathomir/runtime/hydration";
@@ -14,6 +15,7 @@ import {
   css,
 } from "../css/implementation";
 import { defineComponent } from "./implementation";
+import type { GenericHydrationPlan } from "@dathomir/runtime/hydration";
 
 /**
  * Helper to wait for custom element upgrade and connectedCallback.
@@ -1272,6 +1274,52 @@ describe("defineComponent", () => {
     el.remove();
   });
 
+  it("should use compiler-generated hydration metadata when DSD content is present", async () => {
+    const tag = uniqueTag();
+    const component = vi.fn(({ props }) => {
+      return document.createTextNode(String(props.label.value));
+    }) as ((ctx: any) => Node) & {
+      __hydrationMetadata__?: {
+        kind: "generic-plan";
+        planFactory: (host: HTMLElement, ctx: any) => GenericHydrationPlan;
+      };
+    };
+
+    component.__hydrationMetadata__ = {
+      kind: "generic-plan",
+      planFactory: (_host, ctx) => ({
+        namespace: "html",
+        bindings: [
+          {
+            kind: "text",
+            markerId: 0,
+            expression: () => ctx.props.label.value,
+          },
+        ],
+        nestedBoundaries: [],
+      }),
+    };
+
+    expect("boundaryRefs" in component.__hydrationMetadata__).toBe(false);
+
+    defineComponent(tag, component as never, {
+      props: { label: { type: String } },
+      hydrate: undefined,
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag} label="hydrated"><template shadowrootmode="open"><!--dh:t:0-->SSR</template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(component).not.toHaveBeenCalled();
+    expect(el.shadowRoot?.textContent).toBe("hydrated");
+
+    el.remove();
+  });
+
   it("should replace SSR style tags with adoptedStyleSheets during DSD hydrate", async () => {
     const tag = uniqueTag();
     const globalSheet = css`
@@ -1332,6 +1380,45 @@ describe("defineComponent", () => {
     expect(el.shadowRoot!.textContent).toBe("re-rendered");
 
     el.remove();
+  });
+
+  it("should log unsupportedReason and fallback to setup rerender when compiler-generated hydration is unsupported", async () => {
+    const tag = uniqueTag();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const setupFn = vi.fn(({ props }) => {
+      return document.createTextNode(String(props.label.value));
+    }) as ((ctx: any) => Node) & {
+      __hydrationMetadata__?: {
+        kind: "generic-plan";
+        planFactory?: null;
+        unsupportedReason: string;
+      };
+    };
+
+    setupFn.__hydrationMetadata__ = {
+      kind: "generic-plan",
+      unsupportedReason: "imperative-dom-query",
+    };
+
+    defineComponent(tag, setupFn as never, {
+      props: { label: { type: String } },
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag} label="fallback"><template shadowrootmode="open"><!--dh:t:0-->SSR</template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(setupFn).toHaveBeenCalledTimes(1);
+    expect(el.shadowRoot?.textContent).toBe("fallback");
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("compiler-generated hydration is unsupported: imperative-dom-query"),
+    );
+
+    el.remove();
+    warnSpy.mockRestore();
   });
 
   it("should exclude attribute: false prop from observedAttributes and only allow JS property setter", async () => {
@@ -1404,5 +1491,110 @@ describe("defineComponent", () => {
     expect(peekStoreFromHost(childEl)).toBe(appStore);
 
     parentEl.remove();
+  });
+
+  it("should preserve a nested load island when an outer visible host hydrates with a compiler plan", async () => {
+    const outerTag = uniqueTag();
+    const innerTag = uniqueTag();
+
+    const innerClick = vi.fn();
+
+    const InnerComponent = vi.fn(() => {
+      return document.createElement("button");
+    }) as ((ctx: any) => Node) & {
+      __hydrationMetadata__?: {
+        kind: "generic-plan";
+        planFactory: (host: HTMLElement, ctx: any) => GenericHydrationPlan;
+      };
+    };
+
+    InnerComponent.__hydrationMetadata__ = {
+      kind: "generic-plan",
+      planFactory: () => ({
+        namespace: "html",
+        bindings: [
+          {
+            kind: "text",
+            markerId: 0,
+            expression: () => "inner:load:ready",
+          },
+          {
+            kind: "event",
+            path: [0],
+            eventType: "click",
+            expression: innerClick,
+          },
+        ],
+        nestedBoundaries: [],
+      }),
+    };
+
+    const OuterComponent = vi.fn(() => {
+      return document.createElement("section");
+    }) as ((ctx: any) => Node) & {
+      __hydrationMetadata__?: {
+        kind: "generic-plan";
+        planFactory: (host: HTMLElement, ctx: any) => GenericHydrationPlan;
+      };
+    };
+
+    OuterComponent.__hydrationMetadata__ = {
+      kind: "generic-plan",
+      planFactory: (_host, ctx) => ({
+        namespace: "html",
+        bindings: [
+          {
+            kind: "text",
+            markerId: 0,
+            expression: () => ctx.props.label.value,
+          },
+        ],
+        nestedBoundaries: [{ path: [0, 1], tagName: innerTag, islandStrategy: "load" }],
+      }),
+    };
+
+    defineComponent(innerTag, InnerComponent as never);
+    defineComponent(outerTag, OuterComponent as never, {
+      props: { label: { type: String } },
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${outerTag} data-dh-island="visible" label="outer:visible"><template shadowrootmode="open"><section><p><!--dh:t:0-->outer:ssr</p><${innerTag} data-dh-island="load"><template shadowrootmode="open"><button type="button"><!--dh:t:0-->inner:ssr</button></template></${innerTag}></section></template></${outerTag}>`;
+    const outer = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(outer);
+    await waitForMicrotask();
+
+    hydrateIslands(document);
+    window.dispatchEvent(new Event("load"));
+    await waitForMicrotask();
+
+    const innerBeforeOuterHydration = outer.shadowRoot?.querySelector(innerTag);
+    expect(innerBeforeOuterHydration).not.toBeNull();
+    expect(innerBeforeOuterHydration?.shadowRoot?.textContent).toContain("inner:load:ready");
+
+    const innerButtonBeforeOuterHydration =
+      innerBeforeOuterHydration?.shadowRoot?.querySelector("button");
+    innerButtonBeforeOuterHydration?.dispatchEvent(new MouseEvent("click"));
+    expect(innerClick).toHaveBeenCalledTimes(1);
+
+    const outerHook = Reflect.get(outer, HYDRATE_ISLANDS_HOOK) as
+      | ((trigger?: unknown) => boolean)
+      | undefined;
+    expect(typeof outerHook).toBe("function");
+    outerHook?.({ strategy: "visible" });
+    await waitForMicrotask();
+
+    const innerAfterOuterHydration = outer.shadowRoot?.querySelector(innerTag);
+    expect(innerAfterOuterHydration).toBe(innerBeforeOuterHydration);
+    expect(innerAfterOuterHydration?.shadowRoot?.textContent).toContain("inner:load:ready");
+    expect(outer.shadowRoot?.textContent).toContain("outer:visible");
+
+    const innerButtonAfterOuterHydration =
+      innerAfterOuterHydration?.shadowRoot?.querySelector("button");
+    innerButtonAfterOuterHydration?.dispatchEvent(new MouseEvent("click"));
+    expect(innerClick).toHaveBeenCalledTimes(2);
+
+    outer.remove();
   });
 });

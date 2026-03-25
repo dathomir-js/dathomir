@@ -84,6 +84,27 @@
     - Web 標準 API のみ使用（Node.js 依存ゼロ）
     - HTML エスケープは最小限の置換で実装（バンドルサイズ考慮）
     - プレースホルダーはマーカーに変換し、動的値があれば埋め込む
+    - compiler-generated generic hydration plan を使う component では、SSR marker / stable node reference を hydration runtime と共有できるよう出力を安定化する
+  ],
+)
+
+#feature_spec(
+  name: "generic hydration plan compatible SSR output (proposal)",
+  summary: [
+    compiler-generated generic hydration plan が既存 DSD へ接続できるよう、SSR 出力は marker と安定した node 参照規則を保持する。
+  ],
+  constraints: [
+    - text / insert の既存 hydration marker はそのまま再利用できる
+    - attr / event binding が必要な要素には plan 側で参照可能な stable path または stable binding id を与える
+    - nested island host は outer plan が opaque subtree として扱えるよう boundary marker または stable host 参照を持てる
+  ],
+  test_cases: [
+    - generic hydration plan 対応 component の SSR 出力は text/insert marker を保持する
+    - attr/event binding 対象要素を plan から一意に参照できる
+    - nested island host を outer hydration plan から opaque boundary として識別できる
+  ],
+  impl_notes: [
+    - render API 自体の public surface は増やさず、component renderer と `planFactory` が前提とする marker/path 契約として扱ってよい
   ],
 )
 

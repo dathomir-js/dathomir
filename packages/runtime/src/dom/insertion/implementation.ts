@@ -13,6 +13,7 @@ function append(parent: Node, child: Node): void {
  * WeakMap ensures no memory leaks when markers are removed.
  */
 const insertedContent = new WeakMap<Node, Node[]>();
+const INSERT_END_MARKER = "/dh:i";
 
 /**
  * Insert a child node before an anchor node.
@@ -77,7 +78,9 @@ function insert(
           // Stop if we hit another hydration marker (comment starting with "dh:")
           if (
             ssrNode.nodeType === Node.COMMENT_NODE &&
-            ssrNode.nodeValue?.startsWith("dh:")
+            (((ssrNode.nodeValue?.startsWith("dh:") ?? false) &&
+              ssrNode.nodeValue !== (anchor as Comment).nodeValue) ||
+              ssrNode.nodeValue === INSERT_END_MARKER)
           ) {
             break;
           }
@@ -92,6 +95,16 @@ function insert(
           if (node.parentNode) {
             node.parentNode.removeChild(node);
           }
+        }
+
+        const insertEndMarker =
+          ssrNode?.nodeType === Node.COMMENT_NODE &&
+          ssrNode.nodeValue === INSERT_END_MARKER
+            ? ssrNode
+            : null;
+
+        if (insertEndMarker?.parentNode) {
+          insertEndMarker.parentNode.removeChild(insertEndMarker);
         }
       }
       // For CSR anchors: nothing to clean up before the first insert

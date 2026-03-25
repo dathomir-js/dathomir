@@ -131,9 +131,15 @@
     - `connectedCallback` では host に bind 済みの store を解決し、`createRoot` スコープ内で関数コンポーネントを実行する
     - `connectedCallback` と `hydrate` へ渡す context には、host の island metadata を正規化した read-only `client` context を含める。`interaction` strategy で `data-dh-island-value` が欠ける場合は canonical default `click` を補完する
     - `connectedCallback` では local `styles` と `adoptGlobalStyles()` で登録済みの global style を合成し、`adoptedStyleSheets` へ反映する
-    - DSD が存在し `hydrate` がある場合は hydrate パス、`hydrate` がない場合は shadowRoot をクリアして再実行する
+    - host-level `data-dh-island*` metadata はその custom element host の hydration boundary を定義し、同じ host setup が生成した subtree 全体は strategy 発火までその boundary に従う
+    - DSD が存在し、user-defined `hydrate` または compiler-generated generic setup hydration plan がある場合は既存 Shadow DOM を破壊せず hydrate パスへ入る
+    - DSD が存在し、user-defined `hydrate` も compiler-generated hydration plan もない場合だけ shadowRoot をクリアして再実行する fallback を許可する
     - DSD と `hydrate` があり、host が runtime が認識する `data-dh-island` metadata（`load` / `visible` / `idle` / `interaction` / `media`）を持つ場合は `connectedCallback` で即 hydrate せず、runtime `hydrateIslands()` が呼ぶ internal hook を host に公開して遅延 hydrate する
+    - compiler-generated hydration plan により hydrate される host も、`data-dh-island*` metadata を持つ場合は runtime scheduler の strategy 発火まで in-place hydration を遅延できる
+    - deferred host boundary の内側にある通常の DOM 要素や plain component subtree は、host boundary が hydrate されるまで inert な SSR markup として扱う
+    - descendant custom element host 自体が独立した `data-dh-island*` metadata を持つ場合だけ、outer host とは別の explicit nested boundary 候補として扱える
     - compiler-generated colocated client handler を持つ component は render ベースの setup を hydrate entrypoint とし、`interaction` では初回 click 後に root setup を実行して event replay する
+    - compiler-generated colocated client marker は native element 単位の sub-island を作らず、nearest component host boundary へ集約される
     - DSD に SSR `<style>` が存在し、CSR で `adoptedStyleSheets` を適用する場合は `<style>` を除去して重複適用を避ける
     - `disconnectedCallback` では `dispose` により cleanup を実行する
     - SSR では `getCssText()`、`registerComponent()`、`ensureComponentRenderer()` を用いて SSR 情報を登録する
@@ -361,6 +367,66 @@
 )
 
 #adr(
+  header("island boundary は host setup subtree を支配する", Status.Accepted, "2026-03-18"),
+  [
+    delayed hydration strategy を持つ host の内側で、どこまでを inert SSR subtree とみなすかが曖昧だと、author が「どの UI がいつ interactive になるか」を予測できない。
+  ],
+  [
+    `data-dh-island*` metadata を持つ custom element host は 1 つの hydration boundary として扱い、その host setup が生成した subtree 全体は strategy 発火までその boundary に従う。通常の DOM 要素や plain component subtree は独立 hydrate せず、outer host が hydrate された時点でまとめて interactive になる。
+  ],
+  [
+    - `load` / `idle` / `visible` / `interaction` の semantics が subtree 単位で安定する
+    - root CSR rerender の副作用で「たまたま動く」UI と strategy-driven hydration を区別しやすい
+    - author は即時 interactive にしたい UI を明示的な別 boundary として切り出す必要がある
+  ],
+)
+
+#adr(
+  header("nested island boundary は explicit descendant host だけを候補にする", Status.Proposed, "2026-03-18"),
+  [
+    outer island の内側にも別 priority で hydrate したい UI は存在するが、native element marker や plain child component まで自動で sub-island 化すると execution model が複雑化する。
+  ],
+  [
+    nested island は descendant custom element host が独立した `data-dh-island*` metadata を持つ場合にだけ導入し、nearest host boundary を明示的に分割する。colocated client marker は引き続き nearest component host へ集約し、native element 単位の暗黙 sub-island は導入しない。
+  ],
+  [
+    - current host-centric scheduler / cleanup / store boundary を維持しやすい
+    - Astro/Fresh 系の explicit island mental model に近い
+    - nested boundary の可否、outer/inner strategy の優先順位、scan order は別途 runtime / transformer contract として詰める必要がある
+  ],
+)
+
+#adr(
+  header("nested island boundary を正式サポートする", Status.Proposed, "2026-03-18"),
+  [
+    outer island の subtree 内でも、優先度や trigger が異なる interactive UI を独立して起動したい。boundary を host 単位に限定したまま nested islands を正式に扱えれば、SSR shell を維持しつつ局所的な interactivity を段階的に解放できる。
+  ],
+  [
+    descendant custom element host が独立した canonical `data-dh-island*` metadata を持つ場合、Dathomir はそれを outer host とは別の explicit nested island boundary として扱う。nested boundary は nearest ancestor island host の subtree 内に存在してもよく、runtime scheduler は outer/inner をそれぞれ独立に schedule できるようにする。
+  ],
+  [
+    - author は eager child / deferred parent のような構成を explicit host 分割で表現できる
+    - host-centric cleanup / store boundary model は維持できる
+    - boundary traversal、SSR artifact retention、outer setup rerender 時の nested host 保全など追加設計が必要になる
+  ],
+)
+
+#adr(
+  header("generic setup は compiler-generated hydration plan で DSD に接続する", Status.Proposed, "2026-03-18"),
+  [
+    `hydrate` option を手書きしない generic setup component でも、SSR DSD を破壊せずそのまま interactive にできる方が nested islands と progressive hydration の両方に有利である。現在の `shadowRoot.innerHTML = ""` fallback は outer host rerender 時に descendant island host を破壊しやすい。
+  ],
+  [
+    transformer が生成できる JSX/setup については compiler-generated hydration plan を持たせ、`defineComponent` は DSD 接続時にその plan を優先して in-place hydration を実行する。user-defined `hydrate` がある場合はそれを優先し、どちらもない手書き setup だけを clear-and-rerender fallback とする。
+  ],
+  [
+    - generic setup component でも SSR shell を温存したまま hydration できる
+    - outer host が nested child island host を丸ごと消すケースを大きく減らせる
+    - compiler が plan を生成できない imperative setup は引き続き fallback 扱いになる
+  ],
+)
+
+#adr(
   header("colocated client handlers MVP は render replay で実現する", Status.Proposed, "2026-03-16"),
   [
     将来は compiler-generated action plan を個別 bind する設計を見据えるが、まず UX を検証できる MVP が必要である。現行 runtime / transformer の構造では host setup を hydrate entrypoint に再利用する方が変更範囲を抑えやすい。
@@ -477,6 +543,83 @@
   ],
 )
 
+#behavior_spec(
+  name: "compiler-generated generic setup hydration plan (proposal)",
+  summary: [
+    transform 可能な generic setup component は compiler-generated hydration plan によって SSR DSD へ in-place 接続し、手書き `hydrate` がなくても shadowRoot 全消去を避けられるようにする。
+  ],
+  preconditions: [
+    - public API として `ComponentOptions.hydrate` は維持し、compiler-generated plan は内部実装 detail として扱う
+    - user-defined `hydrate` がある場合はそちらを優先し、compiler-generated plan は fallback しない
+    - compiler-generated plan が利用可能な host は `runSetup()` による clear-and-rerender ではなく hydration runtime を使って既存 DSD へ接続する
+    - plan を生成できない imperative setup は従来どおり fallback clear-and-rerender を許可する
+    - plan 対象外の理由は dev diagnostics と SSR registry metadata から追跡できる
+  ],
+  steps: [
+    1. SSR では transform 由来 setup が marker 付き DSD を出力する
+    2. CSR `connectedCallback` は host shadowRoot に DSD がある場合、user-defined `hydrate` の有無を先に確認する
+    3. user-defined `hydrate` がなく compiler-generated plan がある場合、generic setup hydration runtime を呼んで text / attr / event / insert binding を既存 DSD へ接続する
+    4. strategy metadata を持つ island host では、その hydration plan 実行自体を runtime scheduler で遅延する
+    5. plan がない場合だけ `shadowRoot.innerHTML = ""` fallback に落とす
+  ],
+  postconditions: [
+    - transform 由来 setup component は `hydrate` option なしでも SSR DSD を破壊せず interactive になる
+    - compiler-generated hydration plan を持つ host は `data-dh-island="visible"` などの strategy 発火後に in-place hydration される
+    - plan 非対応の imperative setup component は従来どおり clear-and-rerender fallback に落ちる
+    - descendant nested island host を含む outer component が generic hydration plan で hydrate しても child host DOM は初回 hydrate 時に破壊されない
+    - `runSetup()` は将来的に「fresh mount path」と「fallback clear-and-rerender path」へ縮退し、DSD 接続の主経路は hydration plan path へ寄せる
+    - initial rollout では component body 内の imperative DOM query / mutation、runtime-only branching、opaque spread semantics を含む setup を plan 対象外にしてもよい
+  ],
+)
+
+#feature_spec(
+  name: "initial unsupported setup patterns for generic hydration plan",
+  summary: [
+    初期 rollout では compiler が安全に hydration plan を生成できる setup だけを対象にし、解析不能または DOM preservation を壊しやすい setup は明示的に unsupported とする。
+  ],
+  edge_cases: [
+    - component body 内で `document` / `window` / `shadowRoot` / `host` へ imperative query・mutation を行う setup は unsupported
+    - JSX tree の外で DOM Node を自前生成し、その Node identity を前提に append/reuse する setup は unsupported
+    - runtime 条件分岐により SSR と CSR で異なる element shape を返しうる setup は unsupported
+    - object spread の意味を compile 時に正規化できないケースは unsupported
+    - imported helper や opaque function call が JSX tree shape を返すケースは、初期 rollout では unsupported にしてよい
+  ],
+  test_cases: [
+    - unsupported pattern を含む component は hydration plan を持たず fallback clear-and-rerender path に残る
+    - unsupported reason は dev diagnostics と registry metadata から読める
+    - plan 対応 component と unsupported component が同じ app に混在しても registration が壊れない
+  ],
+  impl_notes: [
+    - initial rollout のゴールは coverage 最大化より soundness 優先とする
+    - unsupported から supported への拡張は transform capability を 1 パターンずつ増やす形で進める
+  ],
+)
+
+#feature_spec(
+  name: "planFactory placement",
+  summary: [
+    compiler-generated hydration plan は component definition に紐づく static metadata として保持し、SSR registry と CSR defineComponent の両方から参照できるようにする。
+  ],
+  api: [
+    ```typescript
+    interface ComponentHydrationMetadata {
+      readonly kind: "generic-plan";
+      readonly planFactory?: unknown;
+      readonly unsupportedReason?: string;
+    }
+    ```
+  ],
+  test_cases: [
+    - transform が生成した `planFactory` は component definition/static metadata から取得できる
+    - SSR `registerComponent()` は同じ hydration metadata を registry へ保存できる
+    - CSR `defineComponent` は instance hydrate 時に component definition から `planFactory` を読める
+  ],
+  impl_notes: [
+    - supported component では `planFactory` を持つ metadata を definition object へ付与し、unsupported component では `unsupportedReason` だけを持つ metadata を definition object へ付与する
+    - registry だけに plan を置くと CSR path が参照しづらく、definition object だけに置くと SSR renderer が registry 経由で読めないため、definition object を source of truth にして registry はミラーする
+  ],
+)
+
 == 機能仕様
 
 #feature_spec(
@@ -521,5 +664,57 @@
      34. artifact-based client handler へ進む段階では capture model を `props` / `store` / signal / serializable local `const` へ制限する
      35. `interaction:onClick` は host setup 完了後に target click を replay する
      36. `visible:onClick` / `idle:onClick` は replay を行わず、strategy 発火後の setup rerender で click handler を有効化する
+     37. deferred outer host の subtree にある descendant island host は explicit nested boundary として独立 schedule できる
+     38. nested child island が outer host より先に hydrate しても、outer host の未発火 strategy によって child の hydrated state が破壊されない
+     39. outer host rerender が起きる場合、SSR DSD 由来の descendant island host metadata が再接続可能な形で保全される
+  ],
+)
+
+#behavior_spec(
+  name: "nested island boundary support (proposal)",
+  summary: [
+    descendant custom element host に付いた canonical `data-dh-island*` metadata を explicit nested island boundary として扱い、outer host と独立に hydrate できるようにする。
+  ],
+  preconditions: [
+    - nested boundary は custom element host 単位に限り、native element marker や plain component subtree を直接 boundary にしない
+    - outer host と inner host はそれぞれ own `HYDRATE_ISLANDS_HOOK` / cleanup ownership を持つ
+    - nested child の store binding は nearest host hierarchy を保ったまま独立 hydrate できる必要がある
+    - colocated marker は引き続き nearest host へ集約するため、nested child 化したい場合は child host 自体を explicit island に分割する
+  ],
+  steps: [
+    1. author は outer host の render subtree 内に descendant custom element host を配置し、その child host 自体へ `client:*` または canonical `data-dh-island*` metadata を与える
+    2. runtime `hydrateIslands()` は DOM / open ShadowRoot を走査し、outer host の subtree 内にある descendant island host も独立 host として収集する
+    3. scheduler は host ごとに strategy を評価し、outer/inner の発火順を固定せず独立に hydrate を試みる
+    4. outer host が setup rerender を行う場合は、SSR output が descendant island host を安定 tag + metadata 付きで再生成し、必要なら child host が再接続後に再 schedule される
+  ],
+  postconditions: [
+    - outer `client:visible` host 内の child `client:load` host は child 側の strategy で先に hydrate できる
+    - outer `client:interaction` host が未発火でも、child `client:idle` host は idle で hydrate できる
+    - child host が先に hydrate 済みのあと outer host が hydrate しても child host の metadata と再接続可能性が保たれる
+    - native element に付いた colocated marker だけでは nested boundary を作らない
+    - outer host の render-based setup が shadowRoot 全消去を行う path では、nested child を破壊しうるため preservation strategy か stop-at-boundary rerender 規則が必要になる
+  ],
+)
+
+#behavior_spec(
+  name: "vertical slice: visible outer host with load nested child",
+  summary: [
+    explicit nested island の代表ユースケースとして、`Outer client:visible` の SSR DSD 内に `Inner client:load` がある場合、child は先行 hydrate し、outer は後から in-place hydrate しても child host を破壊しない。
+  ],
+  preconditions: [
+    - `Outer` / `Inner` は `planFactory` を持つ generic hydration plan 対応 component である
+    - `Inner` host は explicit `data-dh-island="load"` metadata を持つ
+    - `Outer` host は explicit `data-dh-island="visible"` metadata を持つ
+  ],
+  steps: [
+    1. SSR では `Outer` DSD の中に `Inner` host + child DSD がそのまま出力される
+    2. client boot 後、runtime は `Inner` host を `load` strategy で先に schedule し、`hydrateWithPlan()` により child host を in-place hydrate する
+    3. `Outer` host は `visible` 発火まで inert のまま残る
+    4. `visible` 発火後、`Outer` host は `planFactory` 由来 plan で hydrate し、`NestedBoundaryRef` に該当する `Inner` subtree を mutate しない
+  ],
+  postconditions: [
+    - child host は outer host より先に interactive になれる
+    - outer host hydrate 後も child host の DOM / event / hydrated state は維持される
+    - clear-and-rerender fallback は unsupported host にしか使われない
   ],
 )

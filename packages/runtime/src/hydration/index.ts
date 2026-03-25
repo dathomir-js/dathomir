@@ -9,6 +9,7 @@ export {
   hydrate,
   hydrateIslands,
   hydrateRoot,
+  hydrateWithPlan,
   HydrationMismatchError,
   HYDRATE_ISLANDS_HOOK,
   HYDRATE_ISLANDS_STATUS,
@@ -16,11 +17,19 @@ export {
   hydrateTextMarker,
 } from "./hydrate/implementation";
 export type {
+  AttrBinding,
+  EventBinding,
+  GenericHydrationPlan,
   HydrateIslandHook,
   HydrateIslandsStatus,
+  HydrationBinding,
   HydrationContext,
+  InsertBinding,
   IslandHydrationTrigger,
   IslandHost,
+  NestedBoundaryRef,
+  SpreadBinding,
+  TextBinding,
 } from "./hydrate/implementation";
 
 export { createWalker, findMarker, findMarkers } from "./walker/implementation";

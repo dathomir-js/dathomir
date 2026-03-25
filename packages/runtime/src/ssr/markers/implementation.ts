@@ -34,6 +34,13 @@ function createBlockEndMarker(): string {
 }
 
 /**
+ * Create an insert end marker.
+ */
+function createInsertEndMarker(): string {
+  return `<!--/dh:i-->`;
+}
+
+/**
  * Create a data attribute marker for elements.
  */
 function createDataMarker(id: number | string): string {
@@ -58,6 +65,7 @@ function createStoreScript(serializedSnapshot: string): string {
 export {
   createBlockEndMarker,
   createDataMarker,
+  createInsertEndMarker,
   createMarker,
   createStateScript,
   createStoreScript,

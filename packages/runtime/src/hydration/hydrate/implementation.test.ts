@@ -11,6 +11,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  type GenericHydrationPlan,
   HydrationMismatchError,
   HydrationMarkerType,
   cancelScheduledIslandHydration,
@@ -19,6 +20,7 @@ import {
   hydrate,
   hydrateIslands,
   hydrateRoot,
+  hydrateWithPlan,
   hydrateTextMarker,
   isHydrated,
   markHydrated,
@@ -287,6 +289,120 @@ describe("hydrate", () => {
     } as never);
 
     expect(store.ref(countAtom).value).toBe(9);
+  });
+});
+
+describe("hydrateWithPlan", () => {
+  let host: HTMLElement;
+  let shadowRoot: ShadowRoot;
+
+  beforeEach(() => {
+    host = document.createElement("div");
+    shadowRoot = host.attachShadow({ mode: "open" });
+    document.body.appendChild(host);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(host);
+  });
+
+  it("hydrates text, attr, and event bindings in place", async () => {
+    const count = signal(1);
+    const handler = vi.fn();
+    shadowRoot.innerHTML = '<button data-role="counter"><!--dh:t:0-->1</button>';
+
+    const plan: GenericHydrationPlan = {
+      namespace: "html",
+      bindings: [
+        { kind: "text", markerId: 0, expression: () => count.value },
+        { kind: "attr", path: [0], key: "data-count", expression: () => count.value },
+        { kind: "event", path: [0], eventType: "click", expression: handler },
+      ],
+      nestedBoundaries: [],
+    };
+
+    hydrateWithPlan(shadowRoot, plan);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const button = shadowRoot.querySelector("button");
+    expect(button?.getAttribute("data-count")).toBe("1");
+    button?.click();
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    count.set(2);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(button?.textContent).toBe("2");
+  });
+
+  it("does not mutate nested boundary descendants from outer plan", async () => {
+    const childText = signal("outer");
+    shadowRoot.innerHTML = '<section><child-box data-dh-island="load"><span>keep me</span></child-box></section>';
+
+    const plan: GenericHydrationPlan = {
+      namespace: "html",
+      bindings: [
+        { kind: "attr", path: [0, 0], key: "data-should-not-change", expression: () => childText.value },
+      ],
+      nestedBoundaries: [
+        { path: [0, 0], tagName: "child-box", islandStrategy: "load" },
+      ],
+    };
+
+    hydrateWithPlan(shadowRoot, plan);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const child = shadowRoot.querySelector("child-box");
+    expect(child?.hasAttribute("data-should-not-change")).toBe(false);
+  });
+
+  it("hydrates insert bindings at stable placeholder paths", async () => {
+    const value = signal("A");
+    shadowRoot.innerHTML = '<div><span>before</span><!--dh:i:1-->server<!--/dh:i--><span>after</span></div>';
+
+    const plan: GenericHydrationPlan = {
+      namespace: "html",
+      bindings: [
+        {
+          kind: "insert",
+          markerId: 1,
+          path: [0, 1],
+          expression: () => document.createTextNode(value.value),
+          isComponent: false,
+        },
+      ],
+      nestedBoundaries: [],
+    };
+
+    hydrateWithPlan(shadowRoot, plan);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(shadowRoot.textContent).toContain("beforeAafter");
+
+    value.set("B");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(shadowRoot.textContent).toContain("beforeBafter");
+  });
+});
+
+describe("hydrateIslands nested hosts", () => {
+  it("collects nested island hosts independently", () => {
+    const outer = document.createElement("outer-box");
+    outer.setAttribute("data-dh-island", "visible");
+    Reflect.set(outer, HYDRATE_ISLANDS_HOOK, vi.fn(() => true));
+
+    const outerShadow = outer.attachShadow({ mode: "open" });
+    const inner = document.createElement("inner-box");
+    inner.setAttribute("data-dh-island", "load");
+    Reflect.set(inner, HYDRATE_ISLANDS_HOOK, vi.fn(() => true));
+    outerShadow.appendChild(inner);
+
+    document.body.appendChild(outer);
+
+    const cleanup = hydrateIslands(document);
+
+    expect(Reflect.get(inner, HYDRATE_ISLANDS_HOOK)).toBeTypeOf("function");
+    cleanup();
+    outer.remove();
   });
 });
 

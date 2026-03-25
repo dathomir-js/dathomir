@@ -229,6 +229,25 @@ describe("ssr", () => {
         } as never);
       }).toThrow("storeSnapshotSchema requires a store");
     });
+
+    it("should preserve hydration metadata in registry registrations used by DSD rendering", () => {
+      const planFactory = () => ({ bindings: [], nestedBoundaries: [] });
+
+      registerComponent(
+        "hydration-meta-template",
+        () => "<div>Hydration Meta</div>",
+        [],
+        undefined,
+        {
+          kind: "generic-plan",
+          planFactory,
+        },
+      );
+
+      const html = renderDSDContent("hydration-meta-template", {});
+
+      expect(html).toContain("Hydration Meta");
+    });
   });
 
   describe("renderDSDContent", () => {

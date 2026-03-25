@@ -88,6 +88,14 @@ describe("SSR Render", () => {
     expect(html).toBe("<div><!--dh:t:1-->Dynamic</div>");
   });
 
+  it("renders insert placeholder with explicit end marker", () => {
+    const tree: Tree[] = [["div", null, ["{insert}", null], "tail"]];
+    const dynamicValues = new Map<number, unknown>([[1, "Dynamic"]]);
+    const html = renderTree(tree, { dynamicValues });
+
+    expect(html).toBe("<div><!--dh:i:1-->Dynamic<!--/dh:i-->tail</div>");
+  });
+
   it("renders each placeholder with block markers", () => {
     const tree: Tree[] = [["ul", null, ["{each}", null]]];
     const items = ["<li>Item 1</li>", "<li>Item 2</li>"];

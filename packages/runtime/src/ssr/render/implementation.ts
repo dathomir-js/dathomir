@@ -13,6 +13,7 @@ import { getCurrentStore } from "@dathomir/store/internal";
 import {
   MarkerType,
   createBlockEndMarker,
+  createInsertEndMarker,
   createMarker,
   createStateScript,
   createStoreScript,
@@ -279,7 +280,7 @@ function renderNode(node: Tree, ctx: RenderContext): string {
       const value = ctx.dynamicValues.get(id);
       const content =
         value != null && typeof value === "string" ? value : "<!--empty-->";
-      return createMarker(MarkerType.Insert, id) + content;
+      return createMarker(MarkerType.Insert, id) + content + createInsertEndMarker();
     }
 
     if (type === "{each}") {

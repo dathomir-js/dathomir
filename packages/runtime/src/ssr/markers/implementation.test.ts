@@ -8,6 +8,7 @@ import {
   MarkerType,
   createBlockEndMarker,
   createDataMarker,
+  createInsertEndMarker,
   createMarker,
   createStateScript,
   createStoreScript,
@@ -35,6 +36,12 @@ describe("Marker Creation", () => {
   describe("createBlockEndMarker", () => {
     it("creates block end marker", () => {
       expect(createBlockEndMarker()).toBe("<!--/dh:b-->");
+    });
+  });
+
+  describe("createInsertEndMarker", () => {
+    it("creates insert end marker", () => {
+      expect(createInsertEndMarker()).toBe("<!--/dh:i-->");
     });
   });
 

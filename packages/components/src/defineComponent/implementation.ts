@@ -22,6 +22,8 @@ import type { RootDispose, Signal } from "@dathomir/reactivity";
 import { createRoot, signal, templateEffect } from "@dathomir/reactivity";
 import {
   cancelScheduledIslandHydration,
+  hydrateWithPlan,
+  type GenericHydrationPlan,
   HYDRATE_ISLANDS_HOOK,
   HYDRATE_ISLANDS_STATUS,
 } from "@dathomir/runtime/hydration";
@@ -151,6 +153,18 @@ interface ComponentOptions<S extends PropsSchema = PropsSchema> {
 interface ComponentMetadata<S extends PropsSchema = PropsSchema> {
   readonly __tagName__: string;
   readonly __propsSchema__?: S;
+  readonly __hydrationMetadata__?: ComponentHydrationMetadata;
+}
+
+type HydrationPlanFactory = (
+  host: HTMLElement,
+  ctx: ComponentContext<PropsSchema>,
+) => GenericHydrationPlan;
+
+interface ComponentHydrationMetadata {
+  readonly kind: "generic-plan";
+  readonly planFactory?: HydrationPlanFactory | unknown;
+  readonly unsupportedReason?: string;
 }
 
 /** Component class with tag name and schema metadata. */
@@ -552,6 +566,7 @@ function createDefinedComponent<S extends PropsSchema>(
   jsx: JSXComponent<S>,
   propsSchema: S | undefined,
   tagName: string,
+  hydrationMetadata?: ComponentHydrationMetadata,
 ): DefinedComponent<S> {
   const definedComponent = jsx as DefinedComponent<S>;
   Object.defineProperties(definedComponent, {
@@ -569,6 +584,10 @@ function createDefinedComponent<S extends PropsSchema>(
     },
     __propsSchema__: {
       value: propsSchema,
+      enumerable: true,
+    },
+    __hydrationMetadata__: {
+      value: hydrationMetadata,
       enumerable: true,
     },
   });
@@ -607,6 +626,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
 ): DefinedComponent<S> {
   const isSSR = typeof window === "undefined";
   const jsx = createJSXComponent(tagName, options.props);
+  const hydrationMetadata = (component as unknown as ComponentMetadata<S>).__hydrationMetadata__;
 
   // Wrap function component into SetupFunction
   const resolvedSetup: SetupFunction<S> = wrapFunctionComponent(
@@ -627,12 +647,20 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
       resolvedSetup as SetupFunction,
       cssTexts,
       options.props as PropsSchema | undefined,
+      hydrationMetadata,
     );
     ensureComponentRenderer();
     const SSRClass = class {} as any;
     SSRClass.__tagName__ = tagName;
     SSRClass.__propsSchema__ = options.props;
-    return createDefinedComponent(SSRClass, jsx, options.props, tagName);
+    SSRClass.__hydrationMetadata__ = hydrationMetadata;
+    return createDefinedComponent(
+      SSRClass,
+      jsx,
+      options.props,
+      tagName,
+      hydrationMetadata,
+    );
   }
 
   const { styles, props: propsSchema, hydrate: hydrateSetup } = options;
@@ -770,9 +798,14 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
         },
       } as ComponentContext<S>;
       const islandStrategy = this.getAttribute(ISLAND_METADATA_ATTRIBUTE);
+      const planFactory =
+        hydrationMetadata?.unsupportedReason === undefined &&
+        typeof hydrationMetadata?.planFactory === "function"
+          ? hydrationMetadata.planFactory
+          : null;
       const shouldDeferIslandHydration =
         hasDSD &&
-        (hydrateSetup !== undefined || colocatedStrategy !== null) &&
+        (hydrateSetup !== undefined || planFactory !== null || colocatedStrategy !== null) &&
         isKnownIslandStrategy(islandStrategy);
 
       this.#islandHydrationAccepted = false;
@@ -833,6 +866,53 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
         }
       };
 
+      const runHydrateWithPlan = (): boolean => {
+        if (planFactory === null) {
+          return false;
+        }
+
+        try {
+          const plan = planFactory(this, ctx) as GenericHydrationPlan;
+          const dispose = hydrateWithPlan(shadowRoot, plan, {
+            store: peekStoreFromHost(this),
+          });
+          if (dispose === null) {
+            return false;
+          }
+          this.#dispose = dispose;
+          this.#islandHydrationAccepted = true;
+          if (
+            isKnownIslandStrategy(this.getAttribute(ISLAND_METADATA_ATTRIBUTE))
+          ) {
+            (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
+              "hydrated";
+          }
+          return true;
+        } catch (error) {
+          if (
+            isMissingStoreError(error) &&
+            retryIfStoreEventuallyBinds(runHydrateWithPlan)
+          ) {
+            return false;
+          }
+          console.error(
+            "[dathomir] Error in compiler-generated hydration plan:",
+            error,
+          );
+          return false;
+        }
+      };
+
+      const logUnsupportedHydrationReason = (): void => {
+        if (hydrationMetadata?.unsupportedReason === undefined) {
+          return;
+        }
+
+        console.warn(
+          `[dathomir] Falling back to setup rerender for <${tagName}> because compiler-generated hydration is unsupported: ${hydrationMetadata.unsupportedReason}`,
+        );
+      };
+
       const runSetup = (trigger?: IslandHydrationTrigger): boolean => {
         try {
           this.#dispose = createRoot(() => {
@@ -886,7 +966,11 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
             (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
               "hydrated";
             const didHydrate =
-              hydrateSetup !== undefined ? runHydrate() : runSetup(trigger);
+              hydrateSetup !== undefined
+                ? runHydrate()
+                : planFactory !== null
+                  ? runHydrateWithPlan()
+                  : runSetup(trigger);
             if (didHydrate) {
               (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
                 "hydrated";
@@ -898,7 +982,10 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
           };
         } else if (hydrateSetup) {
           runHydrate();
+        } else if (planFactory !== null) {
+          runHydrateWithPlan();
         } else {
+          logUnsupportedHydrationReason();
           runSetup();
         }
       } else {
@@ -957,12 +1044,14 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
 
   (Component as any).__tagName__ = tagName;
   (Component as any).__propsSchema__ = propsSchema;
+  (Component as any).__hydrationMetadata__ = hydrationMetadata;
 
   return createDefinedComponent(
     Component as unknown as ComponentConstructor<S>,
     jsx,
     propsSchema,
     tagName,
+    hydrationMetadata,
   );
 }
 
@@ -975,6 +1064,7 @@ export type {
   ComponentElement,
   ComponentMetadata,
   ComponentOptions,
+  ComponentHydrationMetadata,
   DefinedComponent,
   FunctionComponent,
   HydrateSetupFunction,

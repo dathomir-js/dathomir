@@ -61,6 +61,7 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     - `options.storeSnapshotSchema` を使う場合は `options.store` も必須とする
     - `adoptGlobalStyles()` で登録済みの global style は component local style より前に DSD `<style>` として出力する
     - 同一 CSS テキストが global/local の両方に存在する場合、DSD `<style>` は 1 回だけ出力する
+    - compiler-generated generic hydration plan に対応する component では、DSD template 内に hydration runtime が参照できる marker / stable binding reference を保持する
   ],
 )
 
@@ -99,6 +100,22 @@ Declarative Shadow DOM を使った Web Components の SSR レンダリングを
     *使用例*:
     - React/Next.js/Vue などから `renderDSD()` または `renderDSDContent()` を直接呼び出せる
     - `defineComponent` が SSR で初回評価された際に `ensureComponentRenderer()` を自動実行する
+    - generic setup hydration plan 対応 component では SSR marker/path 契約と hydration plan が同じ reference 規則を共有する
+  ],
+)
+
+#feature_spec(
+  name: "generic setup hydration compatible DSD output (proposal)",
+  summary: [
+    transform 由来 generic setup component が client で in-place hydration できるよう、DSD renderer は `planFactory` が期待する marker/path 契約を壊さない形で出力する。
+  ],
+  test_cases: [
+    - generic hydration plan 対応 component の DSD は hydration marker を保持する
+    - nested island host を含む DSD でも child host を境界として識別できる
+    - plan 非対応 component は従来どおり単純 DSD 出力でよい
+  ],
+  impl_notes: [
+    - public API surface は維持しつつ、renderer は extra artifact transport を増やさず existing marker/path 規則の安定化に集中する
   ],
 )
 

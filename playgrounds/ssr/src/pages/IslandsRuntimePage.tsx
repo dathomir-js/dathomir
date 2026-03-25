@@ -167,6 +167,76 @@ const colocatedCardStyles = css`
   }
 `;
 
+const nestedIslandsStyles = css`
+  :host {
+    display: block;
+  }
+
+  .outer-shell {
+    display: grid;
+    gap: 14px;
+    padding: 22px;
+    border-radius: 24px;
+    border: 1px solid rgba(27, 61, 88, 0.14);
+    background:
+      radial-gradient(circle at top right, rgba(125, 173, 214, 0.24), transparent 38%),
+      linear-gradient(180deg, rgba(247, 250, 252, 0.96), rgba(231, 239, 245, 0.92));
+    box-shadow: 0 18px 44px rgba(20, 43, 62, 0.1);
+  }
+
+  .outer-shell h3,
+  .outer-shell p,
+  .inner-card h4,
+  .inner-card p {
+    margin: 0;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(22, 79, 122, 0.1);
+    color: #164f7a;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .status-grid {
+    display: grid;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.74);
+  }
+
+  .status-grid strong {
+    color: #0f3855;
+  }
+
+  .inner-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(19, 102, 75, 0.14);
+    background: linear-gradient(180deg, rgba(244, 251, 247, 0.96), rgba(229, 243, 235, 0.92));
+  }
+
+  button {
+    justify-self: start;
+  }
+`;
+
 const PlaygroundColocatedLoadCard = defineComponent(
   "playground-colocated-load-card",
   ({ client }) => {
@@ -306,6 +376,81 @@ const PlaygroundColocatedVisibleCard = defineComponent(
   },
 );
 
+const PlaygroundNestedInnerIsland = defineComponent(
+  "playground-nested-inner-island",
+  ({ client }) => {
+    const count = signal(0);
+
+    return (
+      <article class="inner-card">
+        <div class="meta-row">
+          <p class="meta-chip">Inner</p>
+          <p class="meta-chip">client:load</p>
+        </div>
+        <h4>Load-first nested child</h4>
+        <p>
+          This child should hydrate on the load strategy before the outer visible host becomes
+          interactive.
+        </p>
+        <p>
+          Child strategy in setup: <strong data-role="inner-strategy">{client.strategy ?? "none"}</strong>
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            count.set(count.value + 1);
+          }}
+        >
+          Increment nested child
+        </button>
+        <p>
+          Child clicks: <strong data-role="inner-count">{count.value}</strong>
+        </p>
+      </article>
+    );
+  },
+  {
+    styles: [nestedIslandsStyles],
+    props: {
+      label: { type: String, default: "Nested child ready" },
+    },
+  },
+);
+
+const PlaygroundNestedOuterIsland = defineComponent(
+  "playground-nested-outer-island",
+  ({ client, props }) => {
+    return (
+      <section class="outer-shell">
+        <div class="meta-row">
+          <p class="meta-chip">Outer</p>
+          <p class="meta-chip">client:visible</p>
+        </div>
+        <h3>Visible outer host with load nested child</h3>
+        <p>
+          The outer host stays inert until it becomes visible. The nested child can already be
+          interactive after page load and should survive the later outer hydration pass.
+        </p>
+        <div class="status-grid">
+          <p>
+            Outer strategy in setup: <strong data-role="outer-strategy">{client.strategy ?? "none"}</strong>
+          </p>
+          <p>
+            Outer note: <strong data-role="outer-label">{props.label.value}</strong>
+          </p>
+        </div>
+        <PlaygroundNestedInnerIsland client:load label="Nested child ready" />
+      </section>
+    );
+  },
+  {
+    styles: [nestedIslandsStyles],
+    props: {
+      label: { type: String, default: "Outer hydrated in place" },
+    },
+  },
+);
+
 function IslandsRuntimePage() {
   return (
     <>
@@ -394,6 +539,24 @@ function IslandsRuntimePage() {
             strategyLabel="client:visible"
             description="Hydrates after IntersectionObserver reports that the island is on screen."
           />
+        </div>
+      </section>
+
+      <section>
+        <h2>Nested island vertical slice</h2>
+        <p>
+          This demo exercises the target flow: <code>Outer client:visible</code> keeps its SSR DSD
+          intact, while the nested <code>Inner client:load</code> hydrates first and keeps working
+          after the outer host later hydrates in place.
+        </p>
+        <p>
+          On initial load this outer host should stay off-screen. The nested child still hydrates on
+          <code>load</code>, so you can verify its button programmatically before scrolling this section
+          into view.
+        </p>
+        <div style="height: 95vh" aria-hidden="true" />
+        <div class="route-grid">
+          <PlaygroundNestedOuterIsland client:visible label="Outer hydrated in place" />
         </div>
       </section>
 

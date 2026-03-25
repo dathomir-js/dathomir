@@ -146,6 +146,46 @@ describe("registry", () => {
       });
     });
 
+    it("should store hydration metadata when provided", () => {
+      const setup = () => document.createTextNode("test");
+      const hydrationMetadata = {
+        kind: "generic-plan" as const,
+        planFactory: () => ({ bindings: [] }),
+      };
+
+      registerComponent(
+        "hydrated-component",
+        setup,
+        [],
+        undefined,
+        hydrationMetadata,
+      );
+
+      const registration = getComponent("hydrated-component");
+      expect(registration?.hydrationMetadata).toEqual(hydrationMetadata);
+    });
+
+    it("should store unsupported reason in hydration metadata", () => {
+      const setup = () => document.createTextNode("test");
+      const hydrationMetadata = {
+        kind: "generic-plan" as const,
+        unsupportedReason: "imperative-dom-query",
+      };
+
+      registerComponent(
+        "unsupported-hydration-component",
+        setup,
+        [],
+        undefined,
+        hydrationMetadata,
+      );
+
+      const registration = getComponent("unsupported-hydration-component");
+      expect(registration?.hydrationMetadata?.unsupportedReason).toBe(
+        "imperative-dom-query",
+      );
+    });
+
     it("should handle empty cssTexts array", () => {
       const setup = () => document.createTextNode("test");
       registerComponent("no-styles", setup, [], { attr: { type: String } });

@@ -147,8 +147,9 @@ describe("insert", () => {
     const parent = document.createElement("div");
     const anchor = document.createComment("dh:i:0");
     const ssrText = document.createTextNode("server rendered");
+    const endMarker = document.createComment("/dh:i");
     const nextMarker = document.createComment("dh:t:1");
-    parent.append(anchor, ssrText, nextMarker);
+    parent.append(anchor, ssrText, endMarker, nextMarker);
 
     const child = document.createElement("span");
     child.textContent = "client";
@@ -156,6 +157,7 @@ describe("insert", () => {
 
     expect(parent.textContent).toBe("client");
     expect(parent.contains(ssrText)).toBe(false);
+    expect(parent.contains(endMarker)).toBe(false);
     expect(parent.childNodes[0]).toBe(child);
     expect(parent.childNodes[1]).toBe(anchor);
     expect(parent.childNodes[2]).toBe(nextMarker);
@@ -182,19 +184,28 @@ describe("insert", () => {
     const parent = document.createElement("div");
     const anchor = document.createComment("anchor");
     parent.appendChild(anchor);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     insert(parent, 42 as unknown, anchor);
 
     expect(parent.childNodes.length).toBe(2);
     expect(parent.childNodes[0].textContent).toBe("42");
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[insert] Unexpected child type:",
+      "number",
+      42,
+    );
+
+    errorSpy.mockRestore();
   });
 
   it("should clean up SSR content on first insert, then use WeakMap on re-insert", () => {
     const parent = document.createElement("div");
     const anchor = document.createComment("dh:i:0");
     const ssrText = document.createTextNode("server rendered");
+    const endMarker = document.createComment("/dh:i");
     const nextMarker = document.createComment("dh:t:1");
-    parent.append(anchor, ssrText, nextMarker);
+    parent.append(anchor, ssrText, endMarker, nextMarker);
 
     // First insert: SSR cleanup removes ssrText between dh: markers
     const child1 = document.createElement("span");
@@ -202,6 +213,7 @@ describe("insert", () => {
     insert(parent, child1, anchor);
 
     expect(parent.contains(ssrText)).toBe(false);
+    expect(parent.contains(endMarker)).toBe(false);
     expect(parent.childNodes[0]).toBe(child1);
     expect(parent.childNodes[1]).toBe(anchor);
     expect(parent.childNodes[2]).toBe(nextMarker);

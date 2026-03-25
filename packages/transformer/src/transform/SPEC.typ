@@ -153,12 +153,12 @@
   ],
 )
 
-#feature_spec(
+#behavior_spec(
   name: "colocated client handlers phase 2 (proposal)",
   summary: [
     MVP の `load:onClick` / `interaction:onClick` が安定した後、同じ colocated syntax surface を `visible:onClick` / `idle:onClick` へ拡張する。
   ],
-  constraints: [
+  preconditions: [
     - phase 2 でも `onClick` のみを対象とする
     - 1 component render subtree 内では 1 種類の strategy のみ許可する
     - `visible:onClick` / `idle:onClick` は trigger event replay を持たない
@@ -171,21 +171,20 @@
     3. handler は通常の `onClick` binding として CSR setup に残す
     4. SSR 出力では `defineComponent()` host が shadowRoot marker から `visible` / `idle` island metadata を導出できる
   ],
-  test_cases: [
+  postconditions: [
     - `<button visible:onClick={...}>` を target marker + `visible` strategy metadata へ変換する
     - `<button idle:onClick={...}>` を target marker + `idle` strategy metadata へ変換する
+    - syntax surface は広げるが、event 種別は引き続き `click` に固定する
+    - visible / idle は hydrate trigger が click ではないため replay は不要
+    - phase 2 でも target marker 形式は MVP と共通にして、artifact-based action plan への移行余地を残す
+  ],
+  errors: [
     - `visible:onClick` と `load:onClick` を同一 JSX root で混在させると transform error にする
     - `idle:onClick` と `interaction:onClick` を同一 JSX root で混在させると transform error にする
     - host-level `client:load` と subtree `visible:onClick` を同一 component render subtree で混在させると transform error にする
     - explicit `data-dh-island="load"` と subtree `idle:onClick` を同一 component render subtree で混在させると transform error にする
     - author が `data-dh-client-target` / `data-dh-client-strategy` を明示指定した場合は transform error にする
     - SVG / MathML 要素上の `visible:onClick` / `idle:onClick` は transform error にする
-  ],
-  impl_notes: [
-    - syntax surface は広げるが、event 種別は引き続き `click` に固定する
-    - visible / idle は hydrate trigger が click ではないため replay は不要
-    - phase 2 でも target marker 形式は MVP と共通にして、artifact-based action plan への移行余地を残す
-    - `data-dh-client-target` / `data-dh-client-strategy` は compiler-reserved metadata として扱い、author からの直接入力を禁止する
   ],
 )
 
@@ -202,6 +201,201 @@
   impl_notes: [
     - strategy 名と metadata key は `@dathomir/shared` の islands contract utility から参照する
     - tree transform と jsx directive parsing が別々の string literal set を持たないようにする
+  ],
+)
+
+#feature_spec(
+  name: "island boundary subtree semantics",
+  summary: [
+    transformer が生成する `data-dh-island*` metadata は nearest custom element host の hydration boundary を表し、その host setup が生成する subtree 全体が同じ strategy に従うことを前提にする。
+  ],
+  edge_cases: [
+    - host-level `client:*` directive は component host boundary を定義し、その JSX subtree 内の plain DOM / plain component subtree を暗黙の別 boundary に分割しない
+    - colocated client handler marker は native element 単位の island を作らず、nearest component host boundary に集約する
+    - descendant component を別 strategy で hydrate したい場合は、その descendant 自身が explicit `client:*` / canonical `data-dh-island*` metadata を持つ boundary として表現する
+  ],
+  test_cases: [
+    - host-level `client:*` と subtree colocated marker の混在を 1 render subtree 内で reject する
+    - colocated marker だけでは nested boundary metadata を新設しない
+    - descendant component に explicit `client:*` が付く場合は outer host とは別 boundary metadata を持てる余地を残す
+  ],
+  impl_notes: [
+    - nearest host boundary ルールは plain DOM / plain component subtree に適用する
+    - explicit nested host metadata を持つ descendant component は別 boundary として扱える
+    - JSX subtree 内の boundary ownership が曖昧な sugar は導入しない
+  ],
+)
+
+#feature_spec(
+  name: "explicit nested island transform support",
+  summary: [
+    descendant component に付いた explicit `client:*` directive を nested island host metadata として保持し、outer host subtree 内でも独立 boundary を表現できるようにする。
+  ],
+  edge_cases: [
+    - nested island は component host 単位でのみ表現し、HTML 要素や colocated marker を暗黙 nested boundary にしない
+    - child component の `client:*` directive は child function call の props に canonical `data-dh-island*` metadata として残す
+    - outer host-level `client:*` directive の存在だけでは child component の explicit island metadata を error にしない
+    - 同一 host render subtree の plain HTML に対する colocated marker と host-level metadata の競合禁止は維持する
+  ],
+  test_cases: [
+    - `<Outer client:visible><Inner client:load /></Outer>` で `Outer` と `Inner` の両方が独立 metadata を持つ
+    - outer host metadata がある subtree 内でも child component の explicit `client:idle` を reject しない
+    - `<button load:onClick={...}>` のような colocated marker は nested island metadata に昇格しない
+  ],
+  impl_notes: [
+    - current component call transform は child component の metadata 保持に近いため、nested islands では mixing diagnostics の適用範囲を nearest host ごとに整理する
+    - explicit nested host support を有効化した後も native element target は nearest host replay model を維持する
+  ],
+)
+
+#feature_spec(
+  name: "generic setup hydration plan generation (proposal)",
+  summary: [
+    transform 可能な generic setup component について、component definition object に `planFactory` を付与し、client で既存 DSD へ in-place 接続できるようにする。
+  ],
+  api: [
+    ```typescript
+    interface GenericHydrationPlan {
+      readonly namespace: "html" | "svg" | "math";
+      readonly bindings: readonly HydrationBinding[];
+      readonly nestedBoundaries: readonly NestedBoundaryRef[];
+    }
+
+    type HydrationBinding =
+      | TextBinding
+      | AttrBinding
+      | EventBinding
+      | InsertBinding
+      | SpreadBinding;
+
+    interface TextBinding {
+      readonly kind: "text";
+      readonly markerId: number;
+      readonly expression: unknown;
+    }
+
+    interface AttrBinding {
+      readonly kind: "attr";
+      readonly path: readonly number[];
+      readonly key: string;
+      readonly expression: unknown;
+    }
+
+    interface EventBinding {
+      readonly kind: "event";
+      readonly path: readonly number[];
+      readonly eventType: string;
+      readonly expression: unknown;
+    }
+
+    interface InsertBinding {
+      readonly kind: "insert";
+      readonly markerId: number;
+      readonly path: readonly number[];
+      readonly expression: unknown;
+      readonly isComponent: boolean;
+    }
+
+    interface SpreadBinding {
+      readonly kind: "spread";
+      readonly path: readonly number[];
+      readonly expression: unknown;
+    }
+
+    interface NestedBoundaryRef {
+      readonly path: readonly number[];
+      readonly tagName: string;
+      readonly islandStrategy: string | null;
+    }
+    ```
+  ],
+  test_cases: [
+    - simple transformable setup から generic hydration metadata が生成される
+    - text / attr / event / insert binding が plan に反映される
+    - nested child component with explicit `client:*` は `nestedBoundaries` として plan に含まれる
+    - plan 生成不能な setup は `unsupportedReason` 付き metadata に落とす
+    - `DynamicPart.path` と SSR marker id から plan の `path` / `markerId` が安定生成される
+  ],
+  impl_notes: [
+    - existing dynamicParts / tree output を generic hydration plan の土台として再利用できる
+    - `text` / `insert` は既存 SSR marker id を再利用し、`attr` / `event` / `spread` / nested boundary は tree path を stable node ref として使う
+    - initial implementation では component definition ごとに static `planFactory` を出力し、runtime は host/ctx を渡して expression を評価できる形にする
+  ],
+)
+
+#feature_spec(
+  name: "initial unsupported generic setup patterns",
+  summary: [
+    initial rollout では hydration plan を sound に生成できる setup だけを対象にし、解析不能または DOM preservation を壊しやすい setup は unsupported reason 付きで除外する。
+  ],
+  edge_cases: [
+    - `document` / `window` / `host` / `shadowRoot` への imperative query・mutation を含む setup は `imperative-dom-query`
+    - JSX tree 外で Node identity を生成・保持して append/reuse する setup は `node-identity-reuse`
+    - SSR と CSR で element shape が変わりうる runtime-only branching を含む setup は `runtime-branching`
+    - spread/object merge を compile 時に正規化できない setup は `non-normalizable-spread`
+    - opaque helper call が DOM tree shape を返す setup は `opaque-helper-call`
+  ],
+  test_cases: [
+    - unsupported setup は `unsupportedReason` 付き metadata に落とす
+    - supported setup は `planFactory` を持つ hydration metadata を生成する
+    - unsupported 判定は dev diagnostics に出せる粒度を持つ
+    - `imperative-dom-query` / `node-identity-reuse` / `runtime-branching` / `non-normalizable-spread` / `opaque-helper-call` を区別できる
+    - top-level local zero-arg helper が直接 JSX を返すだけなら、component setup からその helper を経由しても `planFactory` を生成できる
+    - top-level local helper が trivial argument forwarding で JSX を返すだけなら、component setup からその helper を経由しても `planFactory` を生成できる
+    - top-level local helper 内の `const` / `function` prelude が JSX return 前にある場合も、same-shape なら `planFactory` を生成できる
+    - top-level local helper chain が複数段あっても、最終的に local helper chain が JSX に解決できるなら `planFactory` を生成できる
+    - helper param が destructuring pattern でも、call site の object/array argument をその pattern に安全に束縛できるなら `planFactory` を生成できる
+  ],
+  impl_notes: [
+    - initial rollout は coverage より soundness を優先する
+    - unsupported patterns は transform error ではなく fallback reason として保持し、component 自体は動作可能にする
+  ],
+)
+
+#feature_spec(
+  name: "planFactory placement",
+  summary: [
+    generic hydration plan の source of truth は transform が component definition object へ付与する static metadata とし、SSR registry はそれをミラーする。
+  ],
+  api: [
+    ```typescript
+    interface ComponentHydrationMetadata {
+      readonly kind: "generic-plan";
+      readonly planFactory?: unknown;
+      readonly unsupportedReason?: string;
+    }
+    ```
+  ],
+  test_cases: [
+    - transform 生成コードは component definition object に hydration metadata を付与できる
+    - `defineComponent` は同 metadata を SSR registration へ流せる
+    - runtime/SSR は同一 metadata surface を共有できる
+  ],
+  impl_notes: [
+    - registry だけに置くと CSR path が参照しづらく、definition object だけに置くと SSR renderer が参照しづらいため、definition object を source of truth にして registry を mirror にする
+    - ideal path では `planFactory` を唯一の実行 surface とし、artifact mirror は持ち込まない
+  ],
+)
+
+#behavior_spec(
+  name: "vertical slice: visible outer host with load nested child",
+  summary: [
+    `<Outer client:visible><Inner client:load /></Outer>` を author が書いたとき、transform・SSR・runtime hydration が end-to-end で連携し、child は `load` で先に hydrate し、outer は `visible` 発火時に child を壊さず hydrate する。
+  ],
+  preconditions: [
+    - `Outer` / `Inner` は generic hydration plan 対応 setup とする
+    - child custom element は explicit `client:load` により independent boundary metadata を持つ
+    - outer plan は child host を `NestedBoundaryRef` として保持する
+  ],
+  steps: [
+    1. transformer は `Outer` call に `data-dh-island="visible"` metadata を付与する
+    2. transformer は descendant `Inner` call に `data-dh-island="load"` metadata を保持する
+    3. transformer は `Outer` と `Inner` の component definition ごとに `hydrationMetadata.planFactory` を付与する
+    4. transformer は `Outer` の plan へ child host の `NestedBoundaryRef` を含める
+  ],
+  postconditions: [
+    - output code だけで outer/inner の island boundary と hydration metadata が追跡できる
+    - nested child は colocated marker ではなく explicit host boundary として扱われる
   ],
 )
 
@@ -481,6 +675,51 @@
     - author は strategy の違いだけを変えて同じ mental model で書ける
     - runtime の replay 複雑性は `interaction` に閉じ込められる
     - parser / transformer / component host 側の marker surface を使い回せる
+  ],
+)
+
+#adr(
+  header("island metadata は nearest host boundary の subtree semantics を表す", Status.Accepted, "2026-03-18"),
+  [
+    transform が付与する `data-dh-island*` metadata の意味が host 自身だけなのか subtree 全体なのか曖昧だと、runtime scheduler と author mental model がずれる。
+  ],
+  [
+    host-level `client:*` directive と canonical `data-dh-island*` metadata は nearest custom element host の hydration boundary を表し、その host render/setup が生成した subtree 全体が同じ strategy に従うものとして扱う。
+  ],
+  [
+    - strategy-driven hydration と root CSR rerender を明確に区別できる
+    - plain child component や native element を暗黙 sub-island とみなす複雑性を避けられる
+    - author は eager interactive な UI を別 boundary として明示的に切り出す必要がある
+  ],
+)
+
+#adr(
+  header("nested islands は explicit descendant host metadata だけを候補にする", Status.Proposed, "2026-03-18"),
+  [
+    outer boundary の内側にも別 strategy を与えたい UI はあるが、HTML 要素 marker や plain child component まで boundary 候補にすると transform error 規則と runtime traversal が複雑化する。
+  ],
+  [
+    nested island は descendant custom element host が独立した `client:*` または canonical `data-dh-island*` metadata を持つ場合にのみ候補とし、colocated client marker は引き続き nearest host へ集約する。
+  ],
+  [
+    - host-centric contract を保ったまま explicit nested boundary へ拡張できる
+    - Astro/Fresh に近い explicit island model を採用できる
+    - outer/inner boundary の scan order や ownership は runtime 側の後続仕様として詰める必要がある
+  ],
+)
+
+#adr(
+  header("nested islands を explicit host metadata で正式サポートする", Status.Proposed, "2026-03-18"),
+  [
+    outer island の subtree 内にある child custom element も別 strategy で hydrate したい。transform が explicit host metadata をそのまま保持できれば、runtime は descendant host を独立 boundary として扱える。
+  ],
+  [
+    component child に付いた `client:*` directive は outer host metadata に吸収せず、その child function call 自体の canonical `data-dh-island*` metadata として保持する。これにより descendant custom element host は outer host の subtree 内でも独立 island boundary を表現できる。
+  ],
+  [
+    - transform は explicit nested island host を自然に表現できる
+    - colocated marker は引き続き nearest host へ集約し、native element ベースの暗黙 nested islands は避けられる
+    - same render subtree における host-level metadata と colocated marker の混在ルールを nested host aware に見直す必要がある
   ],
 )
 

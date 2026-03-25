@@ -23,6 +23,9 @@ import {
 } from "@dathomir/shared";
 import { withStore } from "@dathomir/store";
 
+import { setAttr } from "@/dom/attr/implementation";
+import { insert } from "@/dom/insertion/implementation";
+import { spread, type SpreadProps } from "@/dom/spread/implementation";
 import { setText } from "@/dom/text/implementation";
 import { event } from "@/events/implementation";
 import {
@@ -99,6 +102,59 @@ interface HydrationOptions {
   storeSnapshotSchema?: AtomStoreSnapshot<
     Record<string, PrimitiveAtom<unknown>>
   >;
+}
+
+interface TextBinding {
+  readonly kind: "text";
+  readonly markerId: number;
+  readonly expression: () => unknown;
+}
+
+interface AttrBinding {
+  readonly kind: "attr";
+  readonly path: readonly number[];
+  readonly key: string;
+  readonly expression: () => unknown;
+}
+
+interface EventBinding {
+  readonly kind: "event";
+  readonly path: readonly number[];
+  readonly eventType: string;
+  readonly expression: EventListener;
+}
+
+interface InsertBinding {
+  readonly kind: "insert";
+  readonly markerId: number;
+  readonly path: readonly number[];
+  readonly expression: () => unknown;
+  readonly isComponent: boolean;
+}
+
+interface SpreadBinding {
+  readonly kind: "spread";
+  readonly path: readonly number[];
+  readonly expression: () => SpreadProps;
+}
+
+interface NestedBoundaryRef {
+  readonly path: readonly number[];
+  readonly tagName: string;
+  readonly islandStrategy: string | null;
+}
+
+type HydrationBinding =
+  | TextBinding
+  | AttrBinding
+  | EventBinding
+  | InsertBinding
+  | SpreadBinding;
+
+interface GenericHydrationPlan {
+  readonly namespace: "html" | "svg" | "math";
+  readonly bindings: readonly HydrationBinding[];
+  readonly nestedBoundaries: readonly NestedBoundaryRef[];
 }
 
 /**
@@ -244,6 +300,79 @@ function hydrateTextMarker(marker: MarkerInfo, getValue: () => unknown): void {
   templateEffect(() => {
     setText(textNode, getValue());
   });
+}
+
+function findMarkerById(
+  ctx: HydrationContext,
+  markerId: number,
+): MarkerInfo | null {
+  for (const marker of ctx.markers) {
+    if (marker.id === markerId) {
+      return marker;
+    }
+  }
+
+  return null;
+}
+
+function resolveNodeAtPath(
+  root: ShadowRoot,
+  path: readonly number[],
+): Node | null {
+  let current: Node = root;
+
+  for (let depth = 0; depth < path.length; depth += 1) {
+    const index = path[depth];
+    if (index === undefined) {
+      return null;
+    }
+
+    let child = current.firstChild;
+    for (let i = 0; i < index; i += 1) {
+      if (child === null) {
+        return null;
+      }
+      child = child.nextSibling;
+    }
+
+    if (child === null) {
+      return null;
+    }
+
+    current = child;
+  }
+
+  return current;
+}
+
+function pathMatchesOrDescends(
+  path: readonly number[],
+  prefix: readonly number[],
+): boolean {
+  if (prefix.length > path.length) {
+    return false;
+  }
+
+  for (let i = 0; i < prefix.length; i += 1) {
+    if (path[i] !== prefix[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isPathBlockedByNestedBoundary(
+  path: readonly number[],
+  nestedBoundaries: readonly NestedBoundaryRef[],
+): boolean {
+  for (const boundary of nestedBoundaries) {
+    if (pathMatchesOrDescends(path, boundary.path)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function isIslandHost(value: Element): value is IslandHost {
@@ -629,6 +758,124 @@ function hydrate(
   );
 }
 
+function hydrateWithPlan(
+  root: ShadowRoot,
+  plan: GenericHydrationPlan,
+  options: HydrationOptions = {},
+): RootDispose | null {
+  return hydrateRoot(
+    root,
+    (ctx) => {
+      for (const binding of plan.bindings) {
+        switch (binding.kind) {
+          case "text": {
+            const marker = findMarkerById(ctx, binding.markerId);
+            if (marker === null) {
+              handleMismatch(`Text marker ${binding.markerId} not found`, {
+                markerId: binding.markerId,
+                markerType: HydrationMarkerType.Text,
+                expected: "existing SSR text marker",
+                actual: "missing marker",
+              });
+              continue;
+            }
+
+            hydrateTextMarker(marker, binding.expression);
+            continue;
+          }
+
+          case "attr": {
+            if (isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)) {
+              continue;
+            }
+
+            const node = resolveNodeAtPath(root, binding.path);
+            if (!(node instanceof Element)) {
+              handleMismatch(`Element not found for attr path ${binding.path.join(".")}`, {
+                expected: "Element at attr binding path",
+                actual: node === null ? "missing node" : node.nodeName,
+              });
+              continue;
+            }
+
+            templateEffect(() => {
+              setAttr(node, binding.key, binding.expression());
+            });
+            continue;
+          }
+
+          case "event": {
+            if (isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)) {
+              continue;
+            }
+
+            const node = resolveNodeAtPath(root, binding.path);
+            if (!(node instanceof Element)) {
+              handleMismatch(`Element not found for event path ${binding.path.join(".")}`, {
+                expected: "Element at event binding path",
+                actual: node === null ? "missing node" : node.nodeName,
+              });
+              continue;
+            }
+
+            event(binding.eventType, node, binding.expression);
+            continue;
+          }
+
+          case "insert": {
+            if (isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)) {
+              continue;
+            }
+
+            const marker = findMarkerById(ctx, binding.markerId);
+            if (marker === null || marker.node.parentNode === null) {
+              handleMismatch(`Insert marker ${binding.markerId} not found`, {
+                markerId: binding.markerId,
+                markerType: HydrationMarkerType.Insert,
+                expected: "existing SSR insert marker",
+                actual: marker === null ? "missing marker" : "marker without parent",
+              });
+              continue;
+            }
+
+            const applyInsert = () => {
+              insert(marker.node.parentNode as Node, binding.expression(), marker.node);
+            };
+
+            if (binding.isComponent) {
+              applyInsert();
+            } else {
+              templateEffect(applyInsert);
+            }
+            continue;
+          }
+
+          case "spread": {
+            if (isPathBlockedByNestedBoundary(binding.path, plan.nestedBoundaries)) {
+              continue;
+            }
+
+            const node = resolveNodeAtPath(root, binding.path);
+            if (!(node instanceof Element)) {
+              handleMismatch(`Element not found for spread path ${binding.path.join(".")}`, {
+                expected: "Element at spread binding path",
+                actual: node === null ? "missing node" : node.nodeName,
+              });
+              continue;
+            }
+
+            let previousProps: SpreadProps | null = null;
+            templateEffect(() => {
+              previousProps = spread(node, previousProps, binding.expression());
+            });
+          }
+        }
+      }
+    },
+    options,
+  );
+}
+
 export {
   cancelScheduledIslandHydration,
   createHydrationContext,
@@ -636,6 +883,7 @@ export {
   hydrate,
   hydrateIslands,
   hydrateRoot,
+  hydrateWithPlan,
   hydrateTextMarker,
   HydrationMismatchError,
   HydrationMarkerType,
@@ -645,9 +893,17 @@ export {
   markHydrated,
 };
 export type {
+  AttrBinding,
+  EventBinding,
+  GenericHydrationPlan,
   HydrateIslandHook,
   HydrateIslandsStatus,
+  HydrationBinding,
   HydrationContext,
+  InsertBinding,
   IslandHydrationTrigger,
   IslandHost,
+  NestedBoundaryRef,
+  SpreadBinding,
+  TextBinding,
 };

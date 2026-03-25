@@ -15,6 +15,7 @@ import {
   unsetActiveSub,
   updateComputed,
 } from "../internal/system";
+import type { Link } from "../internal/system";
 import type { Computed } from "../types";
 
 function computedOper<T>(node: ComputedNode<T>): T {

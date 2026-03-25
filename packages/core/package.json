@@ -29,39 +29,39 @@
   ],
   "exports": {
     ".": {
+      "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.mts"
+      "require": "./dist/index.cjs"
     },
     "./jsx-runtime": {
+      "types": "./dist/jsx-runtime/index.d.mts",
       "import": "./dist/jsx-runtime/index.mjs",
-      "require": "./dist/jsx-runtime/index.cjs",
-      "types": "./dist/jsx-runtime/index.d.mts"
+      "require": "./dist/jsx-runtime/index.cjs"
     },
     "./jsx-dev-runtime": {
+      "types": "./dist/jsx-runtime/index.d.mts",
       "import": "./dist/jsx-runtime/index.mjs",
-      "require": "./dist/jsx-runtime/index.cjs",
-      "types": "./dist/jsx-runtime/index.d.mts"
+      "require": "./dist/jsx-runtime/index.cjs"
     },
     "./reactivity": {
+      "types": "./dist/reactivity/index.d.mts",
       "import": "./dist/reactivity/index.mjs",
-      "require": "./dist/reactivity/index.cjs",
-      "types": "./dist/reactivity/index.d.mts"
+      "require": "./dist/reactivity/index.cjs"
     },
     "./runtime": {
+      "types": "./dist/runtime/index.d.mts",
       "import": "./dist/runtime/index.mjs",
-      "require": "./dist/runtime/index.cjs",
-      "types": "./dist/runtime/index.d.mts"
+      "require": "./dist/runtime/index.cjs"
     },
     "./store": {
+      "types": "./dist/store/index.d.mts",
       "import": "./dist/store/index.mjs",
-      "require": "./dist/store/index.cjs",
-      "types": "./dist/store/index.d.mts"
+      "require": "./dist/store/index.cjs"
     },
     "./shared": {
+      "types": "./dist/shared/index.d.mts",
       "import": "./dist/shared/index.mjs",
-      "require": "./dist/shared/index.cjs",
-      "types": "./dist/shared/index.d.mts"
+      "require": "./dist/shared/index.cjs"
     }
   },
   "files": [

@@ -39,7 +39,7 @@
     "@stryker-mutator/core": "^9.5.1",
     "@stryker-mutator/vitest-runner": "^9.5.1",
     "@types/node": "24.2.0",
-    "@typescript-eslint/parser": "^8.46.2",
+    "@typescript-eslint/parser": "^9.0.0",
     "eslint": "catalog:",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-no-relative-import-paths": "^1.6.1",

@@ -29,7 +29,7 @@ import type { NestedTransformers } from "./implementation";
 interface ObjectExpressionLike {
   type: "ObjectExpression";
   properties: Array<{
-    key: { type: string; value?: unknown };
+    key: { type: string; name?: string; value?: unknown };
     value?: { type?: string; value?: unknown };
   }>;
 }
@@ -44,6 +44,13 @@ function asCallExpressionLike(node: ESTNode): CallExpressionLike {
 
 function asObjectExpressionLike(node: ESTNode): ObjectExpressionLike {
   return node as unknown as ObjectExpressionLike;
+}
+
+function hasIdentifierKey(
+  property: ObjectExpressionLike["properties"][number],
+  name: string,
+): boolean {
+  return property.key.type === "Identifier" && property.key.name === name;
 }
 
 const nested: NestedTransformers = {
@@ -129,8 +136,11 @@ describe("transform/tree", () => {
     );
 
     expect(dynamicParts).toHaveLength(1);
-    expect(dynamicParts[0]?.type).toBe("attr");
-    expect(dynamicParts[0]?.key).toBe("class");
+    const attrPart = dynamicParts[0];
+    expect(attrPart?.type).toBe("attr");
+    expect(attrPart && attrPart.type === "attr" ? attrPart.key : null).toBe(
+      "class",
+    );
   });
 
   it("processAttributes keeps non-reactive expression attributes as attr dynamic parts", () => {
@@ -153,9 +163,12 @@ describe("transform/tree", () => {
 
     expect(result.attrs).toEqual(nLit(null));
     expect(dynamicParts).toHaveLength(1);
-    expect(dynamicParts[0]?.type).toBe("attr");
-    expect(dynamicParts[0]?.key).toBe("data-render-mode");
-    expect(dynamicParts[0]?.expression).toEqual(nId("modeLabel"));
+    const attrPart = dynamicParts[0];
+    expect(attrPart?.type).toBe("attr");
+    expect(
+      attrPart && attrPart.type === "attr" ? attrPart.key : null,
+    ).toBe("data-render-mode");
+    expect(attrPart?.expression).toEqual(nId("modeLabel"));
   });
 
   it("jsxToTree keeps fragment dynamic text parts", () => {
@@ -395,7 +408,9 @@ describe("transform/tree", () => {
 
     const eventPart = result.dynamicParts.find((part) => part.type === "event");
     expect(eventPart).toBeDefined();
-    expect(eventPart?.key).toBe("click");
+    expect(eventPart && eventPart.type === "event" ? eventPart.key : null).toBe(
+      "click",
+    );
   });
 
   it("buildComponentCall injects island metadata for client:visible", () => {
@@ -719,6 +734,1524 @@ describe("transform/tree", () => {
 
     expect(() => buildComponentCall(component, state, nested)).toThrow(
       "cannot be combined with explicit data-dh-island metadata",
+    );
+  });
+
+  it("buildComponentCall passes single text child as children prop", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [text("Hello World")],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    expect(childrenProp?.value?.type).toBe("Literal");
+    expect(childrenProp?.value?.value).toBe("Hello World");
+  });
+
+  it("buildComponentCall passes multiple children as array", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [text("Hello"), text("World")],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    expect(childrenProp?.value?.type).toBe("ArrayExpression");
+  });
+
+  it("buildComponentCall handles expression container children", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Wrapper" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [expr(nId("content"))],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+  });
+
+  it("buildComponentCall skips JSXEmptyExpression children", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXExpressionContainer",
+          expression: { type: "JSXEmptyExpression" },
+        } as JSXExpressionContainer,
+        text("content"),
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    expect(childrenProp?.value?.type).toBe("Literal");
+    expect(childrenProp?.value?.value).toBe("content");
+  });
+
+  it("buildComponentCall skips whitespace-only JSXText children", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [text("  \n  "), text("actual content")],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    expect(childrenProp?.value?.value).toBe("actual content");
+  });
+
+  it("buildComponentCall handles JSXSpreadChild as child", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Wrapper" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXSpreadChild",
+          expression: nId("items"),
+        } as JSXSpreadChild,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+  });
+
+  it("buildComponentCall handles nested component element children", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Outer" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXElement",
+          openingElement: {
+            type: "JSXOpeningElement",
+            name: { type: "JSXIdentifier", name: "Inner" },
+            attributes: [],
+            selfClosing: true,
+          },
+          children: [],
+          closingElement: null,
+        } as JSXElement,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    // Inner component should be a CallExpression (buildComponentCall result)
+    expect(childrenProp?.value?.type).toBe("CallExpression");
+  });
+
+  it("buildComponentCall handles nested HTML element children", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXElement",
+          openingElement: {
+            type: "JSXOpeningElement",
+            name: { type: "JSXIdentifier", name: "div" },
+            attributes: [],
+            selfClosing: false,
+          },
+          children: [text("hello")],
+          closingElement: null,
+        } as JSXElement,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    // HTML child should be transformed by transformJSXNode (returns nId("CSR_NODE"))
+    expect((childrenProp?.value as { name?: string })?.name).toBe("CSR_NODE");
+  });
+
+  it("buildComponentCall handles SSR mode for HTML element children", () => {
+    const state = createInitialState("ssr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXElement",
+          openingElement: {
+            type: "JSXOpeningElement",
+            name: { type: "JSXIdentifier", name: "div" },
+            attributes: [],
+            selfClosing: false,
+          },
+          children: [text("hello")],
+          closingElement: null,
+        } as JSXElement,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    // SSR mode should use transformJSXForSSRNode (returns nId("SSR_NODE"))
+    expect((childrenProp?.value as { name?: string })?.name).toBe("SSR_NODE");
+  });
+
+  it("buildComponentCall handles JSXFragment children", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXFragment",
+          children: [text("alpha"), text("beta")],
+        } as JSXFragment,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    // Fragment flattens its children, so we should get an array of two text nodes
+    expect(childrenProp?.value?.type).toBe("ArrayExpression");
+  });
+
+  it("buildComponentCall handles fragment with expression container child", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXFragment",
+          children: [expr(nId("content"))],
+        } as JSXFragment,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+  });
+
+  it("buildComponentCall handles fragment with JSXSpreadChild", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXFragment",
+          children: [
+            {
+              type: "JSXSpreadChild",
+              expression: nId("items"),
+            } as JSXSpreadChild,
+          ],
+        } as JSXFragment,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+  });
+
+  it("buildComponentCall handles fragment with nested component element", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXFragment",
+          children: [
+            {
+              type: "JSXElement",
+              openingElement: {
+                type: "JSXOpeningElement",
+                name: { type: "JSXIdentifier", name: "Inner" },
+                attributes: [],
+                selfClosing: true,
+              },
+              children: [],
+              closingElement: null,
+            } as JSXElement,
+          ],
+        } as JSXFragment,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    expect(childrenProp?.value?.type).toBe("CallExpression");
+  });
+
+  it("buildComponentCall handles fragment with nested HTML element", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXFragment",
+          children: [
+            {
+              type: "JSXElement",
+              openingElement: {
+                type: "JSXOpeningElement",
+                name: { type: "JSXIdentifier", name: "span" },
+                attributes: [],
+                selfClosing: false,
+              },
+              children: [text("hi")],
+              closingElement: null,
+            } as JSXElement,
+          ],
+        } as JSXFragment,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    expect((childrenProp?.value as { name?: string })?.name).toBe("CSR_NODE");
+  });
+
+  it("buildComponentCall handles fragment with HTML element in SSR mode", () => {
+    const state = createInitialState("ssr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXFragment",
+          children: [
+            {
+              type: "JSXElement",
+              openingElement: {
+                type: "JSXOpeningElement",
+                name: { type: "JSXIdentifier", name: "span" },
+                attributes: [],
+                selfClosing: false,
+              },
+              children: [text("hi")],
+              closingElement: null,
+            } as JSXElement,
+          ],
+        } as JSXFragment,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    expect((childrenProp?.value as { name?: string })?.name).toBe("SSR_NODE");
+  });
+
+  it("buildComponentCall handles expression container with nested JSX as child", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        expr({
+          type: "ArrayExpression",
+          elements: [
+            {
+              type: "JSXElement",
+              openingElement: {
+                type: "JSXOpeningElement",
+                name: { type: "JSXIdentifier", name: "em" },
+                attributes: [],
+                selfClosing: false,
+              },
+              children: [{ type: "JSXText", value: "nested" }],
+              closingElement: null,
+            },
+          ],
+        }),
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+  });
+
+  it("buildComponentCall handles fragment with empty expression container child", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXFragment",
+          children: [
+            {
+              type: "JSXExpressionContainer",
+              expression: { type: "JSXEmptyExpression" },
+            } as JSXExpressionContainer,
+            text("after"),
+          ],
+        } as JSXFragment,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+    expect(childrenProp?.value?.value).toBe("after");
+  });
+
+  it("buildComponentCall handles fragment with expression containing nested JSX", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Layout" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXFragment",
+          children: [
+            expr({
+              type: "ArrayExpression",
+              elements: [
+                {
+                  type: "JSXElement",
+                  openingElement: {
+                    type: "JSXOpeningElement",
+                    name: { type: "JSXIdentifier", name: "em" },
+                    attributes: [],
+                    selfClosing: false,
+                  },
+                  children: [{ type: "JSXText", value: "nested" }],
+                  closingElement: null,
+                },
+              ],
+            }),
+          ],
+        } as JSXFragment,
+      ],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    const childrenProp = props?.properties.find(
+      (p) => hasIdentifierKey(p, "children"),
+    );
+    expect(childrenProp).toBeDefined();
+  });
+
+  it("processAttributes throws for colocated directive in SVG namespace", () => {
+    const state = createInitialState("csr");
+    state.currentElementNamespace = "svg";
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    expect(() =>
+      processAttributes(
+        [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onClick" },
+            },
+            value: expr(nId("handler")),
+          },
+        ],
+        dynamicParts,
+        [0],
+        state,
+        { strategy: null },
+      ),
+    ).toThrow("is only supported on HTML elements");
+  });
+
+  it("processAttributes throws for colocated directive in math namespace", () => {
+    const state = createInitialState("csr");
+    state.currentElementNamespace = "math";
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    expect(() =>
+      processAttributes(
+        [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onClick" },
+            },
+            value: expr(nId("handler")),
+          },
+        ],
+        dynamicParts,
+        [0],
+        state,
+        { strategy: null },
+      ),
+    ).toThrow("is only supported on HTML elements");
+  });
+
+  it("jsxToTree skips JSXEmptyExpression children in processChildren", () => {
+    const state = createInitialState("csr");
+    const tree = div([
+      {
+        type: "JSXExpressionContainer",
+        expression: { type: "JSXEmptyExpression" },
+      } as JSXExpressionContainer,
+      text("after"),
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+    // Only the text child should produce a dynamic part
+    expect(result.dynamicParts).toHaveLength(0);
+  });
+
+  it("jsxToTree treats expressions containing nested JSXFragment as insert dynamic parts", () => {
+    const state = createInitialState("csr");
+    const tree = div([
+      expr({
+        type: "ArrayExpression",
+        elements: [
+          {
+            type: "JSXFragment",
+            children: [{ type: "JSXText", value: "hello" }],
+          },
+        ],
+      }),
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(
+      true,
+    );
+  });
+
+  it("processAttributes throws for unsupported colocated directive format", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    expect(() =>
+      processAttributes(
+        [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onHover" },
+            },
+            value: expr(nId("handler")),
+          },
+        ],
+        dynamicParts,
+        [0],
+        state,
+        { strategy: null },
+      ),
+    ).toThrow("Unsupported colocated client directive");
+  });
+
+  it("processAttributes throws for unknown client directive on html element", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    expect(() =>
+      processAttributes(
+        [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "hover" },
+            },
+            value: null,
+          },
+        ],
+        dynamicParts,
+        [0],
+        state,
+        { strategy: null },
+      ),
+    ).toThrow("Unknown client:* directive");
+  });
+
+  it("processAttributes handles boolean attribute with null value", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    const result = processAttributes(
+      [
+        {
+          type: "JSXAttribute",
+          name: { type: "JSXIdentifier", name: "disabled" },
+          value: null,
+        },
+      ],
+      dynamicParts,
+      [0],
+      state,
+      { strategy: null },
+    );
+
+    const objExpression = asObjectExpressionLike(result.attrs);
+    expect(objExpression.properties).toHaveLength(1);
+    expect(objExpression.properties[0]?.key).toEqual(
+      expect.objectContaining({ type: "Identifier" }),
+    );
+  });
+
+  it("processAttributes handles spread attribute", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    const result = processAttributes(
+      [
+        {
+          type: "JSXSpreadAttribute",
+          argument: nId("props"),
+        },
+      ],
+      dynamicParts,
+      [0],
+      state,
+      { strategy: null },
+    );
+
+    expect(result.spreads).toHaveLength(1);
+  });
+
+  it("buildComponentCall handles spread attribute on component", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXSpreadAttribute",
+            argument: nId("props"),
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    // Should include spread element in properties
+    expect(props?.properties.length).toBeGreaterThan(0);
+  });
+
+  it("processAttributes throws for colocated directive with null value", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    expect(() =>
+      processAttributes(
+        [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onClick" },
+            },
+            value: null,
+          },
+        ],
+        dynamicParts,
+        [0],
+        state,
+        { strategy: null },
+      ),
+    ).toThrow("requires an inline handler expression");
+  });
+
+  it("processAttributes throws for colocated directive with JSXEmptyExpression value", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    expect(() =>
+      processAttributes(
+        [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onClick" },
+            },
+            value: {
+              type: "JSXExpressionContainer",
+              expression: { type: "JSXEmptyExpression" },
+            },
+          },
+        ],
+        dynamicParts,
+        [0],
+        state,
+        { strategy: null },
+      ),
+    ).toThrow("requires an inline handler expression");
+  });
+
+  it("processAttributes throws for mixed colocated client strategies", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    expect(() =>
+      processAttributes(
+        [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onClick" },
+            },
+            value: expr(nId("handler1")),
+          },
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "idle" },
+              name: { type: "JSXIdentifier", name: "onClick" },
+            },
+            value: expr(nId("handler2")),
+          },
+        ],
+        dynamicParts,
+        [0],
+        state,
+        { strategy: "load" },
+      ),
+    ).toThrow("Mixed colocated client strategies");
+  });
+
+  it("processAttributes handles JSXEmptyExpression attribute value skip", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    const result = processAttributes(
+      [
+        {
+          type: "JSXAttribute",
+          name: { type: "JSXIdentifier", name: "title" },
+          value: {
+            type: "JSXExpressionContainer",
+            expression: { type: "JSXEmptyExpression" },
+          },
+        },
+      ],
+      dynamicParts,
+      [0],
+      state,
+      { strategy: null },
+    );
+
+    // Empty expression should be skipped entirely
+    expect(result.attrs).toEqual(nLit(null));
+    expect(dynamicParts).toHaveLength(0);
+  });
+
+  it("buildComponentCall handles attribute with JSXExpressionContainer containing JSX", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Modal" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "header" },
+            value: {
+              type: "JSXExpressionContainer",
+              expression: {
+                type: "JSXElement",
+                openingElement: {
+                  type: "JSXOpeningElement",
+                  name: { type: "JSXIdentifier", name: "h1" },
+                  attributes: [],
+                  selfClosing: false,
+                },
+                children: [{ type: "JSXText", value: "Title" }],
+                closingElement: null,
+              },
+            },
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    expect(props?.properties.length).toBeGreaterThan(0);
+  });
+
+  it("buildComponentCall throws for multiple client directives on same component", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "visible" },
+            },
+            value: null,
+          },
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "load" },
+            },
+            value: null,
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "Multiple client:* directives are not allowed",
+    );
+  });
+
+  it("buildComponentCall handles attribute with JSXEmptyExpression value", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "title" },
+            value: {
+              type: "JSXExpressionContainer",
+              expression: { type: "JSXEmptyExpression" },
+            },
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    // JSXEmptyExpression attribute should be skipped
+    expect(result.arguments[0]?.properties).toHaveLength(0);
+  });
+
+  it("buildComponentCall injects client:media with string literal value", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "media" },
+            },
+            value: {
+              type: "Literal",
+              value: "(max-width: 768px)",
+              raw: '"(max-width: 768px)"',
+            },
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    expect(
+      props?.properties.some(
+        (p) =>
+          p.key.type === "Literal" &&
+          p.key.value === ISLAND_METADATA_ATTRIBUTE,
+      ),
+    ).toBe(true);
+    expect(
+      props?.properties.some(
+        (p) =>
+          p.key.type === "Literal" &&
+          p.key.value === ISLAND_VALUE_METADATA_ATTRIBUTE &&
+          p.value?.value === "(max-width: 768px)",
+      ),
+    ).toBe(true);
+  });
+
+  it("jsxToTree handles element with SVG namespace propagation", () => {
+    const state = createInitialState("csr");
+    const tree: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "svg" },
+        attributes: [],
+        selfClosing: false,
+      },
+      children: [
+        {
+          type: "JSXElement",
+          openingElement: {
+            type: "JSXOpeningElement",
+            name: { type: "JSXIdentifier", name: "path" },
+            attributes: [],
+            selfClosing: true,
+          },
+          children: [],
+          closingElement: null,
+        } as JSXElement,
+      ],
+      closingElement: null,
+    };
+
+    const result = jsxToTree(tree, state, nested);
+    expect(result.tree).toBeDefined();
+  });
+
+  it("buildComponentCall handles unsupported colocated directive on component", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onHover" },
+            },
+            value: expr(nId("handler")),
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "Unsupported colocated client directive",
+    );
+  });
+
+  it("buildComponentCall handles unknown client directive on component", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "visibile" },
+            },
+            value: null,
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "Unknown client:* directive",
+    );
+  });
+
+  it("jsxToTree transforms nested component in expression via transformNestedJSX", () => {
+    const state = createInitialState("csr");
+    const tree = div([
+      expr({
+        type: "ArrayExpression",
+        elements: [
+          {
+            type: "JSXElement",
+            openingElement: {
+              type: "JSXOpeningElement",
+              name: { type: "JSXIdentifier", name: "Counter" },
+              attributes: [],
+              selfClosing: true,
+            },
+            children: [],
+            closingElement: null,
+          },
+        ],
+      }),
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(
+      true,
+    );
+  });
+
+  it("jsxToTree transforms nested HTML element in SSR mode via transformJSXForSSRNode", () => {
+    const state = createInitialState("ssr");
+    const tree = div([
+      expr({
+        type: "ArrayExpression",
+        elements: [
+          {
+            type: "JSXElement",
+            openingElement: {
+              type: "JSXOpeningElement",
+              name: { type: "JSXIdentifier", name: "span" },
+              attributes: [],
+              selfClosing: false,
+            },
+            children: [{ type: "JSXText", value: "hello" }],
+            closingElement: null,
+          },
+        ],
+      }),
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(
+      true,
+    );
+  });
+
+  it("jsxToTree transforms nested JSXFragment in SSR mode via transformJSXForSSRNode", () => {
+    const state = createInitialState("ssr");
+    const tree = div([
+      expr({
+        type: "LogicalExpression",
+        operator: "&&",
+        left: nId("visible"),
+        right: {
+          type: "JSXFragment",
+          children: [{ type: "JSXText", value: "fragment content" }],
+        },
+      }),
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+    expect(result.dynamicParts.some((part) => part.type === "insert")).toBe(
+      true,
+    );
+  });
+
+  it("jsxToTree in SSR mode uses transformJSXForSSRNode for direct JSXElement children", () => {
+    const state = createInitialState("ssr");
+    const tree = div([
+      {
+        type: "JSXElement",
+        openingElement: {
+          type: "JSXOpeningElement",
+          name: { type: "JSXIdentifier", name: "span" },
+          attributes: [],
+          selfClosing: false,
+        },
+        children: [text("hello")],
+        closingElement: null,
+      } as JSXElement,
+    ]);
+
+    const result = jsxToTree(tree, state, nested);
+    expect(result.tree).toBeDefined();
+  });
+
+  it("processAttributes handles string literal attribute value", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    const result = processAttributes(
+      [
+        {
+          type: "JSXAttribute",
+          name: { type: "JSXIdentifier", name: "className" },
+          value: { type: "Literal", value: "active", raw: '"active"' },
+        },
+      ],
+      dynamicParts,
+      [0],
+      state,
+      { strategy: null },
+    );
+
+    const objExpression = asObjectExpressionLike(result.attrs);
+    expect(objExpression.properties).toHaveLength(1);
+    expect(dynamicParts).toHaveLength(0);
+  });
+
+  it("buildComponentCall handles string literal attribute value on component", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "label" },
+            value: { type: "Literal", value: "clicks", raw: '"clicks"' },
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    expect(props?.properties).toHaveLength(1);
+  });
+
+  it("buildComponentCall handles boolean (null value) attribute on component", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "disabled" },
+            value: null,
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    expect(props?.properties).toHaveLength(1);
+    // Boolean attribute with null value gets converted to { disabled: true }
+    expect(props?.properties[0]?.value?.value).toBe(true);
+  });
+
+  it("buildComponentCall handles expression attribute on component", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "count" },
+            value: {
+              type: "JSXExpressionContainer",
+              expression: nId("count"),
+            },
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    expect(props?.properties).toHaveLength(1);
+  });
+
+  it("buildComponentCall handles namespaced attribute key on component", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Icon" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "xlink" },
+              name: { type: "JSXIdentifier", name: "href" },
+            },
+            value: { type: "Literal", value: "#icon", raw: '"#icon"' },
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = result.arguments[0];
+    expect(props?.properties).toHaveLength(1);
+  });
+
+  it("buildComponentCall throws for reserved client metadata on component", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "data-dh-client-target" },
+            value: { type: "Literal", value: "manual", raw: '"manual"' },
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "data-dh-client-target is compiler-reserved metadata",
+    );
+  });
+
+  it("buildComponentCall skips attribute with unsupported value type", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "title" },
+            // Unsupported value type (not null, not Literal, not JSXExpressionContainer)
+            value: { type: "TemplateLiteral" } as unknown as ESTNode,
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    // Unsupported value type should be skipped (attribute ignored)
+    expect(result.arguments[0]?.properties).toHaveLength(0);
+  });
+
+  it("processAttributes throws for unknown client directive via JSXIdentifier name", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    expect(() =>
+      processAttributes(
+        [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "client:unknown" },
+            value: null,
+          },
+        ],
+        dynamicParts,
+        [0],
+        state,
+        { strategy: null },
+      ),
+    ).toThrow("Unknown client:* directive");
+  });
+
+  it("buildComponentCall throws for unknown client directive via JSXIdentifier name", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: { type: "JSXIdentifier", name: "client:unknown" },
+            value: null,
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "Unknown client:* directive",
     );
   });
 });

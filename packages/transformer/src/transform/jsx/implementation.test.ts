@@ -127,4 +127,145 @@ describe("transform/jsx", () => {
     expect(isValidIdentifier("className")).toBe(true);
     expect(isValidIdentifier("data-foo")).toBe(false);
   });
+
+  it("normalizeIslandsDirectiveValue extracts expression from JSXExpressionContainer for interaction", () => {
+    const innerLiteral = {
+      type: "Literal",
+      value: "mouseover",
+      raw: '"mouseover"',
+    };
+    const result = normalizeIslandsDirectiveValue("interaction", {
+      type: "JSXExpressionContainer",
+      expression: innerLiteral,
+    });
+    expect(result).toEqual(innerLiteral);
+  });
+
+  it("normalizeIslandsDirectiveValue extracts expression from JSXExpressionContainer for media", () => {
+    const innerLiteral = {
+      type: "Literal",
+      value: "(max-width: 768px)",
+      raw: '"(max-width: 768px)"',
+    };
+    const result = normalizeIslandsDirectiveValue("media", {
+      type: "JSXExpressionContainer",
+      expression: innerLiteral,
+    });
+    expect(result).toEqual(innerLiteral);
+  });
+
+  it("normalizeIslandsDirectiveValue throws for JSXEmptyExpression in interaction", () => {
+    expect(() =>
+      normalizeIslandsDirectiveValue("interaction", {
+        type: "JSXExpressionContainer",
+        expression: { type: "JSXEmptyExpression" },
+      }),
+    ).toThrow("client:interaction accepts only string literal event types");
+  });
+
+  it("normalizeIslandsDirectiveValue throws for non-string literal in interaction", () => {
+    expect(() =>
+      normalizeIslandsDirectiveValue("interaction", {
+        type: "JSXExpressionContainer",
+        expression: { type: "Literal", value: 42, raw: "42" },
+      }),
+    ).toThrow("client:interaction accepts only string literal event types");
+  });
+
+  it("normalizeIslandsDirectiveValue throws for non-string expression in media", () => {
+    expect(() =>
+      normalizeIslandsDirectiveValue("media", {
+        type: "JSXExpressionContainer",
+        expression: { type: "Identifier", name: "someVar" },
+      }),
+    ).toThrow("client:media requires a string literal media query");
+  });
+
+  it("isComponentTag returns false for JSXNamespacedName", () => {
+    expect(
+      isComponentTag({
+        type: "JSXNamespacedName",
+        namespace: { type: "JSXIdentifier", name: "svg" },
+        name: { type: "JSXIdentifier", name: "path" },
+      }),
+    ).toBe(false);
+  });
+
+  it("getTagName returns colon-separated name for namespaced names", () => {
+    expect(
+      getTagName({
+        type: "JSXNamespacedName",
+        namespace: { type: "JSXIdentifier", name: "svg" },
+        name: { type: "JSXIdentifier", name: "path" },
+      }),
+    ).toBe("svg:path");
+  });
+
+  it("getIslandsDirectiveName returns null for non-client directives", () => {
+    expect(
+      getIslandsDirectiveName({
+        type: "JSXIdentifier",
+        name: "onClick",
+      }),
+    ).toBe(null);
+  });
+
+  it("isClientDirectiveNamespace returns false for non-client namespace", () => {
+    expect(
+      isClientDirectiveNamespace({
+        type: "JSXNamespacedName",
+        namespace: { type: "JSXIdentifier", name: "xlink" },
+        name: { type: "JSXIdentifier", name: "href" },
+      }),
+    ).toBe(false);
+  });
+
+  it("isClientDirectiveNamespace detects JSXIdentifier starting with client:", () => {
+    expect(
+      isClientDirectiveNamespace({
+        type: "JSXIdentifier",
+        name: "client:load",
+      }),
+    ).toBe(true);
+  });
+
+  it("getColocatedClientDirective returns null for non-colocated directive", () => {
+    expect(
+      getColocatedClientDirective({
+        type: "JSXNamespacedName",
+        namespace: { type: "JSXIdentifier", name: "xlink" },
+        name: { type: "JSXIdentifier", name: "href" },
+      }),
+    ).toBe(null);
+  });
+
+  it("getColocatedClientDirective returns null for non-onClick event", () => {
+    expect(
+      getColocatedClientDirective({
+        type: "JSXNamespacedName",
+        namespace: { type: "JSXIdentifier", name: "load" },
+        name: { type: "JSXIdentifier", name: "onHover" },
+      }),
+    ).toBe(null);
+  });
+
+  it("normalizeIslandsDirectiveValue returns null for bare load directive", () => {
+    expect(normalizeIslandsDirectiveValue("load", null)).toBeNull();
+  });
+
+  it("normalizeIslandsDirectiveValue returns null for bare idle directive", () => {
+    expect(normalizeIslandsDirectiveValue("idle", null)).toBeNull();
+  });
+
+  it("normalizeIslandsDirectiveValue returns null for bare visible directive", () => {
+    expect(normalizeIslandsDirectiveValue("visible", null)).toBeNull();
+  });
+
+  it("jsxNameToExpression converts JSXIdentifier to Identifier", () => {
+    const expr = jsxNameToExpression({
+      type: "JSXIdentifier",
+      name: "Counter",
+    });
+    expect(expr).toEqual(nId("Counter"));
+  });
 });

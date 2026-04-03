@@ -45,13 +45,24 @@ import type {
 import type { TransformState } from "@/transform/state/implementation";
 import { createClientTargetId } from "@/transform/state/implementation";
 
-interface DynamicPart {
-  type: "text" | "attr" | "event" | "spread" | "insert";
-  isComponent?: boolean;
-  path: number[];
-  expression: ESTNode;
-  key?: string;
-}
+type DynamicPart =
+  | {
+      type: "text" | "spread";
+      path: number[];
+      expression: ESTNode;
+    }
+  | {
+      type: "attr" | "event";
+      path: number[];
+      expression: ESTNode;
+      key: string;
+    }
+  | {
+      type: "insert";
+      path: number[];
+      expression: ESTNode;
+      isComponent?: boolean;
+    };
 
 interface TreeResult {
   tree: ESTNode;
@@ -108,6 +119,7 @@ function getRawAttributeNameForDiagnostics(
     return `${name.namespace.name}:${name.name.name}`;
   }
 
+  /* c8 ignore next @preserve -- defensive guard: JSXAttribute names are always identifiers or namespaces */
   return null;
 }
 
@@ -115,6 +127,7 @@ function getUnsupportedColocatedDirectiveError(
   name: JSXAttribute["name"],
 ): string | null {
   const rawName = getRawAttributeNameForDiagnostics(name);
+  /* c8 ignore next @preserve -- defensive guard: parser-produced JSXAttribute names always normalize to a string */
   if (rawName === null) {
     return null;
   }
@@ -258,6 +271,7 @@ function buildComponentCall(
     }
 
     const key = getAttributeName(attr.name);
+    /* c8 ignore next @preserve -- defensive guard: parser-produced JSXAttribute names always normalize to a string */
     if (key === null) continue;
 
     if (RESERVED_ISLAND_METADATA_KEYS.has(key as never)) {
@@ -559,6 +573,7 @@ function processAttributes(
     }
 
     const key = getAttributeName(attr.name);
+    /* c8 ignore next @preserve -- defensive guard: parser-produced JSXAttribute names always normalize to a string */
     if (key === null) continue;
 
     const reservedClientMetadataError = getReservedClientMetadataError(key);
@@ -882,6 +897,7 @@ function getAttributeName(name: JSXAttribute["name"]): string | null {
     return `${name.namespace.name}:${name.name.name}`;
   }
 
+  /* c8 ignore next @preserve -- defensive guard: JSXAttribute names are always identifiers or namespaces */
   return null;
 }
 

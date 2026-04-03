@@ -147,6 +147,7 @@ function getRawAttributeName(name: JSXAttribute["name"]): string | null {
     return name.name;
   }
 
+  /* c8 ignore next @preserve -- defensive guard: JSXAttribute names are always identifiers or namespaces */
   return null;
 }
 
@@ -155,6 +156,7 @@ function getColocatedClientDirective(name: JSXAttribute["name"]): {
   event: typeof DEFAULT_INTERACTION_EVENT_TYPE;
 } | null {
   const rawName = getRawAttributeName(name);
+  /* c8 ignore next @preserve -- defensive guard: parser-produced JSXAttribute names always normalize to a string */
   if (rawName === null) {
     return null;
   }

@@ -88,7 +88,7 @@ function transformJSXNode(
         const attrUpdate = nExprStmt(
           nCall(nId("setAttr"), [
             nodeId,
-            nLit(part.key ?? ""),
+            nLit(part.key),
             part.expression,
           ]),
         );
@@ -114,7 +114,7 @@ function transformJSXNode(
         updateStatements.push(
           nExprStmt(
             nCall(nId("event"), [
-              nLit(part.key ?? ""),
+              nLit(part.key),
               nodeId,
               part.expression,
             ]),

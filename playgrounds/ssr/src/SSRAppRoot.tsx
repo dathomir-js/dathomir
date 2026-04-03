@@ -1,17 +1,100 @@
 import { defineComponent } from "@dathomir/components";
 
 import { getCurrentStore, withStore } from "@dathomir/core";
-import { renderPlaygroundPage } from "./App";
 import { createDemoStore } from "./demoStore";
+import { PlaygroundShell } from "./PlaygroundShell";
+import { ALSPage } from "./pages/ALSPage";
+import { ComponentSSRPage } from "./pages/ComponentSSRPage";
+import { GlobalStylesPage } from "./pages/GlobalStylesPage";
+import { HydrationPlanPage } from "./pages/HydrationPlanPage";
+import { IslandsDirectivePage } from "./pages/IslandsDirectivePage";
+import { IslandsRuntimePage } from "./pages/IslandsRuntimePage";
+import { OverviewPage } from "./pages/OverviewPage";
+import { StoreBoundariesPage } from "./pages/StoreBoundariesPage";
 import type { PlaygroundRoutePath } from "./routes";
+import { getPlaygroundRouteOrDefault } from "./routes";
 
-function renderSSRPlaygroundContent(props: {
+type PlaygroundPageRenderProps = {
+  requestStoreAppId: string;
+  pagePayloadJson: string;
+};
+
+function renderALSPlaygroundPage(props: PlaygroundPageRenderProps): JSX.Element {
+  return (
+    <ALSPage
+      requestStoreAppId={props.requestStoreAppId}
+      pagePayloadJson={props.pagePayloadJson}
+    />
+  );
+}
+
+function renderStoreBoundariesPlaygroundPage(): JSX.Element {
+  return <StoreBoundariesPage />;
+}
+
+function renderComponentSSRPlaygroundPage(): JSX.Element {
+  return <ComponentSSRPage />;
+}
+
+function renderGlobalStylesPlaygroundPage(): JSX.Element {
+  return <GlobalStylesPage />;
+}
+
+function renderIslandsDirectivePlaygroundPage(
+  props: PlaygroundPageRenderProps,
+): JSX.Element {
+  return <IslandsDirectivePage pagePayloadJson={props.pagePayloadJson} />;
+}
+
+function renderHydrationPlanPlaygroundPage(): JSX.Element {
+  return <HydrationPlanPage />;
+}
+
+function renderIslandsRuntimePlaygroundPage(): JSX.Element {
+  return <IslandsRuntimePage />;
+}
+
+function renderOverviewPlaygroundPage(): JSX.Element {
+  return <OverviewPage />;
+}
+
+const playgroundPageRenderers = {
+  "/als": renderALSPlaygroundPage,
+  "/store-boundaries": renderStoreBoundariesPlaygroundPage,
+  "/component-ssr": renderComponentSSRPlaygroundPage,
+  "/global-styles": renderGlobalStylesPlaygroundPage,
+  "/islands-directive": renderIslandsDirectivePlaygroundPage,
+  "/islands-runtime": renderIslandsRuntimePlaygroundPage,
+  "/hydration-plan": renderHydrationPlanPlaygroundPage,
+  "/": renderOverviewPlaygroundPage,
+} satisfies Record<PlaygroundRoutePath, (props: PlaygroundPageRenderProps) => JSX.Element>;
+
+function renderResolvedPlaygroundPage(
+  routePath: PlaygroundRoutePath,
+  props: PlaygroundPageRenderProps,
+): JSX.Element {
+  return playgroundPageRenderers[routePath](props);
+}
+
+function renderPlaygroundPageShell(props: {
   requestId: string;
   requestStoreAppId: string;
   routePath: PlaygroundRoutePath;
   pagePayloadJson: string;
 }) {
-  return renderPlaygroundPage(props);
+  const route = getPlaygroundRouteOrDefault(props.routePath);
+  const pageContent = renderResolvedPlaygroundPage(route.path, {
+    requestStoreAppId: props.requestStoreAppId,
+    pagePayloadJson: props.pagePayloadJson,
+  });
+
+  return (
+    <PlaygroundShell
+      routePath={route.path}
+      requestId={props.requestId}
+      renderPage={() => pageContent}
+    />
+  );
 }
 
 export const SSRAppRoot = defineComponent(
@@ -23,15 +106,20 @@ export const SSRAppRoot = defineComponent(
       count: 3,
       theme: "light",
     });
+    const routePath = props.routePath.value as PlaygroundRoutePath;
+    const route = getPlaygroundRouteOrDefault(routePath);
+    const pageContent = renderResolvedPlaygroundPage(route.path, {
+      requestStoreAppId: props.requestStoreAppId.value,
+      pagePayloadJson: props.pagePayloadJson.value,
+    });
 
-    return withStore(store, () =>
-      renderSSRPlaygroundContent({
-        requestId: props.requestId.value,
-        requestStoreAppId: props.requestStoreAppId.value,
-        routePath: props.routePath.value as PlaygroundRoutePath,
-        pagePayloadJson: props.pagePayloadJson.value,
-      }),
-    );
+    return withStore(store, () => (
+      <PlaygroundShell
+        routePath={route.path}
+        requestId={props.requestId.value}
+        renderPage={() => pageContent}
+      />
+    ));
   },
   {
     hydrate: ({ host, props, store }) => {
@@ -48,7 +136,7 @@ export const SSRAppRoot = defineComponent(
       shadowRoot.innerHTML = "";
       shadowRoot.append(
         withStore(store, () =>
-          renderSSRPlaygroundContent({
+          renderPlaygroundPageShell({
             requestId: props.requestId.value,
             requestStoreAppId: props.requestStoreAppId.value,
             routePath,

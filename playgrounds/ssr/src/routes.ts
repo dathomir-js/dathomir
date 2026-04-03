@@ -48,6 +48,13 @@ const playgroundRoutes = [
     description:
       "Shows runtime-side `hydrateIslands()` scheduling plus colocated `load:onClick`, `interaction:onClick`, `idle:onClick`, and `visible:onClick` demos.",
   },
+  {
+    path: "/hydration-plan",
+    label: "Hydration Plan",
+    title: "Hydration Plan Generation & Compile Guard",
+    description:
+      "Demonstrates planFactory (Path A) vs fallback rerender (Path B), nested islands, and the unsupported+colocated compile-time guard.",
+  },
 ] as const;
 
 type PlaygroundRoute = (typeof playgroundRoutes)[number];

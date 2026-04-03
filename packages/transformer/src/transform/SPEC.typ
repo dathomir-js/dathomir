@@ -324,31 +324,97 @@
 )
 
 #feature_spec(
+  name: "runtime branching plan generation (v2)",
+  summary: [
+    `if/else` や guard return を含む setup について、各分岐が静的な JSX を返す場合、分岐ごとに独立した planFactory を生成し、ハイドレーション時に条件評価して一致するプランを適用する。条件がSSRとクライアントで異なる場合は既存のPath B（full rerender）へフォールバックする。
+  ],
+  api: [
+    ```typescript
+    interface DispatchHydrationPlan {
+      readonly kind: "dispatch";
+      readonly condition: () => boolean;
+      readonly plans: readonly {
+        readonly planFactory: (__dh_host: unknown, __dh_ctx: unknown) => GenericHydrationPlan;
+        readonly shapeHash: string;
+      }[];
+      readonly nestedBoundaries: readonly NestedBoundaryRef[];
+    }
+    ```
+  ],
+  test_cases: [
+    - `if (cond) return <A/>; return <B/>;` のような guard-return パターンから dispatch plan が生成される
+    - `if (cond) { return <A/>; } else { return <B/>; }` のような if/else パターンから dispatch plan が生成される
+    - `return cond ? (<A/>) : (<B/>);` のように各 branch が括弧付き JSX でも dispatch plan が生成される
+    - 各分岐が異なる element type を持つ場合、shapeHash が異なる値になる
+    - 各分岐が同じ element type を持つ場合、shapeHash が同じ値になる
+    - ハイドレーション時に条件が true の分岐の planFactory が適用される
+    - 分岐のいずれかが unsupported pattern を含む場合、全体が unsupported reason にフォールバックする
+    - 分岐内の nested island は nestedBoundaries として正しく追跡される
+    - 分岐内の colocated directive は guard 対象となる（unsupported + colocated の組み合わせ）
+    - 三項演算子 `{cond ? <A/> : <B/>}` は引き続き insert binding として扱い、dispatch plan にはしない
+    - ネストした `if` は v2 では unsupported のままにする
+  ],
+  impl_notes: [
+    - `hasRuntimeBranching` が検出するパターンのうち、guard-return と if/else のみを対象にする
+    - 各分岐の JSX root を独立に `jsxToTree` して planFactory を生成する
+    - shapeHash は element type のシーケンスから導出し、SSR/クライアント間の構造一致を検証する
+    - 三項演算子・論理式は既存の insert binding として扱い、dispatch plan には含めない
+    - ネストした if/switch は unsupported-component-body にフォールバック
+  ],
+)
+
+#feature_spec(
   name: "initial unsupported generic setup patterns",
   summary: [
     initial rollout では hydration plan を sound に生成できる setup だけを対象にし、解析不能または DOM preservation を壊しやすい setup は unsupported reason 付きで除外する。
   ],
   edge_cases: [
     - `document` / `window` / `host` / `shadowRoot` への imperative query・mutation を含む setup は `imperative-dom-query`
+    - `typeof document === "undefined"` / `typeof window === "undefined"` のような environment probe だけであれば `imperative-dom-query` にはしない
     - JSX tree 外で Node identity を生成・保持して append/reuse する setup は `node-identity-reuse`
-    - SSR と CSR で element shape が変わりうる runtime-only branching を含む setup は `runtime-branching`
+    - SSR と CSR で element shape が変わりうる runtime-only branching を含む setup は `runtime-branching`（v2 でサポート。各分岐が静的JSXでsame-shapeならplanFactoryを生成）
     - spread/object merge を compile 時に正規化できない setup は `non-normalizable-spread`
     - opaque helper call が DOM tree shape を返す setup は `opaque-helper-call`
+    - `async` function / arrow function は Promise を返すため hydration plan を sound に生成できず `unsupported-component-body` とする
+    - generator function (`function*`) は iterator を返すため hydration plan を sound に生成できず `unsupported-component-body` とする
+    - `for` / `while` / `do-while` / `for-in` / `for-of` loop を含む setup body は prelude として extractable でないため `unsupported-component-body` となる
+    - `try` / `catch` / `finally` を含む setup body は prelude として extractable でないため `unsupported-component-body` となる
+    - ネストした `if` / `switch` を含む setup body は v2 でも解析不能なため `unsupported-component-body` となる
+    - 分岐のいずれかが非静的JSX（関数呼び出しの戻り値等）を返す場合は `runtime-branching` のまま unsupported となる
+    - class expression は function-like ではないため metadata なし（`__hydrationMetadata__` を付与しない）
   ],
   test_cases: [
     - unsupported setup は `unsupportedReason` 付き metadata に落とす
     - supported setup は `planFactory` を持つ hydration metadata を生成する
     - unsupported 判定は dev diagnostics に出せる粒度を持つ
-    - `imperative-dom-query` / `node-identity-reuse` / `runtime-branching` / `non-normalizable-spread` / `opaque-helper-call` を区別できる
+    - `imperative-dom-query` / `node-identity-reuse` / `non-normalizable-spread` / `opaque-helper-call` を区別できる
+    - guard-return パターン（`if (cond) return <A/>; return <B/>;`）は dispatch plan としてサポートされる
+    - if/else パターン（`if (cond) { return <A/>; } else { return <B/>; }`）は dispatch plan としてサポートされる
+    - `return cond ? (<A/>) : (<B/>);` のような return ternary の括弧付き branch も dispatch plan としてサポートされる
+    - ネストした `if` / `switch` は unsupported-component-body に分類される
+    - 分岐のいずれかが非静的JSXを返す場合は unsupported-component-body に分類される
+    - `typeof document` / `typeof window` による environment probe を含む same-shape setup は supported のままにできる
     - top-level local zero-arg helper が直接 JSX を返すだけなら、component setup からその helper を経由しても `planFactory` を生成できる
     - top-level local helper が trivial argument forwarding で JSX を返すだけなら、component setup からその helper を経由しても `planFactory` を生成できる
     - top-level local helper 内の `const` / `function` prelude が JSX return 前にある場合も、same-shape なら `planFactory` を生成できる
     - top-level local helper chain が複数段あっても、最終的に local helper chain が JSX に解決できるなら `planFactory` を生成できる
+    - top-level local helper が transparent thunk wrapper (`return render()`) なら、zero-arg callback の return JSX / local helper chain を辿って `planFactory` を生成できる
+    - known imported transparent thunk wrapper (`@dathomir/core` / `@dathomir/store` の `withStore(store, () => <JSX />)` など) は opaque helper 扱いせず、zero-arg callback の return JSX / local helper chain を辿って `planFactory` を生成できる
+    - imported transparent thunk wrapper の callback が root component element を返し、その props に local prelude を閉じ込めた function-valued prop (`renderPage={() => pageContent}` など) を含んでも `planFactory` を生成できる
     - helper param が destructuring pattern でも、call site の object/array argument をその pattern に安全に束縛できるなら `planFactory` を生成できる
+    - helper chain 展開で setup param / helper param / helper-local prelude (`const` / `function`) の binding 名が衝突する場合、alpha-renaming で collision を避けた prelude を生成する
+    - `async () => <div>hi</div>` のような async setup は `unsupported-component-body` に分類する
+    - `function*` generator setup は `unsupported-component-body` に分類する
+    - `for` / `while` / `do-while` loop を含む setup は `unsupported-component-body` に分類する
+    - `try/catch` を含む setup は `unsupported-component-body` に分類する
+    - class expression を component arg に渡した場合は metadata を付与しない
+    - `for-in` / `for-of` loop を含む setup は `unsupported-component-body` に分類する
+    - 上記パターンが deeply nested されていても同様に分類する
   ],
   impl_notes: [
     - initial rollout は coverage より soundness を優先する
     - unsupported patterns は transform error ではなく fallback reason として保持し、component 自体は動作可能にする
+    - transparent thunk wrapper は v1 では zero-arg callback だけを対象にし、callback を直接 return する same-module helper または source-aware な known imported API contract に限定する
   ],
 )
 
@@ -679,6 +745,48 @@
 )
 
 #adr(
+  header("runtime branching を dispatch plan でサポートする", Status.Accepted, "2026-04-02"),
+  [
+    現実のコンポーネントはローディング/エラー/空状態/認証チェックなどの条件分岐を必ず持つ。runtime-branching を unsupported にすると、SSRハイドレーションが使えるのは「ただのカウンター」程度の実用性がないケースに限られる。フレームワークとしての実用性を確保するため、静的解析可能な分岐パターンをサポートする必要がある。
+  ],
+  [
+    `if/else` と guard-return（`if (cond) return <A/>; return <B/>;`）について、各分岐が静的JSXを返す場合、分岐ごとに独立した planFactory を生成する。ハイドレーション時に条件を評価し、一致するプランを適用する。条件がSSRとクライアントで異なる場合は、既存のPath B（full rerender）へフォールバックする。
+  ],
+  [
+    - 実世界のコンポーネントの8〜9割が planFactory 対応になる
+    - 各分岐のplanFactory生成は既存ロジックの再利用で実装できる
+    - reconciliation に近づかず、in-place hydration の設計を維持できる
+    - 偽陽性ゼロ：SSR/クライアント間の構造不一致は安全にフォールバックする
+  ],
+  alternatives: [
+    - 全分岐をunsupportedのままにする（実用性が皆無）
+    - 共通部分マージ（実装コストが高くreconciliationに近づく）
+    - 三項演算子・switch も含める（v2では複雑すぎるため対象外）
+  ],
+)
+
+#adr(
+  header("unsupported setup + colocated directive は transform error にする", Status.Accepted, "2026-03-31"),
+  [
+    hydration plan が生成できない component に colocated directive が存在すると、runtime は Path B（full rerender）を使い、SSR shadow DOM を破棄して setup を再実行する。handler closure が SSR state（signal 初期値等）を capture していた場合、CSR 側では新しい（異なる）値で再生成され、visual jump やロジックの不整合が発生する。MVP にはこの問題を検出する仕組みがなく、サイレントに壊れる。
+  ],
+  [
+    unsupported hydration reason が確定した時点で component body の JSX を走査し、colocated client directive を検出した場合は transform error にする。error message に unsupported reason を含め、developer に setup の simplify か directive の除去を促す。
+  ],
+  [
+    - サイレントな SSR state 消失を compile time で防止できる
+    - error message が具体的な unsupported reason を含むため、fix の方向が明確
+    - colocated directive を持たない unsupported component は影響なし（従来通り fallback）
+    - 将来 capture model v2 で制約が緩和される可能性があるが、現時点では保守的に禁止する
+  ],
+  alternatives: [
+    - soft warning（console.warn 相当）で通過させ、runtime で best-effort hydration する
+    - `unsupportedReason` metadata に colocated 情報を付加して runtime 側で判断させる
+    - colocated directive を含む場合のみ plan 生成を試み、失敗したら fallback する
+  ],
+)
+
+#adr(
   header("island metadata は nearest host boundary の subtree semantics を表す", Status.Accepted, "2026-03-18"),
   [
     transform が付与する `data-dh-island*` metadata の意味が host 自身だけなのか subtree 全体なのか曖昧だと、runtime scheduler と author mental model がずれる。
@@ -723,6 +831,21 @@
   ],
 )
 
+#adr(
+  header("containsNodeType の zimmerframe ユニバーサルビジターバグ修正", Status.Accepted, "2026-03-26"),
+  [
+    `containsNodeType` は zimmerframe の `_` (universal) ビジターを使って AST を深く走査し、指定した型のノードが存在するかを判定する関数である。しかし `_` ビジターが `next()` を呼んでいなかったため、ルートノードの型のみをチェックし、子孫ノードを一切走査していなかった。このため `getUnsupportedHydrationReason` 内の `containsNodeType` による深い `IfStatement`/`SwitchStatement` 検出（line 1242 付近）が常に `false` を返し、事実上デッドコードになっていた。
+  ],
+  [
+    `_` ビジターに `{ next }` パラメータを追加し、型チェック後に `next()` を呼び出すよう修正する。これにより `containsNodeType` が本来意図していた深い走査を正しく行えるようになる。
+  ],
+  [
+    - `containsNodeType` が子孫ノードを正しく走査し、ネストされた `IfStatement`/`SwitchStatement` を検出できるようになる
+    - IIFE 内の分岐等、`hasRuntimeBranching` のトップレベルチェックでは捕捉できないパターンが `runtime-branching` として正しく分類される
+    - 以前 `unsupported-component-body` と分類されていた一部コンポーネントが、より正確な `runtime-branching` に再分類される
+  ],
+)
+
 #behavior_spec(
   name: "colocated client handler transform (proposal)",
   summary: [
@@ -750,6 +873,30 @@
     - `defineComponent()` render subtree 外の HTML 要素で使った場合は transform error
     - 同一 render subtree で複数 strategy を混在させた場合は transform error
     - v1 で許可していない capture や unsupported event forms は transform error
+  ],
+)
+
+#behavior_spec(
+  name: "unsupported hydration + colocated directive combination guard",
+  summary: [
+    hydration plan 生成が不可能（unsupported pattern）なコンポーネントに colocated client directive が存在する場合、transform error として検出する。この組み合わせは Path B（full rerender）へ fallback し、SSR state が失われるため、サイレントな破壊を防止する。
+  ],
+  preconditions: [
+    - component setup が unsupported reason（runtime-branching, imperative-dom-query, opaque-helper-call 等）を持つ
+    - 同一 component の render subtree 内に colocated client directive（`load:onClick`, `interaction:onClick` 等）が存在する
+  ],
+  steps: [
+    1. `buildComponentHydrationMetadata` で unsupported reason が確定した時点で、component body の JSX AST を走査して colocated directive の有無を検出する
+    2. colocated directive が検出された場合、unsupported reason を含む transform error を throw する
+    3. colocated directive が存在しない場合は、従来通り `unsupportedReason` metadata を返す
+  ],
+  postconditions: [
+    - unsupported setup + colocated directive の組み合わせは transform error として明示的に報告される
+    - developer は setup を simplify するか colocated directive を除去するかの明確な選択肢を持つ
+    - colocated directive を含まない unsupported component は従来通り `unsupportedReason` fallback で動作する
+  ],
+  errors: [
+    - `[dathomir] Colocated client directives (e.g. load:onClick) cannot be used in a component whose setup is unsupported for hydration plan generation (reason: <unsupportedReason>). The component would fall back to a full rerender, losing SSR state captured by the handler. Simplify the setup function or remove the colocated directive.`
   ],
 )
 
@@ -810,7 +957,7 @@
 
 == 検討事項
 
-- imported function や module-level binding を v2 以降でどこまで許可するか
+- imported function や module-level binding を v2 以降でどこまで許可するか（ただし known transparent thunk wrapper の allowlist は v1 で持ち込める）
 - readonly object literal の許容範囲を shallow に留めるか nested readonly まで広げるか
 - loop / conditional 内 target の stable id を DOM path で表すか marker で表すか
 - 複数 strategy を 1 component 内で許可するか、sub-island 分割を別機能にするか

@@ -13,6 +13,7 @@ import {
   nArrowBlock,
   nBlock,
   nCall,
+  nExprStmt,
   nId,
   nLit,
   nMember,
@@ -1922,6 +1923,46 @@ function collectTopLevelHelpers(program: Program): HelperLookup {
   return helpers;
 }
 
+function collectTopLevelBindings(program: Program): Set<string> {
+  const bindings = new Set<string>();
+
+  for (const statement of program.body) {
+    if (isImportDeclaration(statement)) {
+      for (const specifier of (statement.specifiers ?? []) as ESTNode[]) {
+        const local = specifier.local as ESTNode | undefined;
+        if (local && isIdentifier(local)) {
+          bindings.add(local.name);
+        }
+      }
+      continue;
+    }
+
+    const declaration =
+      isExportNamedDeclaration(statement) && statement.declaration
+        ? statement.declaration
+        : statement;
+
+    if (
+      isFunctionDeclaration(declaration) &&
+      declaration.id &&
+      isIdentifier(declaration.id)
+    ) {
+      bindings.add(declaration.id.name);
+      continue;
+    }
+
+    if (!isVariableDeclaration(declaration)) {
+      continue;
+    }
+
+    for (const declarator of declaration.declarations) {
+      collectBindingNames(declarator.id, bindings);
+    }
+  }
+
+  return bindings;
+}
+
 /**
  * Guard: throw if the component body contains colocated client
  * directives while its setup pattern is unsupported for hydration
@@ -1945,6 +1986,7 @@ function buildComponentHydrationMetadata(
   nested: NestedTransformers,
   helperLookup: HelperLookup,
   importedTransparentThunkWrappers: ReadonlySet<string>,
+  moduleBindings: ReadonlySet<string>,
 ): ComponentHydrationBuildResult | null {
   const specificUnsupportedReason = getSpecificUnsupportedHydrationReason(
     componentArg,
@@ -2012,6 +2054,7 @@ function buildComponentHydrationMetadata(
   );
 
   const analysisState = createInitialState("csr");
+  analysisState.moduleBindings = new Set(moduleBindings);
   const { dynamicParts } = jsxToTree(
     collisionSafeAnalysis.jsxRoot,
     analysisState,
@@ -2066,6 +2109,7 @@ function buildComponentHydrationMetadata(
 function collectComponentPlans(
   program: Program,
   nested: NestedTransformers,
+  moduleBindings: ReadonlySet<string>,
 ): CollectedComponentPlan[] {
   const plans: CollectedComponentPlan[] = [];
   const helperLookup = collectTopLevelHelpers(program);
@@ -2112,6 +2156,7 @@ function collectComponentPlans(
         nested,
         helperLookup,
         importedTransparentThunkWrappers,
+        moduleBindings,
       );
       if (buildResult === null) {
         continue;
@@ -2183,6 +2228,9 @@ function transform(
 
   const parsed = parseSync(filename, code, { sourceType: "module" });
   const state = createInitialState(mode);
+  state.moduleBindings = collectTopLevelBindings(
+    adaptParsedProgram(parsed.program) as Program,
+  );
 
   const nested = {
     transformJSXNode,
@@ -2192,6 +2240,7 @@ function transform(
   const componentPlans = collectComponentPlans(
     adaptParsedProgram(parsed.program) as Program,
     nested,
+    state.moduleBindings,
   );
 
   const transformedProgram = walk(
@@ -2256,6 +2305,28 @@ function transform(
   ) as Program;
 
   applyComponentPlans(transformedProgram, componentPlans);
+
+  if (state.componentClientActions.length > 0) {
+    let insertIndex = 0;
+    for (let i = 0; i < transformedProgram.body.length; i++) {
+      const statement = transformedProgram.body[i];
+      if (statement?.type === "ImportDeclaration") {
+        insertIndex = i + 1;
+      } else {
+        break;
+      }
+    }
+
+    const registrations = state.componentClientActions.map((action) =>
+      nExprStmt(
+        nCall(nId("registerClientAction"), [
+          nLit(action.id),
+          cloneNode(action.handler),
+        ]),
+      ),
+    );
+    transformedProgram.body.splice(insertIndex, 0, ...registrations);
+  }
 
   if (state.templates.length > 0) {
     let insertIndex = 0;

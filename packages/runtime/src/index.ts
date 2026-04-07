@@ -37,6 +37,7 @@ export type { FC, FCWithChildren } from "./types/FC";
 
 // Islands metadata contract
 export {
+  CLIENT_ACTIONS_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,
   COLOCATED_CLIENT_STRATEGIES,
@@ -51,6 +52,8 @@ export type {
   ColocatedClientStrategyName,
   IslandStrategyName,
 } from "@dathomir/shared";
+
+export { getClientAction, registerClientAction } from "./hydration/hydrate/implementation";
 
 // Tree types
 export { Namespace } from "./types/tree";

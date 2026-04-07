@@ -27,8 +27,9 @@ import {
   HYDRATE_ISLANDS_HOOK,
   HYDRATE_ISLANDS_STATUS,
 } from "@dathomir/runtime/hydration";
-import { insert, setAttr } from "@dathomir/runtime";
+import { getClientAction, insert, setAttr } from "@dathomir/runtime";
 import {
+  CLIENT_ACTIONS_METADATA_ATTRIBUTE,
   CLIENT_EVENT_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,
@@ -428,6 +429,69 @@ function createReplayEvent(
   return new Event(eventType, baseInit);
 }
 
+function getHostClientActionBindings(host: HTMLElement): Record<string, string> {
+  const raw = host.getAttribute(CLIENT_ACTIONS_METADATA_ATTRIBUTE);
+  if (raw === null) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const entries = Object.entries(parsed).filter(
+      ([eventType, actionId]) =>
+        typeof eventType === "string" && typeof actionId === "string",
+    );
+    return Object.fromEntries(entries) as Record<string, string>;
+  } catch {
+    console.error(
+      `[dathomir] Invalid ${CLIENT_ACTIONS_METADATA_ATTRIBUTE} metadata on component host`,
+    );
+    return {};
+  }
+}
+
+function bindHostClientActions(host: HTMLElement): () => void {
+  const bindings = getHostClientActionBindings(host);
+  const cleanups: Array<() => void> = [];
+
+  for (const [eventType, actionId] of Object.entries(bindings)) {
+    const handler = getClientAction(actionId);
+    if (handler === undefined) {
+      console.warn(
+        `[dathomir] Missing client action artifact for id ${actionId}`,
+      );
+      continue;
+    }
+
+    host.addEventListener(eventType, handler);
+    cleanups.push(() => {
+      host.removeEventListener(eventType, handler);
+    });
+  }
+
+  return () => {
+    for (const cleanup of cleanups) {
+      cleanup();
+    }
+  };
+}
+
+function replayHostClientAction(
+  host: HTMLElement,
+  trigger: IslandHydrationTrigger | undefined,
+): void {
+  if (trigger?.eventType == null || trigger.replayTargetId != null) {
+    return;
+  }
+
+  const bindings = getHostClientActionBindings(host);
+  if (!(trigger.eventType in bindings)) {
+    return;
+  }
+
+  host.dispatchEvent(createReplayEvent(trigger.eventType, trigger.replayEvent));
+}
+
 function createClientContext(host: HTMLElement): ComponentClientContext {
   const strategy = host.getAttribute(ISLAND_METADATA_ATTRIBUTE);
   const normalizedStrategy = getNormalizedIslandStrategy(strategy);
@@ -777,6 +841,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
   class Component extends HTMLElement {
     static observedAttributes = observedAttrNames;
     #dispose: RootDispose | undefined;
+    #clientActionCleanup: (() => void) | undefined;
     #islandHydrationAccepted = false;
     #storeRetryScheduled = false;
 
@@ -825,6 +890,8 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
 
       const hasHostIslandMetadata =
         this.getAttribute(ISLAND_METADATA_ATTRIBUTE) !== null;
+      const hasHostClientActions =
+        this.getAttribute(CLIENT_ACTIONS_METADATA_ATTRIBUTE) !== null;
 
       if (colocatedStrategy !== null && hydrateSetup !== undefined) {
         console.error(
@@ -876,10 +943,13 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
         hasDSD &&
         (hydrateSetup !== undefined ||
           planFactory !== null ||
-          colocatedStrategy !== null) &&
+          colocatedStrategy !== null ||
+          hasHostClientActions) &&
         isKnownIslandStrategy(islandStrategy);
 
       this.#islandHydrationAccepted = false;
+      this.#clientActionCleanup?.();
+      this.#clientActionCleanup = undefined;
       (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = undefined;
       (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
         undefined;
@@ -912,11 +982,20 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
         );
       };
 
-      const runHydrate = (): boolean => {
+      const finalizeHostClientActions = (
+        trigger?: IslandHydrationTrigger,
+      ): void => {
+        this.#clientActionCleanup?.();
+        this.#clientActionCleanup = bindHostClientActions(this);
+        replayHostClientAction(this, trigger);
+      };
+
+      const runHydrate = (trigger?: IslandHydrationTrigger): boolean => {
         try {
           this.#dispose = createRoot(() => {
             hydrateSetup!(ctx);
           });
+          finalizeHostClientActions(trigger);
           this.#islandHydrationAccepted = true;
           if (
             isKnownIslandStrategy(this.getAttribute(ISLAND_METADATA_ATTRIBUTE))
@@ -928,7 +1007,9 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
         } catch (error) {
           if (
             isMissingStoreError(error) &&
-            retryIfStoreEventuallyBinds(runHydrate)
+            retryIfStoreEventuallyBinds(() => {
+              runHydrate(trigger);
+            })
           ) {
             return false;
           }
@@ -958,6 +1039,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
             (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
               "hydrated";
           }
+          finalizeHostClientActions(trigger);
           replayHydrationTrigger(shadowRoot, trigger);
           return true;
         } catch (error) {
@@ -995,6 +1077,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
             }
             const content = resolvedSetup(this, ctx);
             shadowRoot.append(content as string | Node);
+            finalizeHostClientActions(trigger);
             replayHydrationTrigger(shadowRoot, trigger);
           });
           this.#islandHydrationAccepted = true;
@@ -1041,7 +1124,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
               "hydrated";
             const didHydrate =
               hydrateSetup !== undefined
-                ? runHydrate()
+                ? runHydrate(trigger)
                 : planFactory !== null
                   ? runHydrateWithPlan(trigger)
                   : runSetup(trigger);
@@ -1071,6 +1154,8 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
       cancelScheduledIslandHydration(this);
       this.#dispose?.();
       this.#dispose = undefined;
+      this.#clientActionCleanup?.();
+      this.#clientActionCleanup = undefined;
       this.#islandHydrationAccepted = false;
       (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] = undefined;
       (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =

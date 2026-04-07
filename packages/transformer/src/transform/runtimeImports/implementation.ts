@@ -17,6 +17,7 @@ type RuntimeImportName =
   | "renderToString"
   | "renderTree"
   | "serializeState"
+  | "registerClientAction"
   | "createMarker"
   | "MarkerType";
 

@@ -148,3 +148,6 @@ reports
 
 # Screenshot tests
 __screenshots__/
+
+# Playwright MCP artifacts
+.playwright-mcp/

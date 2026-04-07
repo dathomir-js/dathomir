@@ -31,10 +31,12 @@
 		- `TransformState` 型
 		- `createInitialState(mode)`
 		- `createTemplateId(state)`
+		- `createClientActionId(state)`
 	],
 	test_cases: [
 		- `createInitialState("csr")` が既定フィールドを空で初期化する
 		- `createInitialState("ssr")` が mode を反映する
 		- `createTemplateId` が `_t1`, `_t2` とインクリメントする
+		- `createClientActionId` が `dh-ca-1`, `dh-ca-2` とインクリメントする
 	],
 )

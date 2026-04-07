@@ -3,6 +3,7 @@ const ISLAND_VALUE_METADATA_ATTRIBUTE = "data-dh-island-value" as const;
 const CLIENT_TARGET_METADATA_ATTRIBUTE = "data-dh-client-target" as const;
 const CLIENT_STRATEGY_METADATA_ATTRIBUTE = "data-dh-client-strategy" as const;
 const CLIENT_EVENT_METADATA_ATTRIBUTE = "data-dh-client-event" as const;
+const CLIENT_ACTIONS_METADATA_ATTRIBUTE = "data-dh-client-actions" as const;
 const DEFAULT_INTERACTION_EVENT_TYPE = "click" as const;
 
 const ISLAND_STRATEGIES = [
@@ -39,6 +40,7 @@ function isColocatedClientStrategyName(
 }
 
 export {
+  CLIENT_ACTIONS_METADATA_ATTRIBUTE,
   CLIENT_EVENT_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,

@@ -5,7 +5,9 @@
 
 export {
   cancelScheduledIslandHydration,
+  clearClientActions,
   createHydrationContext,
+  getClientAction,
   hydrate,
   hydrateIslands,
   hydrateRoot,
@@ -15,6 +17,7 @@ export {
   HYDRATE_ISLANDS_STATUS,
   isHydrated,
   hydrateTextMarker,
+  registerClientAction,
 } from "./hydrate/implementation";
 export type {
   AttrBinding,

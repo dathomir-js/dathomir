@@ -11,6 +11,8 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  clearClientActions,
+  getClientAction,
   type GenericHydrationPlan,
   HydrationMismatchError,
   HydrationMarkerType,
@@ -24,9 +26,11 @@ import {
   hydrateTextMarker,
   isHydrated,
   markHydrated,
+  registerClientAction,
 } from "@/hydration/hydrate/implementation";
 
 afterEach(() => {
+  clearClientActions();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -46,6 +50,16 @@ describe("HydrationMismatchError", () => {
     const error = new HydrationMismatchError("expected div, got span");
     expect(error.message).toContain("expected div, got span");
     expect(error.message).toContain("Hydration mismatch");
+  });
+});
+
+describe("client action registry", () => {
+  it("registers and resolves client actions by id", () => {
+    const handler = vi.fn();
+
+    registerClientAction("action:test", handler);
+
+    expect(getClientAction("action:test")).toBe(handler);
   });
 });
 

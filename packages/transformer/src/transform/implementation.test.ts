@@ -2689,13 +2689,47 @@ describe("transform", () => {
       );
     });
 
-    it("should throw when colocated directives are used on component elements", () => {
+    it("should transform component load:onClick into host metadata plus client action registration", () => {
       const code = `
-        const element = <Counter load:onClick={() => doThing()} />;
+        const handleClick = () => doThing();
+        const element = <Counter load:onClick={handleClick} />;
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('registerClientAction("dh-ca-1", handleClick)');
+      expect(result.code).toContain('"data-dh-island": "load"');
+      expect(result.code).toContain('"data-dh-client-actions"');
+      expect(result.code).toContain('dh-ca-1');
+      expect(result.code).not.toContain("load:onClick");
+    });
+
+    it("should transform component interaction:onKeyDown into host metadata plus client action registration", () => {
+      const code = `
+        const handleKeyDown = (event) => report(event.key);
+        const element = <Counter interaction:onKeyDown={handleKeyDown} />;
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('registerClientAction("dh-ca-1", handleKeyDown)');
+      expect(result.code).toContain('"data-dh-island": "interaction"');
+      expect(result.code).toContain('"data-dh-island-value": "keydown"');
+      expect(result.code).toContain('"data-dh-client-actions"');
+      expect(result.code).toContain('dh-ca-1');
+      expect(result.code).not.toContain("interaction:onKeyDown");
+    });
+
+    it("should reject component-target colocated handlers that capture local bindings", () => {
+      const code = `
+        const Parent = defineComponent("x-parent", () => {
+          const localCount = signal(0);
+          return <Counter load:onClick={() => bump(localCount)} />;
+        });
       `;
 
       expect(() => transform(code)).toThrow(
-        "Unsupported colocated client directive: load:onClick",
+        "[dathomir] load:onClick component-target colocated handlers cannot capture local bindings: bump, localCount",
       );
     });
 

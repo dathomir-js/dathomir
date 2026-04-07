@@ -22,6 +22,7 @@ transformer・runtime・plugin が共有する islands metadata contract を 1 �
     const CLIENT_TARGET_METADATA_ATTRIBUTE: "data-dh-client-target"
     const CLIENT_STRATEGY_METADATA_ATTRIBUTE: "data-dh-client-strategy"
     const CLIENT_EVENT_METADATA_ATTRIBUTE: "data-dh-client-event"
+    const CLIENT_ACTIONS_METADATA_ATTRIBUTE: "data-dh-client-actions"
     const DEFAULT_INTERACTION_EVENT_TYPE: "click"
 
     const ISLAND_STRATEGIES: readonly [

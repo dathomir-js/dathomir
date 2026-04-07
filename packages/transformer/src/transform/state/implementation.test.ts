@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { createInitialState, createTemplateId } from "./implementation";
+import {
+  createClientActionId,
+  createInitialState,
+  createTemplateId,
+} from "./implementation";
 
 describe("transform/state", () => {
   it("createInitialState initializes csr mode state", () => {
@@ -10,6 +14,7 @@ describe("transform/state", () => {
     expect(state.templateCount).toBe(0);
     expect(state.templates).toEqual([]);
     expect(state.runtimeImports.size).toBe(0);
+    expect(state.componentClientActions).toEqual([]);
   });
 
   it("createInitialState initializes ssr mode state", () => {
@@ -24,5 +29,13 @@ describe("transform/state", () => {
     expect(createTemplateId(state).name).toBe("_t1");
     expect(createTemplateId(state).name).toBe("_t2");
     expect(state.templateCount).toBe(2);
+  });
+
+  it("createClientActionId increments sequentially", () => {
+    const state = createInitialState("csr");
+
+    expect(createClientActionId(state)).toBe("dh-ca-1");
+    expect(createClientActionId(state)).toBe("dh-ca-2");
+    expect(state.clientActionCount).toBe(2);
   });
 });

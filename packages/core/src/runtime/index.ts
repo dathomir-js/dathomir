@@ -61,6 +61,7 @@ export type {
 
 export {
   HydrationMismatchError,
+  registerClientAction,
   createHydrationContext,
   createWalker,
   deserializeState,

@@ -747,6 +747,26 @@
 )
 
 #adr(
+  header("component target の colocated handler は function prop ではなく action artifact で運ぶ", Status.Proposed, "2026-04-07"),
+  [
+    `<Counter load:onClick={() => doThing()} />` のような component 要素 target は、parent callsite にある handler closure を child host が後から hydrate するときにも復元できる必要がある。しかし SSR では function-valued prop は DSD / attribute surface に残らないため、単純に `onClick` prop へ書き換えるだけでは child island の独立 hydrate 時に handler を失う。
+  ],
+  [
+    component target の colocated handler は callsite-scoped client action artifact として抽出し、child host には strategy metadata に加えて action binding metadata と serializable capture payload を残す。runtime は child host hydrate 時に artifact registry から handler を解決して bind する。
+  ],
+  [
+    - parent callsite に書かれた handler を SSR 後の child island hydrate でも失わない
+    - HTML target の render replay model と component target の artifact model を明確に分離できる
+    - capture model v2 を component target に対して本当に必要な箇所へ限定して導入できる
+  ],
+  alternatives: [
+    - component target でも単純に `on*` prop へ書き換える（SSR で function prop が失われる）
+    - component target を永続的に unsupported にする（author 体験と実用性を損なう）
+    - child host が parent render closure を暗黙参照できる前提を置く（module/instance ownership が壊れる）
+  ],
+)
+
+#adr(
   header("runtime branching を dispatch plan でサポートする", Status.Accepted, "2026-04-02"),
   [
     現実のコンポーネントはローディング/エラー/空状態/認証チェックなどの条件分岐を必ず持つ。runtime-branching を unsupported にすると、SSRハイドレーションが使えるのは「ただのカウンター」程度の実用性がないケースに限られる。フレームワークとしての実用性を確保するため、静的解析可能な分岐パターンをサポートする必要がある。
@@ -928,6 +948,37 @@
     - object / array literal を mutable に保持して capture する handler は transform error
     - class instance や `new` されたオブジェクトを capture する handler は transform error
     - runtime 値を埋め込む template literal や mutable tuple/object を capture する handler は transform error
+  ],
+)
+
+#behavior_spec(
+  name: "component-target colocated client handlers v2 (proposal)",
+  summary: [
+    `<Child load:onClick={...} />` や `<Child interaction:onKeyDown={...} />` のような component 要素 target を、callsite-scoped client action artifact と child host metadata へ分解し、SSR 後の独立 hydrate でも parent callsite handler を復元できるようにする。
+  ],
+  preconditions: [
+    - directive target は component 要素であり、最終的に custom element host を持つ `defineComponent()` へ解決される
+    - component target は explicit `client:*` / `data-dh-island*` metadata と colocated directive を同時指定しない
+    - initial rollout では handler は module-scope で再評価できる形（module binding reference または module binding だけを参照する expression-body inline arrow）に限定する
+    - bound event は child host boundary から観測可能か、child 側が host event として明示 re-emit する必要がある
+  ],
+  steps: [
+    1. transformer は component target の `<strategy>:on<Event>` を認識する
+    2. handler 本体を module-local client action artifact と stable action id へ抽出する
+    3. action が参照する serializable capture payload を callsite ごとに生成する
+    4. child component call には canonical `data-dh-island*` metadata と、internal action binding metadata / capture payload metadata を注入する
+    5. runtime は child host hydrate 時に artifact registry から action id を解決し、host-visible event surface へ bind する
+    6. `interaction` では trigger event と bound event が一致する場合、child host hydrate 直後に first-event replay を適用する
+  ],
+  postconditions: [
+    - source 上では component target でも event と hydrate trigger が colocated に見える
+    - SSR 後の child island 独立 hydrate でも parent callsite handler を復元できる
+    - bare `client:*` を使わなくても child host 単位の deferred hydration を表現できる
+  ],
+  errors: [
+    - child host boundary から観測不能な event を component target へ colocate した場合は transform error
+    - callsite local capture や block-body inline handler など、module-scope で再評価できない handler は transform error
+    - component target colocated と explicit `client:*` / `data-dh-island*` metadata を同時指定した場合は transform error
   ],
 )
 

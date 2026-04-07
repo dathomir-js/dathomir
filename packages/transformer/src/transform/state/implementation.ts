@@ -1,5 +1,6 @@
 import { nId } from "@/transform/ast/implementation";
 import type {
+  ESTNode,
   Identifier,
   VariableDeclaration,
 } from "@/transform/ast/implementation";
@@ -8,9 +9,15 @@ import type { RuntimeImportName } from "@/transform/runtimeImports/implementatio
 interface TransformState {
   templateCount: number;
   clientTargetCount: number;
+  clientActionCount: number;
   templates: VariableDeclaration[];
   runtimeImports: Set<RuntimeImportName>;
   mode: "csr" | "ssr";
+  moduleBindings: Set<string>;
+  componentClientActions: Array<{
+    id: string;
+    handler: ESTNode;
+  }>;
   currentColocatedClientState?: {
     strategy: "load" | "interaction" | "visible" | "idle" | null;
     interactionEventType: string | null;
@@ -26,9 +33,12 @@ function createInitialState(mode: "csr" | "ssr"): TransformState {
   return {
     templateCount: 0,
     clientTargetCount: 0,
+    clientActionCount: 0,
     templates: [],
     runtimeImports: new Set(),
     mode,
+    moduleBindings: new Set(),
+    componentClientActions: [],
     currentElementNamespace: "html",
     currentHostIslandMetadata: false,
   };
@@ -46,5 +56,15 @@ function createClientTargetId(state: TransformState): string {
   return `dh-ct-${state.clientTargetCount}`;
 }
 
-export { createClientTargetId, createInitialState, createTemplateId };
+function createClientActionId(state: TransformState): string {
+  state.clientActionCount += 1;
+  return `dh-ca-${state.clientActionCount}`;
+}
+
+export {
+  createClientActionId,
+  createClientTargetId,
+  createInitialState,
+  createTemplateId,
+};
 export type { TransformState };

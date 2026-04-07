@@ -53,6 +53,7 @@ import type {
  */
 const hydratedRoots = new WeakMap<ShadowRoot, boolean>();
 const scheduledIslandCleanups = new WeakMap<HTMLElement, () => void>();
+const clientActionRegistry = new Map<string, EventListener>();
 
 const HYDRATE_ISLANDS_HOOK = Symbol("dathomir.hydrateIslandsHook");
 const HYDRATE_ISLANDS_STATUS = Symbol("dathomir.hydrateIslandsStatus");
@@ -81,6 +82,18 @@ interface ReplayEventSnapshot {
     | FocusEventInit
     | InputEventInit
     | PointerEventInit;
+}
+
+function registerClientAction(id: string, handler: EventListener): void {
+  clientActionRegistry.set(id, handler);
+}
+
+function getClientAction(id: string): EventListener | undefined {
+  return clientActionRegistry.get(id);
+}
+
+function clearClientActions(): void {
+  clientActionRegistry.clear();
 }
 type HydrateIslandHook = (trigger?: IslandHydrationTrigger) => boolean;
 
@@ -1080,7 +1093,9 @@ function hydrateWithPlan(
 
 export {
   cancelScheduledIslandHydration,
+  clearClientActions,
   createHydrationContext,
+  getClientAction,
   handleMismatch,
   hydrate,
   hydrateIslands,
@@ -1093,6 +1108,7 @@ export {
   HYDRATE_ISLANDS_STATUS,
   isHydrated,
   markHydrated,
+  registerClientAction,
 };
 export type {
   AttrBinding,

@@ -1,6 +1,7 @@
 import { walk } from "zimmerframe";
 import {
   COLOCATED_CLIENT_STRATEGIES,
+  CLIENT_ACTIONS_METADATA_ATTRIBUTE,
   CLIENT_EVENT_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,
@@ -45,7 +46,10 @@ import type {
   JSXSpreadChild,
 } from "@/transform/jsx/implementation";
 import type { TransformState } from "@/transform/state/implementation";
-import { createClientTargetId } from "@/transform/state/implementation";
+import {
+  createClientActionId,
+  createClientTargetId,
+} from "@/transform/state/implementation";
 
 type DynamicPart =
   | {
@@ -93,6 +97,7 @@ const RESERVED_ISLAND_METADATA_KEYS = new Set([
 ]);
 
 const RESERVED_CLIENT_METADATA_KEYS = new Set([
+  CLIENT_ACTIONS_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_EVENT_METADATA_ATTRIBUTE,
@@ -101,6 +106,42 @@ const RESERVED_CLIENT_METADATA_KEYS = new Set([
 const colocatedDirectivePrefixes = new Set(
   COLOCATED_CLIENT_STRATEGIES.map((strategy) => `${strategy}:`),
 );
+
+function collectBindingNames(pattern: ESTNode, names: Set<string>): void {
+  if (isIdentifier(pattern)) {
+    names.add(pattern.name);
+    return;
+  }
+
+  if (pattern.type === "ObjectPattern") {
+    for (const property of pattern.properties as ESTNode[]) {
+      if (property.type === "Property") {
+        collectBindingNames(property.value as ESTNode, names);
+      } else if (property.type === "RestElement") {
+        collectBindingNames(property.argument as ESTNode, names);
+      }
+    }
+    return;
+  }
+
+  if (pattern.type === "ArrayPattern") {
+    for (const element of pattern.elements as Array<ESTNode | null>) {
+      if (element !== null) {
+        collectBindingNames(element, names);
+      }
+    }
+    return;
+  }
+
+  if (pattern.type === "AssignmentPattern") {
+    collectBindingNames(pattern.left as ESTNode, names);
+    return;
+  }
+
+  if (pattern.type === "RestElement") {
+    collectBindingNames(pattern.argument as ESTNode, names);
+  }
+}
 
 function throwUnknownClientDirective(name: JSXAttribute["name"]): never {
   if (name.type !== "JSXNamespacedName") {
@@ -142,6 +183,182 @@ function getUnsupportedColocatedDirectiveError(
     )
   ) {
     return `Unsupported colocated client directive: ${rawName}`;
+  }
+
+  return null;
+}
+
+const KNOWN_COMPONENT_ACTION_GLOBALS = new Set([
+  "console",
+  "Math",
+  "JSON",
+  "Number",
+  "String",
+  "Boolean",
+  "Object",
+  "Array",
+]);
+
+function collectBlockBindingNames(body: ESTNode[], names: Set<string>): void {
+  for (const statement of body) {
+    if (statement.type === "VariableDeclaration") {
+      for (const declaration of statement.declarations as Array<{
+        id: ESTNode;
+      }>) {
+        collectBindingNames(declaration.id, names);
+      }
+      continue;
+    }
+
+    if (statement.type === "FunctionDeclaration" && statement.id) {
+      collectBindingNames(statement.id as ESTNode, names);
+    }
+  }
+}
+
+function collectFreeIdentifiers(
+  node: ESTNode | null | undefined,
+  available: Set<string>,
+  free: Set<string>,
+): boolean {
+  if (node === null || node === undefined) {
+    return true;
+  }
+
+  if (isIdentifier(node)) {
+    if (!available.has(node.name)) {
+      free.add(node.name);
+    }
+    return true;
+  }
+
+  switch (node.type) {
+    case "Literal":
+    case "ThisExpression":
+      return true;
+    case "MemberExpression":
+      return (
+        collectFreeIdentifiers(node.object as ESTNode, available, free) &&
+        (!node.computed ||
+          collectFreeIdentifiers(node.property as ESTNode, available, free))
+      );
+    case "CallExpression":
+    case "NewExpression":
+      return [node.callee as ESTNode, ...(node.arguments as ESTNode[])].every(
+        (part) => collectFreeIdentifiers(part, available, free),
+      );
+    case "ArrowFunctionExpression":
+    case "FunctionExpression": {
+      const nextAvailable = new Set(available);
+      if (node.type === "FunctionExpression" && node.id) {
+        collectBindingNames(node.id as ESTNode, nextAvailable);
+      }
+      for (const param of (node.params ?? []) as ESTNode[]) {
+        collectBindingNames(param, nextAvailable);
+      }
+      const functionBody = node.body as ESTNode;
+      if (functionBody.type === "BlockStatement") {
+        collectBlockBindingNames(functionBody.body as ESTNode[], nextAvailable);
+      }
+      return collectFreeIdentifiers(functionBody, nextAvailable, free);
+    }
+    case "BlockStatement": {
+      const nextAvailable = new Set(available);
+      collectBlockBindingNames(node.body as ESTNode[], nextAvailable);
+      return (node.body as ESTNode[]).every((statement) =>
+        collectFreeIdentifiers(statement, nextAvailable, free),
+      );
+    }
+    case "ExpressionStatement":
+      return collectFreeIdentifiers(node.expression as ESTNode, available, free);
+    case "ReturnStatement":
+    case "AwaitExpression":
+    case "YieldExpression":
+      return collectFreeIdentifiers(node.argument as ESTNode, available, free);
+    case "UnaryExpression":
+    case "UpdateExpression":
+      return collectFreeIdentifiers(node.argument as ESTNode, available, free);
+    case "BinaryExpression":
+    case "LogicalExpression":
+    case "AssignmentExpression":
+      return (
+        collectFreeIdentifiers(node.left as ESTNode, available, free) &&
+        collectFreeIdentifiers(node.right as ESTNode, available, free)
+      );
+    case "ConditionalExpression":
+      return (
+        collectFreeIdentifiers(node.test as ESTNode, available, free) &&
+        collectFreeIdentifiers(node.consequent as ESTNode, available, free) &&
+        collectFreeIdentifiers(node.alternate as ESTNode, available, free)
+      );
+    case "SequenceExpression":
+      return (node.expressions as ESTNode[]).every((expression) =>
+        collectFreeIdentifiers(expression, available, free),
+      );
+    case "ArrayExpression":
+      return (node.elements as Array<ESTNode | null>).every((element) =>
+        collectFreeIdentifiers(element, available, free),
+      );
+    case "ObjectExpression":
+      return (node.properties as ESTNode[]).every((property) => {
+        if (property.type === "SpreadElement") {
+          return collectFreeIdentifiers(
+            property.argument as ESTNode,
+            available,
+            free,
+          );
+        }
+
+        return (
+          (!property.computed ||
+            collectFreeIdentifiers(property.key as ESTNode, available, free)) &&
+          collectFreeIdentifiers(property.value as ESTNode, available, free)
+        );
+      });
+    case "TemplateLiteral":
+      return (node.expressions as ESTNode[]).every((expression) =>
+        collectFreeIdentifiers(expression, available, free),
+      );
+    case "IfStatement":
+      return (
+        collectFreeIdentifiers(node.test as ESTNode, available, free) &&
+        collectFreeIdentifiers(node.consequent as ESTNode, available, free) &&
+        collectFreeIdentifiers(node.alternate as ESTNode, available, free)
+      );
+    case "VariableDeclaration":
+      return (node.declarations as Array<{ init?: ESTNode | null }>).every(
+        (declaration) =>
+          collectFreeIdentifiers(declaration.init ?? null, available, free),
+      );
+    default:
+      return false;
+  }
+}
+
+function validateComponentActionHandler(
+  handler: ESTNode,
+  moduleBindings: ReadonlySet<string>,
+): string | null {
+  if (
+    handler.type !== "Identifier" &&
+    handler.type !== "MemberExpression" &&
+    handler.type !== "ArrowFunctionExpression" &&
+    handler.type !== "FunctionExpression"
+  ) {
+    return "component-target colocated handlers must be a function reference or inline function expression";
+  }
+
+  const available = new Set<string>([
+    ...moduleBindings,
+    ...KNOWN_COMPONENT_ACTION_GLOBALS,
+  ]);
+  const free = new Set<string>();
+  if (!collectFreeIdentifiers(handler, available, free)) {
+    return "component-target colocated handlers must be module-scoped and use only supported expression syntax";
+  }
+
+  if (free.size > 0) {
+    return `component-target colocated handlers cannot capture local bindings: ${Array.from(free).sort().join(", ")}`;
   }
 
   return null;
@@ -240,6 +457,9 @@ function buildComponentCall(
 
   const propsProperties: ESTNode[] = [];
   let islandsDirective: IslandsDirectiveMetadata | null = null;
+  let colocatedDirectiveStrategy: ColocatedClientStrategyName | null = null;
+  let colocatedInteractionEventType: string | null = null;
+  const componentActionBindings = new Map<string, string>();
   let hasExplicitReservedIslandMetadata = false;
   let hasExplicitHostIslandMetadata = false;
 
@@ -261,6 +481,95 @@ function buildComponentCall(
         strategy: directiveName,
         value: normalizeIslandsDirectiveValue(directiveName, attr.value),
       };
+      continue;
+    }
+
+    const colocatedDirective = getColocatedClientDirective(attr.name);
+    if (colocatedDirective !== null) {
+      const rawName =
+        getRawAttributeNameForDiagnostics(attr.name) ??
+        `${colocatedDirective.strategy}:onClick`;
+      const value = attr.value;
+      if (
+        value === null ||
+        !isJSXExpressionContainer(value) ||
+        isJSXEmptyExpression(value.expression)
+      ) {
+        throw new Error(
+          `[dathomir] ${rawName} requires an inline handler expression`,
+        );
+      }
+
+      assertNoHostIslandsMixing(
+        state.currentHostIslandMetadata,
+        colocatedDirective.strategy,
+      );
+
+      const colocatedClientState = state.currentColocatedClientState ?? {
+        strategy: null,
+        interactionEventType: null,
+      };
+      if (
+        colocatedClientState.strategy !== null &&
+        colocatedClientState.strategy !== colocatedDirective.strategy
+      ) {
+        throw new Error(
+          "[dathomir] Mixed colocated client strategies are not supported in one JSX root",
+        );
+      }
+      if (
+        colocatedDirective.strategy === "interaction" &&
+        colocatedClientState.interactionEventType !== null &&
+        colocatedClientState.interactionEventType !== colocatedDirective.event
+      ) {
+        throw new Error(
+          "[dathomir] Mixed colocated interaction event types are not supported in one JSX root",
+        );
+      }
+      colocatedClientState.strategy = colocatedDirective.strategy;
+      if (colocatedDirective.strategy === "interaction") {
+        colocatedClientState.interactionEventType = colocatedDirective.event;
+      }
+      state.currentColocatedClientState = colocatedClientState;
+
+      if (
+        colocatedDirectiveStrategy !== null &&
+        colocatedDirectiveStrategy !== colocatedDirective.strategy
+      ) {
+        throw new Error(
+          "[dathomir] Mixed colocated client strategies are not supported in one JSX root",
+        );
+      }
+      if (
+        colocatedDirective.strategy === "interaction" &&
+        colocatedInteractionEventType !== null &&
+        colocatedInteractionEventType !== colocatedDirective.event
+      ) {
+        throw new Error(
+          "[dathomir] Mixed colocated interaction event types are not supported in one JSX root",
+        );
+      }
+
+      const handlerValidationError = validateComponentActionHandler(
+        value.expression,
+        state.moduleBindings,
+      );
+      if (handlerValidationError !== null) {
+        throw new Error(`[dathomir] ${rawName} ${handlerValidationError}`);
+      }
+
+      colocatedDirectiveStrategy = colocatedDirective.strategy;
+      if (colocatedDirective.strategy === "interaction") {
+        colocatedInteractionEventType = colocatedDirective.event;
+      }
+
+      const actionId = createClientActionId(state);
+      componentActionBindings.set(colocatedDirective.event, actionId);
+      state.componentClientActions.push({
+        id: actionId,
+        handler: value.expression,
+      });
+      state.runtimeImports.add("registerClientAction");
       continue;
     }
 
@@ -309,6 +618,12 @@ function buildComponentCall(
   }
 
   if (islandsDirective !== null) {
+    if (colocatedDirectiveStrategy !== null) {
+      throw new Error(
+        "[dathomir] host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
+      );
+    }
+
     if (hasExplicitReservedIslandMetadata) {
       throw new Error(
         `[dathomir] client:* directives cannot be combined with explicit data-dh-island metadata on <${getTagName(opening.name)}>`,
@@ -326,10 +641,39 @@ function buildComponentCall(
     }
   }
 
+  if (colocatedDirectiveStrategy !== null) {
+    if (hasExplicitHostIslandMetadata) {
+      throw new Error(
+        "[dathomir] host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
+      );
+    }
+
+    propsProperties.push(
+      nProp(nLit(ISLAND_METADATA_ATTRIBUTE), nLit(colocatedDirectiveStrategy)),
+      nProp(
+        nLit(CLIENT_ACTIONS_METADATA_ATTRIBUTE),
+        nLit(JSON.stringify(Object.fromEntries(componentActionBindings))),
+      ),
+    );
+
+    if (
+      colocatedDirectiveStrategy === "interaction" &&
+      colocatedInteractionEventType !== null
+    ) {
+      propsProperties.push(
+        nProp(
+          nLit(ISLAND_VALUE_METADATA_ATTRIBUTE),
+          nLit(colocatedInteractionEventType),
+        ),
+      );
+    }
+  }
+
   const previousHostIslandMetadata = state.currentHostIslandMetadata;
   const nextHostIslandMetadata =
     previousHostIslandMetadata === true ||
     islandsDirective !== null ||
+    colocatedDirectiveStrategy !== null ||
     hasExplicitHostIslandMetadata;
   state.currentHostIslandMetadata = nextHostIslandMetadata;
 

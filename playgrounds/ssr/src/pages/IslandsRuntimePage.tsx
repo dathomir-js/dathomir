@@ -167,6 +167,26 @@ const colocatedCardStyles = css`
   }
 `;
 
+const componentTargetArtifactCount = signal(0);
+
+function incrementComponentTargetArtifactCount() {
+  componentTargetArtifactCount.set(componentTargetArtifactCount.value + 1);
+}
+
+const PlaygroundComponentTargetButton = defineComponent(
+  "playground-component-target-button",
+  () => {
+    return (
+      <button class="demo-button" type="button">
+        Click inside child shadow root
+      </button>
+    );
+  },
+  {
+    styles: [colocatedCardStyles],
+  },
+);
+
 const nestedIslandsStyles = css`
   :host {
     display: block;
@@ -423,6 +443,32 @@ const PlaygroundColocatedInteractionPointerCard = defineComponent(
   },
 );
 
+const PlaygroundComponentTargetArtifactCard = defineComponent(
+  "playground-component-target-artifact-card",
+  ({ client }) => {
+    return (
+      <article>
+        <p class="syntax-chip">&lt;Child interaction:onClick /&gt;</p>
+        <h3>Component target interaction click</h3>
+        <p>
+          The handler is compiled into a client action artifact and rebound on the child host, so
+          clicking the button inside the child shadow root increments the shared count.
+        </p>
+        <p>Active strategy in setup: {client.strategy ?? "none"}</p>
+        <PlaygroundComponentTargetButton
+          interaction:onClick={incrementComponentTargetArtifactCount}
+        />
+        <p>
+          Component target count: <span class="count">{componentTargetArtifactCount.value}</span>
+        </p>
+      </article>
+    );
+  },
+  {
+    styles: [colocatedCardStyles],
+  },
+);
+
 const PlaygroundColocatedIdleCard = defineComponent(
   "playground-colocated-idle-card",
   ({ client }) => {
@@ -582,6 +628,7 @@ function IslandsRuntimePage() {
           <PlaygroundColocatedInteractionKeydownCard />
           <PlaygroundColocatedInteractionFocusCard />
           <PlaygroundColocatedInteractionPointerCard />
+          <PlaygroundComponentTargetArtifactCard />
           <PlaygroundColocatedIdleCard />
         </div>
       </section>

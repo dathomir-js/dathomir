@@ -4,6 +4,7 @@ import { atom, createAtomStore, withStore } from "@dathomir/store";
 import { bindStoreToHost, peekStoreFromHost } from "./internal";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  registerClientAction,
   HYDRATE_ISLANDS_HOOK,
   hydrateIslands,
   HYDRATE_ISLANDS_STATUS,
@@ -1185,6 +1186,71 @@ describe("defineComponent", () => {
 
     el.remove();
     errorSpy.mockRestore();
+  });
+
+  it("should defer host client action binding until idle strategy fires", async () => {
+    const tag = uniqueTag();
+    const actionId = `action:${tag}`;
+    const clickSpy = vi.fn();
+    let idleCallback: (() => void) | undefined;
+
+    vi.stubGlobal(
+      "requestIdleCallback",
+      vi.fn((callback: () => void) => {
+        idleCallback = callback;
+        return 1;
+      }),
+    );
+    vi.stubGlobal("cancelIdleCallback", vi.fn());
+
+    registerClientAction(actionId, clickSpy);
+    defineComponent(tag, () => document.createElement("button"));
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag} data-dh-island="idle" data-dh-client-actions='{"click":"${actionId}"}'><template shadowrootmode="open"><button type="button">SSR</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    hydrateIslands(document);
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await waitForMicrotask();
+    expect(clickSpy).not.toHaveBeenCalled();
+
+    idleCallback?.();
+    await waitForMicrotask();
+
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await waitForMicrotask();
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    el.remove();
+  });
+
+  it("should replay interaction events against host client actions", async () => {
+    const tag = uniqueTag();
+    const actionId = `action:${tag}`;
+    const clickSpy = vi.fn();
+
+    registerClientAction(actionId, clickSpy);
+    defineComponent(tag, () => document.createElement("button"));
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag} data-dh-island="interaction" data-dh-island-value="click" data-dh-client-actions='{"click":"${actionId}"}'><template shadowrootmode="open"><button type="button">SSR</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    hydrateIslands(document);
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    await waitForMicrotask();
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(Reflect.get(el, HYDRATE_ISLANDS_STATUS)).toBe("hydrated");
+
+    el.remove();
   });
 
   it("should replay the first click for interaction-deferred setup islands with client target markers", async () => {

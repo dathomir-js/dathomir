@@ -472,6 +472,45 @@
 )
 
 #adr(
+  header("component target の colocated handler は child host event surface を bind 点にする", Status.Proposed, "2026-04-07"),
+  [
+    component 要素 target の colocated handler は parent callsite に書かれるが、SSR 後に実際に hydrate されるのは child custom element host である。runtime が bind できる安定 surface は child host 自身であり、shadow 内部 DOM へ親が直接 reach する contract は持てない。
+  ],
+  [
+    component target の artifact-based handler binding は child host から観測できる event surface を bind 点とする。標準 DOM event で child host まで届かない event は child 側が host event として明示 re-emit するか、component target colocated では unsupported とする。
+  ],
+  [
+    - runtime の binding point が child host で固定され、SSR/CSR の ownership が明確になる
+    - child shadow DOM の内部構造変更を親 callsite の契約に露出しない
+    - host へ届く event だけを component target colocated の対象にすることで replay semantics を定義しやすい
+  ],
+)
+
+#behavior_spec(
+  name: "component-target colocated action artifact support (proposal)",
+  summary: [
+    component 要素上の colocated handler は function prop transport ではなく compiler-generated action artifact binding として扱い、child host が独立 hydrate しても parent callsite の意図した handler を復元できるようにする。
+  ],
+  preconditions: [
+    - child host は canonical `data-dh-island*` metadata と internal action binding metadata を持つ
+    - initial rollout の action artifact は module-scope で再評価可能な handler のみを対象とし、runtime が追加の capture deserialize を必要としない
+    - event surface は child host から観測できるか、child が host event として re-emit する
+  ],
+  steps: [
+    1. child host は DSD 接続時に compiler-generated action binding metadata の有無を検査する
+    2. strategy 発火までは既存 island scheduler に従って hydrate を遅延する
+    3. hydrate 時に runtime action registry から action artifact を解決し、child host event surface へ listener を bind する
+    4. `interaction` では trigger event が action binding event と一致する場合、hydrate 直後に replay を適用する
+    5. child host dispose 時は action listener と pending replay state を cleanup する
+  ],
+  postconditions: [
+    - component target colocated handler は child host の独立 hydrate 後も有効になる
+    - function prop が SSR で失われても action artifact binding により handler が復元される
+    - `hydrate` option と compiler-generated artifact path の責務が分離される
+  ],
+)
+
+#adr(
   header("store binding は components 内部実装で扱う", Status.Accepted, "2026-03-10"),
   [
     `withStore()` の boundary を custom element instance まで運ぶ仕組みは必要だが、利用者に public API として公開すると mental model が複雑になる。

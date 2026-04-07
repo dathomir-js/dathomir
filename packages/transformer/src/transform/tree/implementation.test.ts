@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CLIENT_ACTIONS_METADATA_ATTRIBUTE,
   CLIENT_EVENT_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,
@@ -491,6 +492,108 @@ describe("transform/tree", () => {
 
     expect(interactionValue?.value?.type).toBe("Literal");
     expect(interactionValue?.value?.value).toBe(DEFAULT_INTERACTION_EVENT_TYPE);
+  });
+
+  it("buildComponentCall turns component load:onClick into host island metadata plus client action metadata", () => {
+    const state = createInitialState("csr");
+    state.moduleBindings.add("handleClick");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onClick" },
+            },
+            value: expr(nId("handleClick")),
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = asObjectExpressionLike(result.arguments[0] as unknown as ESTNode);
+
+    expect(
+      props.properties.some(
+        (property) =>
+          property.key.type === "Literal" &&
+          property.key.value === ISLAND_METADATA_ATTRIBUTE &&
+          property.value?.type === "Literal" &&
+          property.value.value === "load",
+      ),
+    ).toBe(true);
+    expect(
+      props.properties.some(
+        (property) =>
+          property.key.type === "Literal" &&
+          property.key.value === CLIENT_ACTIONS_METADATA_ATTRIBUTE &&
+          property.value?.type === "Literal" &&
+          String(property.value.value).includes('"click":"dh-ca-1"'),
+      ),
+    ).toBe(true);
+    expect(state.componentClientActions).toHaveLength(1);
+    expect(state.componentClientActions[0]?.id).toBe("dh-ca-1");
+  });
+
+  it("buildComponentCall turns component interaction:onKeyDown into host island value metadata", () => {
+    const state = createInitialState("csr");
+    state.moduleBindings.add("handleKeyDown");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "interaction" },
+              name: { type: "JSXIdentifier", name: "onKeyDown" },
+            },
+            value: expr(nId("handleKeyDown")),
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = asObjectExpressionLike(result.arguments[0] as unknown as ESTNode);
+
+    expect(
+      props.properties.some(
+        (property) =>
+          property.key.type === "Literal" &&
+          property.key.value === ISLAND_METADATA_ATTRIBUTE &&
+          property.value?.type === "Literal" &&
+          property.value.value === "interaction",
+      ),
+    ).toBe(true);
+    expect(
+      props.properties.some(
+        (property) =>
+          property.key.type === "Literal" &&
+          property.key.value === ISLAND_VALUE_METADATA_ATTRIBUTE &&
+          property.value?.type === "Literal" &&
+          property.value.value === "keydown",
+      ),
+    ).toBe(true);
   });
 
   it("jsxToTree throws when client directive is used on html element", () => {
@@ -1945,7 +2048,7 @@ describe("transform/tree", () => {
             name: {
               type: "JSXNamespacedName",
               namespace: { type: "JSXIdentifier", name: "load" },
-              name: { type: "JSXIdentifier", name: "onHover" },
+              name: { type: "JSXIdentifier", name: "click" },
             },
             value: expr(nId("handler")),
           },
@@ -1958,6 +2061,86 @@ describe("transform/tree", () => {
 
     expect(() => buildComponentCall(component, state, nested)).toThrow(
       "Unsupported colocated client directive",
+    );
+  });
+
+  it("buildComponentCall rejects component colocated handlers that capture local bindings", () => {
+    const state = createInitialState("csr");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onClick" },
+            },
+            value: expr({
+              type: "ArrowFunctionExpression",
+              params: [],
+              body: {
+                type: "CallExpression",
+                callee: nId("increment"),
+                arguments: [nId("localCount")],
+                optional: false,
+              },
+              expression: true,
+            }),
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    state.moduleBindings.add("increment");
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "component-target colocated handlers cannot capture local bindings: localCount",
+    );
+  });
+
+  it("buildComponentCall rejects mixing component colocated directives with client:*", () => {
+    const state = createInitialState("csr");
+    state.moduleBindings.add("handleClick");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "client" },
+              name: { type: "JSXIdentifier", name: "load" },
+            },
+            value: null,
+          },
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onClick" },
+            },
+            value: expr(nId("handleClick")),
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
     );
   });
 

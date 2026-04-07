@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CLIENT_EVENT_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,
   DEFAULT_INTERACTION_EVENT_TYPE,
@@ -132,6 +133,7 @@ describe("transform/tree", () => {
       createInitialState("csr"),
       {
         strategy: null,
+        interactionEventType: null,
       },
     );
 
@@ -158,7 +160,7 @@ describe("transform/tree", () => {
       dynamicParts,
       [0],
       createInitialState("csr"),
-      { strategy: null },
+      { strategy: null, interactionEventType: null },
     );
 
     expect(result.attrs).toEqual(nLit(null));
@@ -228,7 +230,7 @@ describe("transform/tree", () => {
       dynamicParts,
       [0],
       createInitialState("csr"),
-      { strategy: null },
+      { strategy: null, interactionEventType: null },
     );
 
     expect(result.attrs.type).toBe("ObjectExpression");
@@ -566,6 +568,7 @@ describe("transform/tree", () => {
 
     const result = processAttributes(attributes, dynamicParts, [0], state, {
       strategy: null,
+      interactionEventType: null,
     });
 
     expect(result.attrs.type).toBe("ObjectExpression");
@@ -609,7 +612,7 @@ describe("transform/tree", () => {
         dynamicParts,
         [0],
         state,
-        { strategy: null },
+        { strategy: null, interactionEventType: null },
       ),
     ).toThrow(
       "data-dh-client-target is compiler-reserved metadata and cannot be authored directly",
@@ -1376,7 +1379,7 @@ describe("transform/tree", () => {
         dynamicParts,
         [0],
         state,
-        { strategy: null },
+        { strategy: null, interactionEventType: null },
       ),
     ).toThrow("is only supported on HTML elements");
   });
@@ -1402,7 +1405,7 @@ describe("transform/tree", () => {
         dynamicParts,
         [0],
         state,
-        { strategy: null },
+        { strategy: null, interactionEventType: null },
       ),
     ).toThrow("is only supported on HTML elements");
   });
@@ -1454,7 +1457,7 @@ describe("transform/tree", () => {
             name: {
               type: "JSXNamespacedName",
               namespace: { type: "JSXIdentifier", name: "load" },
-              name: { type: "JSXIdentifier", name: "onHover" },
+              name: { type: "JSXIdentifier", name: "click" },
             },
             value: expr(nId("handler")),
           },
@@ -1462,9 +1465,74 @@ describe("transform/tree", () => {
         dynamicParts,
         [0],
         state,
-        { strategy: null },
+        { strategy: null, interactionEventType: null },
       ),
     ).toThrow("Unsupported colocated client directive");
+  });
+
+  it("processAttributes stores client event metadata for non-click interaction", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    const result = processAttributes(
+      [
+        {
+          type: "JSXAttribute",
+          name: {
+            type: "JSXNamespacedName",
+            namespace: { type: "JSXIdentifier", name: "interaction" },
+            name: { type: "JSXIdentifier", name: "onKeyDown" },
+          },
+          value: expr(nId("handler")),
+        },
+      ],
+      dynamicParts,
+      [0],
+      state,
+      { strategy: null, interactionEventType: null },
+    );
+
+    const attrs = asObjectExpressionLike(result.attrs);
+    expect(
+      attrs.properties.some(
+        (property) =>
+          "type" in property &&
+          property.type === "Property" &&
+          property.key.type === "Literal" &&
+          property.key.value === CLIENT_EVENT_METADATA_ATTRIBUTE &&
+          property.value !== undefined &&
+          property.value.type === "Literal" &&
+          property.value.value === "keydown",
+      ),
+    ).toBe(true);
+    expect(result.events).toEqual([
+      { type: "keydown", handler: expect.objectContaining({ type: "Identifier" }) },
+    ]);
+  });
+
+  it("processAttributes throws for mixed interaction event types", () => {
+    const state = createInitialState("csr");
+    const dynamicParts: Parameters<typeof processAttributes>[1] = [];
+
+    expect(() =>
+      processAttributes(
+        [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "interaction" },
+              name: { type: "JSXIdentifier", name: "onMouseEnter" },
+            },
+            value: expr(nId("handler")),
+          },
+        ],
+        dynamicParts,
+        [0],
+        state,
+        { strategy: "interaction", interactionEventType: "keydown" },
+      ),
+    ).toThrow("Mixed colocated interaction event types are not supported in one JSX root");
   });
 
   it("processAttributes throws for unknown client directive on html element", () => {
@@ -1487,7 +1555,7 @@ describe("transform/tree", () => {
         dynamicParts,
         [0],
         state,
-        { strategy: null },
+        { strategy: null, interactionEventType: null },
       ),
     ).toThrow("Unknown client:* directive");
   });
@@ -1507,7 +1575,7 @@ describe("transform/tree", () => {
       dynamicParts,
       [0],
       state,
-      { strategy: null },
+      { strategy: null, interactionEventType: null },
     );
 
     const objExpression = asObjectExpressionLike(result.attrs);
@@ -1531,7 +1599,7 @@ describe("transform/tree", () => {
       dynamicParts,
       [0],
       state,
-      { strategy: null },
+      { strategy: null, interactionEventType: null },
     );
 
     expect(result.spreads).toHaveLength(1);
@@ -1584,7 +1652,7 @@ describe("transform/tree", () => {
         dynamicParts,
         [0],
         state,
-        { strategy: null },
+        { strategy: null, interactionEventType: null },
       ),
     ).toThrow("requires an inline handler expression");
   });
@@ -1612,7 +1680,7 @@ describe("transform/tree", () => {
         dynamicParts,
         [0],
         state,
-        { strategy: null },
+        { strategy: null, interactionEventType: null },
       ),
     ).toThrow("requires an inline handler expression");
   });
@@ -1646,7 +1714,7 @@ describe("transform/tree", () => {
         dynamicParts,
         [0],
         state,
-        { strategy: "load" },
+        { strategy: "load", interactionEventType: null },
       ),
     ).toThrow("Mixed colocated client strategies");
   });
@@ -1669,7 +1737,7 @@ describe("transform/tree", () => {
       dynamicParts,
       [0],
       state,
-      { strategy: null },
+      { strategy: null, interactionEventType: null },
     );
 
     // Empty expression should be skipped entirely
@@ -2031,7 +2099,7 @@ describe("transform/tree", () => {
       dynamicParts,
       [0],
       state,
-      { strategy: null },
+      { strategy: null, interactionEventType: null },
     );
 
     const objExpression = asObjectExpressionLike(result.attrs);
@@ -2225,7 +2293,7 @@ describe("transform/tree", () => {
         dynamicParts,
         [0],
         state,
-        { strategy: null },
+        { strategy: null, interactionEventType: null },
       ),
     ).toThrow("Unknown client:* directive");
   });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CLIENT_EVENT_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,
   COLOCATED_CLIENT_STRATEGIES,
@@ -18,6 +19,7 @@ describe("islandsContract", () => {
     expect(ISLAND_VALUE_METADATA_ATTRIBUTE).toBe("data-dh-island-value");
     expect(CLIENT_TARGET_METADATA_ATTRIBUTE).toBe("data-dh-client-target");
     expect(CLIENT_STRATEGY_METADATA_ATTRIBUTE).toBe("data-dh-client-strategy");
+    expect(CLIENT_EVENT_METADATA_ATTRIBUTE).toBe("data-dh-client-event");
   });
 
   it("exports canonical strategy lists", () => {

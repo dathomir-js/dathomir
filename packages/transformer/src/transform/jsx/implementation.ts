@@ -151,9 +151,17 @@ function getRawAttributeName(name: JSXAttribute["name"]): string | null {
   return null;
 }
 
+function isEventHandlerName(name: string): boolean {
+  return name.startsWith("on") && name.length > 2 && name[2] === name[2].toUpperCase();
+}
+
+function getEventTypeFromHandlerName(name: string): string {
+  return name.slice(2).toLowerCase();
+}
+
 function getColocatedClientDirective(name: JSXAttribute["name"]): {
   strategy: ColocatedClientStrategyName;
-  event: typeof DEFAULT_INTERACTION_EVENT_TYPE;
+  event: string;
 } | null {
   const rawName = getRawAttributeName(name);
   /* c8 ignore next @preserve -- defensive guard: parser-produced JSXAttribute names always normalize to a string */
@@ -162,13 +170,16 @@ function getColocatedClientDirective(name: JSXAttribute["name"]): {
   }
 
   const [strategy, event] = rawName.split(":");
-  if (!isColocatedClientStrategyName(strategy ?? null) || event !== "onClick") {
+  if (
+    !isColocatedClientStrategyName(strategy ?? null) ||
+    !isEventHandlerName(event ?? "")
+  ) {
     return null;
   }
 
   return {
     strategy: strategy as ColocatedClientStrategyName,
-    event: DEFAULT_INTERACTION_EVENT_TYPE,
+    event: getEventTypeFromHandlerName(event),
   };
 }
 

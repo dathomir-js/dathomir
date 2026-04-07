@@ -2607,12 +2607,18 @@ describe("transform", () => {
       const strategyCode = `
         const element = <button data-dh-client-strategy="idle" idle:onClick={() => doThing()}>Run</button>;
       `;
+      const eventCode = `
+        const element = <button data-dh-client-event="keydown" interaction:onKeyDown={() => doThing()}>Run</button>;
+      `;
 
       expect(() => transform(targetCode)).toThrow(
         "data-dh-client-target is compiler-reserved metadata and cannot be authored directly",
       );
       expect(() => transform(strategyCode)).toThrow(
         "data-dh-client-strategy is compiler-reserved metadata and cannot be authored directly",
+      );
+      expect(() => transform(eventCode)).toThrow(
+        "data-dh-client-event is compiler-reserved metadata and cannot be authored directly",
       );
     });
 
@@ -2626,29 +2632,60 @@ describe("transform", () => {
       );
     });
 
-    it("should throw for unsupported colocated directives on html elements", () => {
+    it("should transform load:onMouseEnter on html elements into load target metadata plus mouseenter binding", () => {
       const code = `
         const element = <button load:onMouseEnter={() => doThing()}>Run</button>;
       `;
 
-      expect(() => transform(code)).toThrow(
-        "Unsupported colocated client directive: load:onMouseEnter",
-      );
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('"data-dh-client-target"');
+      expect(result.code).toContain('"data-dh-client-strategy"');
+      expect(result.code).toContain('"load"');
+      expect(result.code).toContain('"mouseenter"');
     });
 
-    it("should throw for unsupported visible and idle colocated directives on html elements", () => {
+    it("should transform visible:onFocus and idle:onScroll on html elements", () => {
       const visibleCode = `
-        const element = <button visible:onMouseEnter={() => doThing()}>Run</button>;
+        const element = <button visible:onFocus={() => doThing()}>Run</button>;
       `;
       const idleCode = `
-        const element = <button idle:onFocus={() => doThing()}>Run</button>;
+        const element = <button idle:onScroll={() => doThing()}>Run</button>;
       `;
 
-      expect(() => transform(visibleCode)).toThrow(
-        "Unsupported colocated client directive: visible:onMouseEnter",
-      );
-      expect(() => transform(idleCode)).toThrow(
-        "Unsupported colocated client directive: idle:onFocus",
+      const visibleResult = transform(visibleCode, { mode: "csr" });
+      const idleResult = transform(idleCode, { mode: "csr" });
+
+      expect(visibleResult.code).toContain('"visible"');
+      expect(visibleResult.code).toContain('"focus"');
+      expect(idleResult.code).toContain('"idle"');
+      expect(idleResult.code).toContain('"scroll"');
+    });
+
+    it("should keep interaction colocated directives limited to onClick", () => {
+      const code = `
+        const element = <button interaction:onKeyDown={() => doThing()}>Run</button>;
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('"interaction"');
+      expect(result.code).toContain('"keydown"');
+      expect(result.code).toContain('"data-dh-client-event"');
+    });
+
+    it("should throw when mixed interaction event types are used in one jsx root", () => {
+      const code = `
+        const element = (
+          <div>
+            <button interaction:onClick={() => a()} />
+            <button interaction:onKeyDown={() => b()} />
+          </div>
+        );
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "Mixed colocated interaction event types are not supported in one JSX root",
       );
     });
 
@@ -5546,44 +5583,45 @@ describe("transform", () => {
       expect(result.code).toContain('"focus"');
     });
 
-    it("should throw for colocated load:onMouseEnter (non-onClick not supported)", () => {
+    it("should transform colocated load:onMouseEnter", () => {
       const code = `
         const handler = () => {};
         const element = <div load:onMouseEnter={handler}>hover</div>;
       `;
-      expect(() => transform(code)).toThrow(
-        "Unsupported colocated client directive: load:onMouseEnter",
-      );
+      const result = transform(code);
+      expect(result.code).toContain('"load"');
+      expect(result.code).toContain('"mouseenter"');
     });
 
-    it("should throw for colocated interaction:onKeyDown (non-onClick not supported)", () => {
+    it("should keep colocated interaction:onKeyDown unsupported", () => {
       const code = `
         const handler = () => {};
         const element = <div interaction:onKeyDown={handler}>key</div>;
       `;
-      expect(() => transform(code)).toThrow(
-        "Unsupported colocated client directive: interaction:onKeyDown",
-      );
+      const result = transform(code);
+      expect(result.code).toContain('"interaction"');
+      expect(result.code).toContain('"keydown"');
+      expect(result.code).toContain('"data-dh-client-event"');
     });
 
-    it("should throw for colocated visible:onFocus (non-onClick not supported)", () => {
+    it("should transform colocated visible:onFocus", () => {
       const code = `
         const handler = () => {};
         const element = <input visible:onFocus={handler} />;
       `;
-      expect(() => transform(code)).toThrow(
-        "Unsupported colocated client directive: visible:onFocus",
-      );
+      const result = transform(code);
+      expect(result.code).toContain('"visible"');
+      expect(result.code).toContain('"focus"');
     });
 
-    it("should throw for colocated idle:onScroll (non-onClick not supported)", () => {
+    it("should transform colocated idle:onScroll", () => {
       const code = `
         const handler = () => {};
         const element = <div idle:onScroll={handler}>scroll</div>;
       `;
-      expect(() => transform(code)).toThrow(
-        "Unsupported colocated client directive: idle:onScroll",
-      );
+      const result = transform(code);
+      expect(result.code).toContain('"idle"');
+      expect(result.code).toContain('"scroll"');
     });
   });
 

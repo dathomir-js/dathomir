@@ -972,6 +972,47 @@ describe("defineComponent", () => {
     el.remove();
   });
 
+  it("should derive non-click interaction metadata from colocated target markers", async () => {
+    const tag = uniqueTag();
+    const keySpy = vi.fn();
+
+    defineComponent(tag, () => {
+      const input = document.createElement("input");
+      input.setAttribute("data-dh-client-target", "field");
+      input.setAttribute("data-dh-client-strategy", "interaction");
+      input.setAttribute("data-dh-client-event", "keydown");
+      input.addEventListener("keydown", (event) => {
+        keySpy((event as KeyboardEvent).key);
+      });
+      return input;
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><input data-dh-client-target="field" data-dh-client-strategy="interaction" data-dh-client-event="keydown"></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.getAttribute("data-dh-island")).toBe("interaction");
+    expect(el.getAttribute("data-dh-island-value")).toBe("keydown");
+
+    hydrateIslands(document);
+    const ssrInput = el.shadowRoot?.querySelector("input");
+    ssrInput?.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        composed: true,
+        key: "Enter",
+      }),
+    );
+    await waitForMicrotask();
+
+    expect(keySpy).toHaveBeenCalledWith("Enter");
+
+    el.remove();
+  });
+
   it("should derive host visible metadata from colocated target markers and defer setup until hydrateIslands runs visibility scheduling", async () => {
     const tag = uniqueTag();
     const clickSpy = vi.fn();
@@ -1116,7 +1157,7 @@ describe("defineComponent", () => {
     await waitForMicrotask();
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "[dathomir] colocated load:onClick / interaction:onClick / idle:onClick / visible:onClick cannot be combined with a hydrate option in the same component",
+      "[dathomir] colocated load:on* / interaction:on* / idle:on* / visible:on* cannot be combined with a hydrate option in the same component",
     );
     expect(el.getAttribute("data-dh-island")).toBeNull();
 
@@ -1175,6 +1216,43 @@ describe("defineComponent", () => {
     await waitForMicrotask();
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    el.remove();
+  });
+
+  it("should replay the first keydown for interaction-deferred setup islands with client target markers", async () => {
+    const tag = uniqueTag();
+    const keySpy = vi.fn();
+
+    defineComponent(tag, () => {
+      const input = document.createElement("input");
+      input.setAttribute("data-dh-client-target", "field");
+      input.setAttribute("data-dh-client-event", "keydown");
+      input.addEventListener("keydown", (event) => {
+        keySpy((event as KeyboardEvent).key);
+      });
+      return input;
+    });
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><input data-dh-client-target="field" data-dh-client-strategy="interaction" data-dh-client-event="keydown"></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    hydrateIslands(document);
+    const ssrInput = el.shadowRoot?.querySelector("input");
+    ssrInput?.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        composed: true,
+        key: "Enter",
+      }),
+    );
+    await waitForMicrotask();
+
+    expect(keySpy).toHaveBeenCalledWith("Enter");
 
     el.remove();
   });
@@ -1316,6 +1394,182 @@ describe("defineComponent", () => {
 
     expect(component).not.toHaveBeenCalled();
     expect(el.shadowRoot?.textContent).toBe("hydrated");
+
+    el.remove();
+  });
+
+  it("should replay interaction events after compiler-generated plan hydration", async () => {
+    const tag = uniqueTag();
+    const keySpy = vi.fn();
+    const component = vi.fn(() => {
+      return document.createElement("input");
+    }) as ((ctx: any) => Node) & {
+      __hydrationMetadata__?: {
+        kind: "generic-plan";
+        planFactory: (host: HTMLElement, ctx: any) => GenericHydrationPlan;
+      };
+    };
+
+    component.__hydrationMetadata__ = {
+      kind: "generic-plan",
+      planFactory: () => ({
+        namespace: "html",
+        bindings: [
+          {
+            kind: "event",
+            path: [0],
+            eventType: "keydown",
+            expression: (event: Event) => {
+              keySpy((event as KeyboardEvent).key);
+            },
+          },
+        ],
+        nestedBoundaries: [],
+      }),
+    };
+
+    defineComponent(tag, component as never);
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><input data-dh-client-target="field" data-dh-client-strategy="interaction" data-dh-client-event="keydown"></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.getAttribute("data-dh-island")).toBe("interaction");
+    expect(el.getAttribute("data-dh-island-value")).toBe("keydown");
+
+    hydrateIslands(document);
+    const ssrInput = el.shadowRoot?.querySelector("input");
+    ssrInput?.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        composed: true,
+        key: "Enter",
+      }),
+    );
+    await waitForMicrotask();
+
+    expect(keySpy).toHaveBeenCalledWith("Enter");
+    expect(component).not.toHaveBeenCalled();
+
+    el.remove();
+  });
+
+  it("should replay focus events after compiler-generated plan hydration", async () => {
+    const tag = uniqueTag();
+    const focusSpy = vi.fn();
+    const component = vi.fn(() => {
+      return document.createElement("input");
+    }) as ((ctx: any) => Node) & {
+      __hydrationMetadata__?: {
+        kind: "generic-plan";
+        planFactory: (host: HTMLElement, ctx: any) => GenericHydrationPlan;
+      };
+    };
+
+    component.__hydrationMetadata__ = {
+      kind: "generic-plan",
+      planFactory: () => ({
+        namespace: "html",
+        bindings: [
+          {
+            kind: "event",
+            path: [0],
+            eventType: "focus",
+            expression: (event: Event) => {
+              focusSpy(event.type);
+            },
+          },
+        ],
+        nestedBoundaries: [],
+      }),
+    };
+
+    defineComponent(tag, component as never);
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><input data-dh-client-target="field" data-dh-client-strategy="interaction" data-dh-client-event="focus"></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.getAttribute("data-dh-island")).toBe("interaction");
+    expect(el.getAttribute("data-dh-island-value")).toBe("focus");
+
+    hydrateIslands(document);
+    const ssrInput = el.shadowRoot?.querySelector("input");
+    ssrInput?.dispatchEvent(
+      new FocusEvent("focus", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await waitForMicrotask();
+
+    expect(focusSpy).toHaveBeenCalledWith("focus");
+    expect(component).not.toHaveBeenCalled();
+
+    el.remove();
+  });
+
+  it("should replay pointer events after compiler-generated plan hydration", async () => {
+    const tag = uniqueTag();
+    const pointerSpy = vi.fn();
+    const component = vi.fn(() => {
+      return document.createElement("button");
+    }) as ((ctx: any) => Node) & {
+      __hydrationMetadata__?: {
+        kind: "generic-plan";
+        planFactory: (host: HTMLElement, ctx: any) => GenericHydrationPlan;
+      };
+    };
+
+    component.__hydrationMetadata__ = {
+      kind: "generic-plan",
+      planFactory: () => ({
+        namespace: "html",
+        bindings: [
+          {
+            kind: "event",
+            path: [0],
+            eventType: "pointerdown",
+            expression: (event: Event) => {
+              pointerSpy((event as PointerEvent).pointerType);
+            },
+          },
+        ],
+        nestedBoundaries: [],
+      }),
+    };
+
+    defineComponent(tag, component as never);
+
+    const container = document.createElement("div");
+    container.innerHTML = `<${tag}><template shadowrootmode="open"><button data-dh-client-target="field" data-dh-client-strategy="interaction" data-dh-client-event="pointerdown">SSR</button></template></${tag}>`;
+    const el = container.firstElementChild as HTMLElement;
+
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    expect(el.getAttribute("data-dh-island")).toBe("interaction");
+    expect(el.getAttribute("data-dh-island-value")).toBe("pointerdown");
+
+    hydrateIslands(document);
+    const ssrButton = el.shadowRoot?.querySelector("button");
+    ssrButton?.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        composed: true,
+        pointerType: "mouse",
+      }),
+    );
+    await waitForMicrotask();
+
+    expect(pointerSpy).toHaveBeenCalledWith("mouse");
+    expect(component).not.toHaveBeenCalled();
 
     el.remove();
   });

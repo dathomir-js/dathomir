@@ -129,26 +129,29 @@
 #behavior_spec(
   name: "colocated client handlers MVP",
   summary: [
-    HTML 要素上の `load:onClick` / `interaction:onClick` を sugar として認識する。v1 では target marker 付き click binding と strategy metadata へ落とし込み、`defineComponent()` host 側で DSD rerender-based hydration replay に使えるようにする。
+    HTML 要素上の `<strategy>:on<Event>` を sugar として認識する。v1 では target marker 付き event binding と strategy metadata へ落とし込み、必要な場合は target event type metadata も残して `defineComponent()` host / runtime 側の DSD hydration scheduling と first-event replay に使えるようにする。
   ],
   preconditions: [
-    - v1 では `onClick` のみサポートする
+    - colocated client handler は `on*` 形式の event handler key のみ許可する
+    - `interaction` は 1 component render subtree 内で 1 種類の event type のみ許可する
     - v1 では 1 component render subtree 内で 1 種類の strategy (`load` または `interaction`) のみ許可する
   ],
   steps: [
-    1. transformer は `load:onClick` / `interaction:onClick` を namespaced 属性として認識する
+    1. transformer は `<strategy>:on<Event>` を namespaced 属性として認識する
     2. transformer は target HTML 要素へ stable `data-dh-client-target` marker を付与する
-    3. colocated directive 自体は出力から除去し、handler は通常の `onClick` event binding として CSR transform へ流す
+    3. colocated directive 自体は出力から除去し、handler は通常の `on*` event binding として CSR transform へ流す
     4. target HTML 要素へ `data-dh-client-strategy` metadata を残す
+    5. `interaction` で event type が canonical default `click` 以外の場合は target HTML 要素へ `data-dh-client-event` metadata を残す
     5. `defineComponent()` host は DSD 接続時に shadowRoot 内 marker を読んで `data-dh-island` metadata を自動付与できる
   ],
   postconditions: [
     - author は event と hydrate trigger を 1 箇所で記述できる
     - SSR 出力には target marker と target-level strategy metadata が残る
-    - CSR setup 後は通常の `onClick` handler として動作する
+    - CSR setup 後は通常の `on*` handler として動作する
   ],
   errors: [
-    - `onClick` 以外の colocated client handler は transform error
+    - `interaction:onClick` と `interaction:onKeyDown` のように同一 subtree 内で interaction event type を混在させた場合は transform error
+    - `on*` 形式でない colocated client handler は transform error
     - 同一 component render subtree に `load` と `interaction` を混在させた場合は transform error
   ],
 )
@@ -156,31 +159,30 @@
 #behavior_spec(
   name: "colocated client handlers phase 2 (proposal)",
   summary: [
-    MVP の `load:onClick` / `interaction:onClick` が安定した後、同じ colocated syntax surface を `visible:onClick` / `idle:onClick` へ拡張する。
+    `visible` / `idle` も MVP と同じ colocated syntax surface を持つ。non-interaction strategies では trigger event replay を持たないため、`on*` event binding をそのまま target element に残せる。
   ],
   preconditions: [
-    - phase 2 でも `onClick` のみを対象とする
+    - `visible` / `idle` は `on*` 形式の event handler key を許可する
     - 1 component render subtree 内では 1 種類の strategy のみ許可する
-    - `visible:onClick` / `idle:onClick` は trigger event replay を持たない
+    - `visible:on*` / `idle:on*` は trigger event replay を持たない
     - host-level `client:*` directive または explicit `data-dh-island*` metadata と同じ component render subtree で混在させてはならない
-    - rollout 中に `visible:onClick` / `idle:onClick` を解釈できない transformer/runtime へ部分導入してはならず、未対応フェーズでは transform error とする
+    - `interaction` の colocated event type は target event metadata と first-event replay を通じて host hydration trigger へ接続する
   ],
   steps: [
-    1. transformer は `visible:onClick` / `idle:onClick` を MVP と同じ namespaced 属性として認識する
+    1. transformer は `visible:on*` / `idle:on*` を MVP と同じ namespaced 属性として認識する
     2. target HTML 要素へ `data-dh-client-target` と `data-dh-client-strategy` を付与する
-    3. handler は通常の `onClick` binding として CSR setup に残す
+    3. handler は通常の `on*` binding として CSR setup に残す
     4. SSR 出力では `defineComponent()` host が shadowRoot marker から `visible` / `idle` island metadata を導出できる
   ],
   postconditions: [
-    - `<button visible:onClick={...}>` を target marker + `visible` strategy metadata へ変換する
-    - `<button idle:onClick={...}>` を target marker + `idle` strategy metadata へ変換する
-    - syntax surface は広げるが、event 種別は引き続き `click` に固定する
-    - visible / idle は hydrate trigger が click ではないため replay は不要
+    - `<button visible:onFocus={...}>` を target marker + `visible` strategy metadata + `focus` binding へ変換する
+    - `<button idle:onScroll={...}>` を target marker + `idle` strategy metadata + `scroll` binding へ変換する
+    - visible / idle は hydrate trigger が event binding と独立しているため replay は不要
     - phase 2 でも target marker 形式は MVP と共通にして、artifact-based action plan への移行余地を残す
   ],
   errors: [
-    - `visible:onClick` と `load:onClick` を同一 JSX root で混在させると transform error にする
-    - `idle:onClick` と `interaction:onClick` を同一 JSX root で混在させると transform error にする
+    - `visible:onFocus` と `load:onMouseEnter` を同一 JSX root で混在させると transform error にする
+    - `idle:onScroll` と `interaction:onKeyDown` を同一 JSX root で混在させると transform error にする
     - host-level `client:load` と subtree `visible:onClick` を同一 component render subtree で混在させると transform error にする
     - explicit `data-dh-island="load"` と subtree `idle:onClick` を同一 component render subtree で混在させると transform error にする
     - author が `data-dh-client-target` / `data-dh-client-strategy` を明示指定した場合は transform error にする

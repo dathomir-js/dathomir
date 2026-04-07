@@ -14,6 +14,8 @@ import {
   type RootDispose,
 } from "@dathomir/reactivity";
 import {
+  CLIENT_EVENT_METADATA_ATTRIBUTE,
+  CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,
   DEFAULT_INTERACTION_EVENT_TYPE,
   ISLAND_METADATA_ATTRIBUTE,
@@ -61,6 +63,24 @@ interface IslandHydrationTrigger {
   readonly strategy: string;
   readonly eventType?: string;
   readonly replayTargetId?: string | null;
+  readonly replayEvent?: ReplayEventSnapshot;
+}
+
+interface ReplayEventSnapshot {
+  readonly kind:
+    | "event"
+    | "mouse"
+    | "keyboard"
+    | "focus"
+    | "input"
+    | "pointer";
+  readonly init:
+    | EventInit
+    | MouseEventInit
+    | KeyboardEventInit
+    | FocusEventInit
+    | InputEventInit
+    | PointerEventInit;
 }
 type HydrateIslandHook = (trigger?: IslandHydrationTrigger) => boolean;
 
@@ -413,6 +433,152 @@ function getReplayTargetIdFromEvent(event: Event): string | null {
   return null;
 }
 
+function createReplayEventSnapshot(event: Event): ReplayEventSnapshot {
+  const baseInit = {
+    bubbles: event.bubbles,
+    cancelable: event.cancelable,
+    composed: event.composed,
+  };
+  const eventRecord = event as Event & Record<string, unknown>;
+
+  if (
+    (typeof PointerEvent !== "undefined" && event instanceof PointerEvent) ||
+    typeof eventRecord.pointerType === "string"
+  ) {
+    return {
+      kind: "pointer",
+      init: {
+        ...baseInit,
+        button: Number(eventRecord.button ?? 0),
+        buttons: Number(eventRecord.buttons ?? 0),
+        clientX: Number(eventRecord.clientX ?? 0),
+        clientY: Number(eventRecord.clientY ?? 0),
+        ctrlKey: Boolean(eventRecord.ctrlKey),
+        shiftKey: Boolean(eventRecord.shiftKey),
+        altKey: Boolean(eventRecord.altKey),
+        metaKey: Boolean(eventRecord.metaKey),
+        pointerId: Number(eventRecord.pointerId ?? 0),
+        pointerType: String(eventRecord.pointerType ?? ""),
+        pressure: Number(eventRecord.pressure ?? 0),
+        tangentialPressure: Number(eventRecord.tangentialPressure ?? 0),
+        tiltX: Number(eventRecord.tiltX ?? 0),
+        tiltY: Number(eventRecord.tiltY ?? 0),
+        twist: Number(eventRecord.twist ?? 0),
+        width: Number(eventRecord.width ?? 0),
+        height: Number(eventRecord.height ?? 0),
+        isPrimary: Boolean(eventRecord.isPrimary),
+      },
+    };
+  }
+
+  if (
+    (typeof MouseEvent !== "undefined" && event instanceof MouseEvent) ||
+    typeof eventRecord.clientX === "number" ||
+    typeof eventRecord.button === "number"
+  ) {
+    return {
+      kind: "mouse",
+      init: {
+        ...baseInit,
+        detail: Number(eventRecord.detail ?? 0),
+        button: Number(eventRecord.button ?? 0),
+        buttons: Number(eventRecord.buttons ?? 0),
+        clientX: Number(eventRecord.clientX ?? 0),
+        clientY: Number(eventRecord.clientY ?? 0),
+        ctrlKey: Boolean(eventRecord.ctrlKey),
+        shiftKey: Boolean(eventRecord.shiftKey),
+        altKey: Boolean(eventRecord.altKey),
+        metaKey: Boolean(eventRecord.metaKey),
+        relatedTarget: null,
+        screenX: Number(eventRecord.screenX ?? 0),
+        screenY: Number(eventRecord.screenY ?? 0),
+      },
+    };
+  }
+
+  if (
+    (typeof KeyboardEvent !== "undefined" && event instanceof KeyboardEvent) ||
+    typeof eventRecord.key === "string" ||
+    typeof eventRecord.code === "string"
+  ) {
+    return {
+      kind: "keyboard",
+      init: {
+        ...baseInit,
+        key: String(eventRecord.key ?? ""),
+        code: String(eventRecord.code ?? ""),
+        location: Number(eventRecord.location ?? 0),
+        repeat: Boolean(eventRecord.repeat),
+        ctrlKey: Boolean(eventRecord.ctrlKey),
+        shiftKey: Boolean(eventRecord.shiftKey),
+        altKey: Boolean(eventRecord.altKey),
+        metaKey: Boolean(eventRecord.metaKey),
+        isComposing: Boolean(eventRecord.isComposing),
+      },
+    };
+  }
+
+  if (
+    (typeof FocusEvent !== "undefined" && event instanceof FocusEvent) ||
+    event.type === "focus" ||
+    event.type === "blur" ||
+    event.type === "focusin" ||
+    event.type === "focusout"
+  ) {
+    return {
+      kind: "focus",
+      init: {
+        ...baseInit,
+        detail: Number(eventRecord.detail ?? 0),
+        relatedTarget: null,
+      },
+    };
+  }
+
+  if (
+    (typeof InputEvent !== "undefined" && event instanceof InputEvent) ||
+    typeof eventRecord.inputType === "string" ||
+    "data" in eventRecord
+  ) {
+    return {
+      kind: "input",
+      init: {
+        ...baseInit,
+        data:
+          typeof eventRecord.data === "string" ? eventRecord.data : null,
+        inputType: String(eventRecord.inputType ?? ""),
+        isComposing: Boolean(eventRecord.isComposing),
+      },
+    };
+  }
+
+  return {
+    kind: "event",
+    init: baseInit,
+  };
+}
+
+function getColocatedInteractionTargets(
+  host: IslandHost,
+  eventType: string,
+): HTMLElement[] {
+  const shadowRoot = host.shadowRoot;
+  if (shadowRoot === null) {
+    return [];
+  }
+
+  return Array.from(
+    shadowRoot.querySelectorAll<HTMLElement>(
+      `[${CLIENT_TARGET_METADATA_ATTRIBUTE}][${CLIENT_STRATEGY_METADATA_ATTRIBUTE}="interaction"]`,
+    ),
+  ).filter((target) => {
+    return (
+      (target.getAttribute(CLIENT_EVENT_METADATA_ATTRIBUTE) ??
+        DEFAULT_INTERACTION_EVENT_TYPE) === eventType
+    );
+  });
+}
+
 function collectIslandHosts(
   root: Document | ShadowRoot | Element,
   hosts: IslandHost[] = [],
@@ -564,8 +730,22 @@ function scheduleIslandHydration(host: IslandHost): (() => void) | null {
           strategy,
           eventType,
           replayTargetId: getReplayTargetIdFromEvent(event),
+          replayEvent: createReplayEventSnapshot(event),
         });
       };
+      const colocatedTargets = getColocatedInteractionTargets(host, eventType);
+      if (colocatedTargets.length > 0) {
+        for (const target of colocatedTargets) {
+          target.addEventListener(eventType, onInteraction, { once: true });
+        }
+        cleanup = () => {
+          for (const target of colocatedTargets) {
+            target.removeEventListener(eventType, onInteraction);
+          }
+        };
+        break;
+      }
+
       host.addEventListener(eventType, onInteraction, { once: true });
       cleanup = () => {
         host.removeEventListener(eventType, onInteraction);

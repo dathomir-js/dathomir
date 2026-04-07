@@ -110,6 +110,32 @@ describe("transform/jsx", () => {
     }
   });
 
+  it("getColocatedClientDirective supports non-click events for non-interaction strategies", () => {
+    expect(
+      getColocatedClientDirective({
+        type: "JSXNamespacedName",
+        namespace: { type: "JSXIdentifier", name: "load" },
+        name: { type: "JSXIdentifier", name: "onMouseEnter" },
+      }),
+    ).toEqual({ strategy: "load", event: "mouseenter" });
+
+    expect(
+      getColocatedClientDirective({
+        type: "JSXNamespacedName",
+        namespace: { type: "JSXIdentifier", name: "visible" },
+        name: { type: "JSXIdentifier", name: "onFocus" },
+      }),
+    ).toEqual({ strategy: "visible", event: "focus" });
+
+    expect(
+      getColocatedClientDirective({
+        type: "JSXNamespacedName",
+        namespace: { type: "JSXIdentifier", name: "interaction" },
+        name: { type: "JSXIdentifier", name: "onKeyDown" },
+      }),
+    ).toEqual({ strategy: "interaction", event: "keydown" });
+  });
+
   it("normalizeIslandsDirectiveValue throws for invalid directive values", () => {
     expect(() => normalizeIslandsDirectiveValue("media", null)).toThrow(
       "client:media requires a string literal media query",
@@ -239,12 +265,12 @@ describe("transform/jsx", () => {
     ).toBe(null);
   });
 
-  it("getColocatedClientDirective returns null for non-onClick event", () => {
+  it("getColocatedClientDirective returns null for non-event handler names", () => {
     expect(
       getColocatedClientDirective({
         type: "JSXNamespacedName",
-        namespace: { type: "JSXIdentifier", name: "load" },
-        name: { type: "JSXIdentifier", name: "onHover" },
+        namespace: { type: "JSXIdentifier", name: "interaction" },
+        name: { type: "JSXIdentifier", name: "click" },
       }),
     ).toBe(null);
   });

@@ -671,6 +671,34 @@ describe("hydrateIslands", () => {
     );
   });
 
+  it("hydrates interaction islands from colocated target markers for non-bubbling events", () => {
+    const island = document.createElement("test-island");
+    const shadowRoot = island.attachShadow({ mode: "open" });
+    const hydrateHook = vi.fn(() => true);
+    island.setAttribute("data-dh-island", "interaction");
+    island.setAttribute("data-dh-island-value", "focus");
+    setHydrateHook(island, hydrateHook);
+
+    const input = document.createElement("input");
+    input.setAttribute("data-dh-client-target", "field");
+    input.setAttribute("data-dh-client-strategy", "interaction");
+    input.setAttribute("data-dh-client-event", "focus");
+    shadowRoot.appendChild(input);
+    host.appendChild(island);
+
+    hydrateIslands(document);
+    input.dispatchEvent(new FocusEvent("focus"));
+
+    expect(hydrateHook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        strategy: "interaction",
+        eventType: "focus",
+        replayTargetId: "field",
+        replayEvent: expect.objectContaining({ kind: "focus" }),
+      }),
+    );
+  });
+
   it("hydrates media islands after the media query matches", () => {
     let changeListener: ((event: { matches: boolean }) => void) | undefined;
 

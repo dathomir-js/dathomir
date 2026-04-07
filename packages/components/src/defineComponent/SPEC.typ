@@ -138,7 +138,7 @@
     - compiler-generated hydration plan により hydrate される host も、`data-dh-island*` metadata を持つ場合は runtime scheduler の strategy 発火まで in-place hydration を遅延できる
     - deferred host boundary の内側にある通常の DOM 要素や plain component subtree は、host boundary が hydrate されるまで inert な SSR markup として扱う
     - descendant custom element host 自体が独立した `data-dh-island*` metadata を持つ場合だけ、outer host とは別の explicit nested boundary 候補として扱える
-    - compiler-generated colocated client handler を持つ component は render ベースの setup を hydrate entrypoint とし、`interaction` では初回 click 後に root setup を実行して event replay する
+    - compiler-generated colocated client handler を持つ component は render ベースの setup だけでなく compiler-generated hydration plan path でも interaction replay を維持し、`interaction` では初回 event 後に target marker へ event replay する
     - compiler-generated colocated client marker は native element 単位の sub-island を作らず、nearest component host boundary へ集約される
     - DSD に SSR `<style>` が存在し、CSR で `adoptedStyleSheets` を適用する場合は `<style>` を除去して重複適用を避ける
     - `disconnectedCallback` では `dispose` により cleanup を実行する
@@ -432,7 +432,7 @@
     将来は compiler-generated action plan を個別 bind する設計を見据えるが、まず UX を検証できる MVP が必要である。現行 runtime / transformer の構造では host setup を hydrate entrypoint に再利用する方が変更範囲を抑えやすい。
   ],
   [
-    MVP では `load:onClick` / `interaction:onClick` を compiler が target marker + strategy metadata へ変換し、component は DSD を保持したまま strategy 発火後に root setup を再実行する。`interaction` では trigger click 後に host subtree の target button へ synthetic click を replay する。
+    MVP では `<strategy>:on<Event>` を compiler が target marker + strategy metadata へ変換し、必要に応じて target event metadata も残す。component は DSD を保持したまま strategy 発火後に root setup を再実行する。`interaction` では trigger event 後に host subtree の target 要素へ synthetic event を replay する。
   ],
   [
     - MVP を比較的短い変更で動かせる
@@ -447,7 +447,7 @@
     colocated click syntax を load / interaction だけに留めると、非同期 scheduler を使いたい UI だけ author 体験が分断される。
   ],
   [
-    phase 2 では `visible:onClick` / `idle:onClick` を追加し、component host は shadowRoot marker から `visible` / `idle` island metadata を導出する。strategy 発火後は MVP と同じ render-based setup を実行し、`onClick` binding は rerender 後の button にそのまま有効化される。host-level `client:*` / `data-dh-island*` metadata との混在、および `hydrate` option との併用は引き続き不許可とし、実装は dev diagnostics を出して colocated path を無効化する。
+    phase 2 では `visible:on*` / `idle:on*` も追加し、component host は shadowRoot marker から `visible` / `idle` island metadata を導出する。`interaction` では必要に応じて target event metadata も読み、1 host 内で 1 種類の interaction event type を island value として導出する。strategy 発火後は MVP と同じ render-based setup を実行し、event binding は rerender 後の target に有効化される。host-level `client:*` / `data-dh-island*` metadata との混在、および `hydrate` option との併用は引き続き不許可とし、実装は dev diagnostics を出して colocated path を無効化する。
   ],
   [
     - author は strategy だけを差し替えて同じ書き味を維持できる

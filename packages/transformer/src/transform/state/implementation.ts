@@ -13,6 +13,7 @@ interface TransformState {
   mode: "csr" | "ssr";
   currentColocatedClientState?: {
     strategy: "load" | "interaction" | "visible" | "idle" | null;
+    interactionEventType: string | null;
   };
   currentElementNamespace?: "html" | "svg" | "math";
   currentHostIslandMetadata?: boolean;

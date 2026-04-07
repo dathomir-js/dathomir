@@ -29,6 +29,7 @@ import {
 } from "@dathomir/runtime/hydration";
 import { insert, setAttr } from "@dathomir/runtime";
 import {
+  CLIENT_EVENT_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,
   DEFAULT_INTERACTION_EVENT_TYPE,
@@ -130,6 +131,24 @@ interface IslandHydrationTrigger {
   readonly strategy: ColocatedClientStrategyName;
   readonly eventType?: string;
   readonly replayTargetId?: string | null;
+  readonly replayEvent?: ReplayEventSnapshot;
+}
+
+interface ReplayEventSnapshot {
+  readonly kind:
+    | "event"
+    | "mouse"
+    | "keyboard"
+    | "focus"
+    | "input"
+    | "pointer";
+  readonly init:
+    | EventInit
+    | MouseEventInit
+    | KeyboardEventInit
+    | FocusEventInit
+    | InputEventInit
+    | PointerEventInit;
 }
 
 /** Props accepted by the JSX helper component returned from defineComponent. */
@@ -317,6 +336,7 @@ function getColocatedClientStrategyFromShadowRoot(
   }
 
   let strategy: ColocatedClientStrategyName | null = null;
+  let interactionEventType: string | null = null;
 
   for (const target of targets) {
     const nextStrategy = target.getAttribute(
@@ -328,12 +348,27 @@ function getColocatedClientStrategyFromShadowRoot(
 
     if (strategy === null) {
       strategy = nextStrategy;
+    } else if (strategy !== nextStrategy) {
+      throw new Error(
+        "[dathomir] Mixed colocated client strategies are not supported in one component shadow root",
+      );
+    }
+
+    if (nextStrategy !== "interaction") {
       continue;
     }
 
-    if (strategy !== nextStrategy) {
+    const nextEventType =
+      target.getAttribute(CLIENT_EVENT_METADATA_ATTRIBUTE) ??
+      DEFAULT_INTERACTION_EVENT_TYPE;
+    if (interactionEventType === null) {
+      interactionEventType = nextEventType;
+      continue;
+    }
+
+    if (interactionEventType !== nextEventType) {
       throw new Error(
-        "[dathomir] Mixed colocated client strategies are not supported in one component shadow root",
+        "[dathomir] Mixed colocated interaction event types are not supported in one component shadow root",
       );
     }
   }
@@ -347,9 +382,50 @@ function getColocatedClientStrategyFromShadowRoot(
     strategy: normalizedStrategy,
     value:
       normalizedStrategy === "interaction"
-        ? DEFAULT_INTERACTION_EVENT_TYPE
+        ? (interactionEventType ?? DEFAULT_INTERACTION_EVENT_TYPE)
         : null,
   };
+}
+
+function createReplayEvent(
+  eventType: string,
+  replayEvent: ReplayEventSnapshot | undefined,
+): Event {
+  const baseInit = replayEvent?.init ?? {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+  };
+
+  switch (replayEvent?.kind) {
+    case "pointer":
+      if (typeof PointerEvent === "function") {
+        return new PointerEvent(eventType, baseInit as PointerEventInit);
+      }
+      break;
+    case "mouse":
+      if (typeof MouseEvent === "function") {
+        return new MouseEvent(eventType, baseInit as MouseEventInit);
+      }
+      break;
+    case "keyboard":
+      if (typeof KeyboardEvent === "function") {
+        return new KeyboardEvent(eventType, baseInit as KeyboardEventInit);
+      }
+      break;
+    case "focus":
+      if (typeof FocusEvent === "function") {
+        return new FocusEvent(eventType, baseInit as FocusEventInit);
+      }
+      break;
+    case "input":
+      if (typeof InputEvent === "function") {
+        return new InputEvent(eventType, baseInit as InputEventInit);
+      }
+      break;
+  }
+
+  return new Event(eventType, baseInit);
 }
 
 function createClientContext(host: HTMLElement): ComponentClientContext {
@@ -373,10 +449,7 @@ function replayHydrationTrigger(
   shadowRoot: ShadowRoot,
   trigger: IslandHydrationTrigger | undefined,
 ): void {
-  if (
-    trigger?.eventType !== DEFAULT_INTERACTION_EVENT_TYPE ||
-    trigger.replayTargetId == null
-  ) {
+  if (trigger?.eventType == null || trigger.replayTargetId == null) {
     return;
   }
 
@@ -388,12 +461,7 @@ function replayHydrationTrigger(
     return;
   }
 
-  target.dispatchEvent(
-    new MouseEvent(DEFAULT_INTERACTION_EVENT_TYPE, {
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  target.dispatchEvent(createReplayEvent(trigger.eventType, trigger.replayEvent));
 }
 
 function isIterableValue(value: unknown): value is Iterable<unknown> {
@@ -760,7 +828,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
 
       if (colocatedStrategy !== null && hydrateSetup !== undefined) {
         console.error(
-          "[dathomir] colocated load:onClick / interaction:onClick / idle:onClick / visible:onClick cannot be combined with a hydrate option in the same component",
+          "[dathomir] colocated load:on* / interaction:on* / idle:on* / visible:on* cannot be combined with a hydrate option in the same component",
         );
         colocatedStrategy = null;
       }
@@ -869,7 +937,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
         }
       };
 
-      const runHydrateWithPlan = (): boolean => {
+      const runHydrateWithPlan = (trigger?: IslandHydrationTrigger): boolean => {
         if (planFactory === null) {
           return false;
         }
@@ -890,11 +958,14 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
             (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =
               "hydrated";
           }
+          replayHydrationTrigger(shadowRoot, trigger);
           return true;
         } catch (error) {
           if (
             isMissingStoreError(error) &&
-            retryIfStoreEventuallyBinds(runHydrateWithPlan)
+            retryIfStoreEventuallyBinds(() => {
+              runHydrateWithPlan(trigger);
+            })
           ) {
             return false;
           }
@@ -972,7 +1043,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
               hydrateSetup !== undefined
                 ? runHydrate()
                 : planFactory !== null
-                  ? runHydrateWithPlan()
+                  ? runHydrateWithPlan(trigger)
                   : runSetup(trigger);
             if (didHydrate) {
               (this as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_STATUS] =

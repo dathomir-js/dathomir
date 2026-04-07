@@ -51,6 +51,7 @@ interface IslandsMetadataContract {
   hostValueMetadataAttribute: "data-dh-island-value";
   clientTargetMetadataAttribute: "data-dh-client-target";
   clientStrategyMetadataAttribute: "data-dh-client-strategy";
+  clientEventMetadataAttribute: "data-dh-client-event";
   defaultInteractionEventType: "click";
   hostStrategies: readonly IslandStrategyName[];
   colocatedStrategies: readonly ColocatedClientStrategyName[];

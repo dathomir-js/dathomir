@@ -308,6 +308,121 @@ const PlaygroundColocatedInteractionCard = defineComponent(
   },
 );
 
+const PlaygroundColocatedInteractionKeydownCard = defineComponent(
+  "playground-colocated-interaction-keydown-card",
+  ({ client }) => {
+    const keyCount = signal(0);
+    const lastKey = signal("-");
+
+    return (
+      <article>
+        <p class="syntax-chip">interaction:onKeyDown</p>
+        <h3>Colocated interaction keydown</h3>
+        <p>
+          The first key press hydrates the host and is replayed onto the rerendered input. Press
+          Enter in the field and the counter should immediately become <strong>1</strong>.
+        </p>
+        <p>Active strategy in setup: {client.strategy ?? "none"}</p>
+        <input
+          class="demo-input"
+          type="text"
+          placeholder="Press Enter"
+          interaction:onKeyDown={(event) => {
+            keyCount.set(keyCount.value + 1);
+            lastKey.set((event as KeyboardEvent).key || "unknown");
+          }}
+        />
+        <p>
+          Replayed key count: <span class="count">{keyCount.value}</span>
+        </p>
+        <p>
+          Last replayed key: <span class="count">{lastKey.value}</span>
+        </p>
+      </article>
+    );
+  },
+  {
+    styles: [colocatedCardStyles],
+  },
+);
+
+const PlaygroundColocatedInteractionFocusCard = defineComponent(
+  "playground-colocated-interaction-focus-card",
+  ({ client }) => {
+    const focusCount = signal(0);
+    const lastFocusState = signal("blurred");
+
+    return (
+      <article>
+        <p class="syntax-chip">interaction:onFocus</p>
+        <h3>Colocated interaction focus</h3>
+        <p>
+          Focusing the field should hydrate the host and replay the focus event onto the rerendered
+          input, incrementing the counter immediately.
+        </p>
+        <p>Active strategy in setup: {client.strategy ?? "none"}</p>
+        <input
+          class="demo-input"
+          type="text"
+          placeholder="Focus me"
+          interaction:onFocus={() => {
+            focusCount.set(focusCount.value + 1);
+            lastFocusState.set("focused");
+          }}
+        />
+        <p>
+          Replayed focus count: <span class="count">{focusCount.value}</span>
+        </p>
+        <p>
+          Last focus state: <span class="count">{lastFocusState.value}</span>
+        </p>
+      </article>
+    );
+  },
+  {
+    styles: [colocatedCardStyles],
+  },
+);
+
+const PlaygroundColocatedInteractionPointerCard = defineComponent(
+  "playground-colocated-interaction-pointer-card",
+  ({ client }) => {
+    const pointerCount = signal(0);
+    const lastPointerType = signal("none");
+
+    return (
+      <article>
+        <p class="syntax-chip">interaction:onPointerDown</p>
+        <h3>Colocated interaction pointerdown</h3>
+        <p>
+          Pointer down on the button should hydrate the host and replay the pointer event onto the
+          rerendered button.
+        </p>
+        <p>Active strategy in setup: {client.strategy ?? "none"}</p>
+        <button
+          class="demo-button"
+          type="button"
+          interaction:onPointerDown={(event) => {
+            pointerCount.set(pointerCount.value + 1);
+            lastPointerType.set((event as PointerEvent).pointerType || "unknown");
+          }}
+        >
+          Pointer down to hydrate
+        </button>
+        <p>
+          Replayed pointer count: <span class="count">{pointerCount.value}</span>
+        </p>
+        <p>
+          Last pointer type: <span class="count">{lastPointerType.value}</span>
+        </p>
+      </article>
+    );
+  },
+  {
+    styles: [colocatedCardStyles],
+  },
+);
+
 const PlaygroundColocatedIdleCard = defineComponent(
   "playground-colocated-idle-card",
   ({ client }) => {
@@ -455,15 +570,18 @@ function IslandsRuntimePage() {
   return (
     <>
       <section>
-        <h2>Colocated click strategies</h2>
+        <h2>Colocated strategy demos</h2>
         <p>
           These cards use the new HTML-element syntax directly inside the render function.
-          The strategy and click behavior stay in one place instead of splitting into manual
+          The strategy and event behavior stay in one place instead of splitting into manual
           <code>hydrate</code> code.
         </p>
         <div class="route-grid">
           <PlaygroundColocatedLoadCard />
           <PlaygroundColocatedInteractionCard />
+          <PlaygroundColocatedInteractionKeydownCard />
+          <PlaygroundColocatedInteractionFocusCard />
+          <PlaygroundColocatedInteractionPointerCard />
           <PlaygroundColocatedIdleCard />
         </div>
       </section>
@@ -568,8 +686,8 @@ function IslandsRuntimePage() {
         </p>
         <p>
           The legacy runtime islands expose <code>data-hydrated="true"</code> after their strategy
-          fires. The colocated cards instead reveal their active strategy in setup and start
-          incrementing their colocated click counters.
+           fires. The colocated cards instead reveal their active strategy in setup and start
+           responding to their colocated click or keydown handlers.
         </p>
       </section>
     </>

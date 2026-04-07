@@ -1,8 +1,10 @@
 import { walk } from "zimmerframe";
 import {
   COLOCATED_CLIENT_STRATEGIES,
+  CLIENT_EVENT_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
   CLIENT_TARGET_METADATA_ATTRIBUTE,
+  DEFAULT_INTERACTION_EVENT_TYPE,
   ISLAND_METADATA_ATTRIBUTE,
   ISLAND_VALUE_METADATA_ATTRIBUTE,
 } from "@dathomir/shared";
@@ -77,6 +79,7 @@ interface ProcessedAttributes {
 
 interface ColocatedClientState {
   strategy: ColocatedClientStrategyName | null;
+  interactionEventType: string | null;
 }
 
 interface IslandsDirectiveMetadata {
@@ -92,6 +95,7 @@ const RESERVED_ISLAND_METADATA_KEYS = new Set([
 const RESERVED_CLIENT_METADATA_KEYS = new Set([
   CLIENT_TARGET_METADATA_ATTRIBUTE,
   CLIENT_STRATEGY_METADATA_ATTRIBUTE,
+  CLIENT_EVENT_METADATA_ATTRIBUTE,
 ]);
 
 const colocatedDirectivePrefixes = new Set(
@@ -514,6 +518,9 @@ function processAttributes(
     const colocatedClientDirective = getColocatedClientDirective(attr.name);
     if (colocatedClientDirective !== null) {
       const value = attr.value;
+      const rawName =
+        getRawAttributeNameForDiagnostics(attr.name) ??
+        `${colocatedClientDirective.strategy}:onClick`;
       if (
         shouldRejectColocatedDirectiveInNamespace(state.currentElementNamespace)
       ) {
@@ -528,7 +535,7 @@ function processAttributes(
         isJSXEmptyExpression(value.expression)
       ) {
         throw new Error(
-          `[dathomir] ${colocatedClientDirective.strategy}:onClick requires an inline handler expression`,
+          `[dathomir] ${rawName} requires an inline handler expression`,
         );
       }
 
@@ -546,7 +553,20 @@ function processAttributes(
         );
       }
 
+      if (
+        colocatedClientDirective.strategy === "interaction" &&
+        colocatedClientState.interactionEventType !== null &&
+        colocatedClientState.interactionEventType !== colocatedClientDirective.event
+      ) {
+        throw new Error(
+          "[dathomir] Mixed colocated interaction event types are not supported in one JSX root",
+        );
+      }
+
       colocatedClientState.strategy = colocatedClientDirective.strategy;
+      if (colocatedClientDirective.strategy === "interaction") {
+        colocatedClientState.interactionEventType = colocatedClientDirective.event;
+      }
       const targetId = createClientTargetId(state);
       staticProps.push(
         nProp(nLit(CLIENT_TARGET_METADATA_ATTRIBUTE), nLit(targetId)),
@@ -555,6 +575,17 @@ function processAttributes(
           nLit(colocatedClientDirective.strategy),
         ),
       );
+      if (
+        colocatedClientDirective.strategy === "interaction" &&
+        colocatedClientDirective.event !== DEFAULT_INTERACTION_EVENT_TYPE
+      ) {
+        staticProps.push(
+          nProp(
+            nLit(CLIENT_EVENT_METADATA_ATTRIBUTE),
+            nLit(colocatedClientDirective.event),
+          ),
+        );
+      }
       events.push({
         type: colocatedClientDirective.event,
         handler: value.expression,
@@ -641,7 +672,10 @@ function jsxElementToTree(
       dynamicParts,
       path,
       state,
-      state.currentColocatedClientState ?? { strategy: null },
+      state.currentColocatedClientState ?? {
+        strategy: null,
+        interactionEventType: null,
+      },
     );
 
     const children = processChildren(
@@ -833,6 +867,7 @@ function jsxToTree(
   const previousElementNamespace = scopedState.currentElementNamespace;
   const colocatedClientState = previousColocatedClientState ?? {
     strategy: null,
+    interactionEventType: null,
   };
   scopedState.currentColocatedClientState = colocatedClientState;
   scopedState.currentHostIslandMetadata = previousHostIslandMetadata ?? false;

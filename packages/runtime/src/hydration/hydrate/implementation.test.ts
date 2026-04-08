@@ -56,10 +56,11 @@ describe("HydrationMismatchError", () => {
 describe("client action registry", () => {
   it("registers and resolves client actions by id", () => {
     const handler = vi.fn();
+    const factory = vi.fn(() => handler);
 
-    registerClientAction("action:test", handler);
+    registerClientAction("action:test", factory);
 
-    expect(getClientAction("action:test")).toBe(handler);
+    expect(getClientAction("action:test")).toBe(factory);
   });
 });
 

@@ -17,10 +17,16 @@ import {
   isMemberExpression,
   isStringLiteral,
   nArr,
+  nArrowBlock,
+  nBlock,
+  nCall,
+  nConst,
   nId,
   nLit,
+  nMember,
   nObj,
   nProp,
+  nReturn,
   nSpread,
 } from "@/transform/ast/implementation";
 import type { CallExpression, ESTNode } from "@/transform/ast/implementation";
@@ -199,6 +205,14 @@ const KNOWN_COMPONENT_ACTION_GLOBALS = new Set([
   "Array",
 ]);
 
+const UNSUPPORTED_COMPONENT_TARGET_EVENTS = new Set([
+  "focus",
+  "blur",
+  "mouseenter",
+  "mouseleave",
+  "scroll",
+]);
+
 function collectBlockBindingNames(body: ESTNode[], names: Set<string>): void {
   for (const statement of body) {
     if (statement.type === "VariableDeclaration") {
@@ -335,17 +349,96 @@ function collectFreeIdentifiers(
   }
 }
 
-function validateComponentActionHandler(
+function isSerializableCaptureExpression(
+  node: ESTNode | undefined,
+  serializableBindings: ReadonlyMap<string, ESTNode>,
+  visited: Set<string> = new Set(),
+): boolean {
+  if (node === undefined) {
+    return false;
+  }
+
+  if (node.type === "Literal") {
+    return (
+      node.value === null ||
+      typeof node.value === "string" ||
+      typeof node.value === "number" ||
+      typeof node.value === "boolean"
+    );
+  }
+
+  if (isIdentifier(node)) {
+    if (visited.has(node.name)) {
+      return false;
+    }
+    const binding = serializableBindings.get(node.name);
+    if (binding === undefined) {
+      return false;
+    }
+    visited.add(node.name);
+    const result = isSerializableCaptureExpression(
+      binding,
+      serializableBindings,
+      visited,
+    );
+    visited.delete(node.name);
+    return result;
+  }
+
+  if (node.type === "TemplateLiteral") {
+    return (node.expressions as ESTNode[]).every((expression) =>
+      isSerializableCaptureExpression(expression, serializableBindings, visited),
+    );
+  }
+
+  if (node.type === "ArrayExpression") {
+    return (node.elements as Array<ESTNode | null>).every(
+      (element) =>
+        element === null ||
+        isSerializableCaptureExpression(element, serializableBindings, visited),
+    );
+  }
+
+  if (node.type === "ObjectExpression") {
+    return (node.properties as ESTNode[]).every((property) => {
+      if (property.type === "SpreadElement") {
+        return false;
+      }
+
+      return (
+        (!property.computed ||
+          isSerializableCaptureExpression(
+            property.key as ESTNode,
+            serializableBindings,
+            visited,
+          )) &&
+        isSerializableCaptureExpression(
+          property.value as ESTNode,
+          serializableBindings,
+          visited,
+        )
+      );
+    });
+  }
+
+  return false;
+}
+
+function analyzeComponentActionHandler(
   handler: ESTNode,
   moduleBindings: ReadonlySet<string>,
-): string | null {
+  serializableBindings: ReadonlyMap<string, ESTNode> | undefined,
+): { captures: string[] } | { error: string } {
   if (
     handler.type !== "Identifier" &&
     handler.type !== "MemberExpression" &&
     handler.type !== "ArrowFunctionExpression" &&
     handler.type !== "FunctionExpression"
   ) {
-    return "component-target colocated handlers must be a function reference or inline function expression";
+    return {
+      error:
+        "component-target colocated handlers must be a function reference or inline function expression",
+    };
   }
 
   const available = new Set<string>([
@@ -354,14 +447,61 @@ function validateComponentActionHandler(
   ]);
   const free = new Set<string>();
   if (!collectFreeIdentifiers(handler, available, free)) {
-    return "component-target colocated handlers must be module-scoped and use only supported expression syntax";
+    return {
+      error:
+        "component-target colocated handlers must be module-scoped and use only supported expression syntax",
+    };
   }
 
-  if (free.size > 0) {
-    return `component-target colocated handlers cannot capture local bindings: ${Array.from(free).sort().join(", ")}`;
+  const captures = Array.from(free).sort();
+  if (captures.length === 0) {
+    return { captures: [] };
   }
 
-  return null;
+  const currentSerializableBindings = serializableBindings ?? new Map();
+  for (const capture of captures) {
+    if (
+      !isSerializableCaptureExpression(
+        currentSerializableBindings.get(capture),
+        currentSerializableBindings,
+      )
+    ) {
+      return {
+        error: `component-target colocated handlers cannot capture local bindings: ${captures.join(", ")}`,
+      };
+    }
+  }
+
+  return { captures };
+}
+
+function buildComponentActionPayloadExpression(
+  captureNames: readonly string[],
+  serializableBindings: ReadonlyMap<string, ESTNode> | undefined,
+): ESTNode {
+  const properties = captureNames.map((name) =>
+    nProp(
+      isValidIdentifier(name) ? nId(name) : nLit(name),
+      (serializableBindings?.get(name) ?? nId(name)) as ESTNode,
+      !isValidIdentifier(name),
+    ),
+  );
+  return nObj(properties);
+}
+
+function buildComponentActionFactory(
+  handler: ESTNode,
+  captureNames: readonly string[],
+): ESTNode {
+  const statements: ESTNode[] = captureNames.map((name) =>
+    nConst(
+      nId(name),
+      nMember(nId("__dh_payload"), nLit(name), true),
+    ),
+  );
+  statements.push(nReturn(handler));
+
+  return nArrowBlock([nId("__dh_payload"), nId("__dh_host")], nBlock(statements));
 }
 
 function getElementNamespace(tagName: string): "html" | "svg" | "math" {
@@ -459,7 +599,10 @@ function buildComponentCall(
   let islandsDirective: IslandsDirectiveMetadata | null = null;
   let colocatedDirectiveStrategy: ColocatedClientStrategyName | null = null;
   let colocatedInteractionEventType: string | null = null;
-  const componentActionBindings = new Map<string, string>();
+  const componentActionBindings = new Map<
+    string,
+    { id: string; captureNames: string[] }
+  >();
   let hasExplicitReservedIslandMetadata = false;
   let hasExplicitHostIslandMetadata = false;
 
@@ -497,6 +640,12 @@ function buildComponentCall(
       ) {
         throw new Error(
           `[dathomir] ${rawName} requires an inline handler expression`,
+        );
+      }
+
+      if (UNSUPPORTED_COMPONENT_TARGET_EVENTS.has(colocatedDirective.event)) {
+        throw new Error(
+          `[dathomir] ${rawName} is not supported on component targets because the child host cannot observe that event without an explicit host re-emit`,
         );
       }
 
@@ -550,12 +699,13 @@ function buildComponentCall(
         );
       }
 
-      const handlerValidationError = validateComponentActionHandler(
+      const analysis = analyzeComponentActionHandler(
         value.expression,
         state.moduleBindings,
+        state.currentSerializableBindings,
       );
-      if (handlerValidationError !== null) {
-        throw new Error(`[dathomir] ${rawName} ${handlerValidationError}`);
+      if ("error" in analysis) {
+        throw new Error(`[dathomir] ${rawName} ${analysis.error}`);
       }
 
       colocatedDirectiveStrategy = colocatedDirective.strategy;
@@ -564,10 +714,13 @@ function buildComponentCall(
       }
 
       const actionId = createClientActionId(state);
-      componentActionBindings.set(colocatedDirective.event, actionId);
+      componentActionBindings.set(colocatedDirective.event, {
+        id: actionId,
+        captureNames: analysis.captures,
+      });
       state.componentClientActions.push({
         id: actionId,
-        handler: value.expression,
+        factory: buildComponentActionFactory(value.expression, analysis.captures),
       });
       state.runtimeImports.add("registerClientAction");
       continue;
@@ -648,11 +801,30 @@ function buildComponentCall(
       );
     }
 
+    const clientActionMetadata = nObj(
+      Array.from(componentActionBindings.entries()).map(
+        ([eventType, binding]) =>
+        nProp(
+          nLit(eventType),
+          nObj([
+            nProp(nId("id"), nLit(binding.id)),
+            nProp(
+              nId("payload"),
+              buildComponentActionPayloadExpression(
+                binding.captureNames,
+                state.currentSerializableBindings,
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+
     propsProperties.push(
       nProp(nLit(ISLAND_METADATA_ATTRIBUTE), nLit(colocatedDirectiveStrategy)),
       nProp(
         nLit(CLIENT_ACTIONS_METADATA_ATTRIBUTE),
-        nLit(JSON.stringify(Object.fromEntries(componentActionBindings))),
+        nCall(nMember(nId("JSON"), nId("stringify")), [clientActionMetadata]),
       ),
     );
 

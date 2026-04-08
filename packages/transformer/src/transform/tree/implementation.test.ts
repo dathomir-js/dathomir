@@ -538,8 +538,7 @@ describe("transform/tree", () => {
         (property) =>
           property.key.type === "Literal" &&
           property.key.value === CLIENT_ACTIONS_METADATA_ATTRIBUTE &&
-          property.value?.type === "Literal" &&
-          String(property.value.value).includes('"click":"dh-ca-1"'),
+          property.value?.type === "CallExpression",
       ),
     ).toBe(true);
     expect(state.componentClientActions).toHaveLength(1);
@@ -2102,6 +2101,96 @@ describe("transform/tree", () => {
 
     expect(() => buildComponentCall(component, state, nested)).toThrow(
       "component-target colocated handlers cannot capture local bindings: localCount",
+    );
+  });
+
+  it("buildComponentCall serializes local const captures for component-target handlers", () => {
+    const state = createInitialState("csr");
+    state.moduleBindings.add("report");
+    state.currentSerializableBindings = new Map([
+      [
+        "label",
+        {
+          type: "Literal",
+          value: "captured-label",
+          raw: '"captured-label"',
+        },
+      ],
+    ]);
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "load" },
+              name: { type: "JSXIdentifier", name: "onClick" },
+            },
+            value: expr({
+              type: "ArrowFunctionExpression",
+              params: [],
+              body: {
+                type: "CallExpression",
+                callee: nId("report"),
+                arguments: [nId("label")],
+                optional: false,
+              },
+              expression: true,
+            }),
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    const result = asCallExpressionLike(
+      buildComponentCall(component, state, nested),
+    );
+    const props = asObjectExpressionLike(result.arguments[0] as unknown as ESTNode);
+
+    expect(
+      props.properties.some(
+        (property) =>
+          property.key.type === "Literal" &&
+          property.key.value === CLIENT_ACTIONS_METADATA_ATTRIBUTE,
+      ),
+    ).toBe(true);
+    expect(state.componentClientActions).toHaveLength(1);
+  });
+
+  it("buildComponentCall rejects component-target focus events", () => {
+    const state = createInitialState("csr");
+    state.moduleBindings.add("handleFocus");
+    const component: JSXElement = {
+      type: "JSXElement",
+      openingElement: {
+        type: "JSXOpeningElement",
+        name: { type: "JSXIdentifier", name: "Counter" },
+        attributes: [
+          {
+            type: "JSXAttribute",
+            name: {
+              type: "JSXNamespacedName",
+              namespace: { type: "JSXIdentifier", name: "interaction" },
+              name: { type: "JSXIdentifier", name: "onFocus" },
+            },
+            value: expr(nId("handleFocus")),
+          },
+        ],
+        selfClosing: true,
+      },
+      children: [],
+      closingElement: null,
+    };
+
+    expect(() => buildComponentCall(component, state, nested)).toThrow(
+      "interaction:onFocus is not supported on component targets because the child host cannot observe that event without an explicit host re-emit",
     );
   });
 

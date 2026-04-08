@@ -16,8 +16,9 @@ interface TransformState {
   moduleBindings: Set<string>;
   componentClientActions: Array<{
     id: string;
-    handler: ESTNode;
+    factory: ESTNode;
   }>;
+  currentSerializableBindings?: Map<string, ESTNode>;
   currentColocatedClientState?: {
     strategy: "load" | "interaction" | "visible" | "idle" | null;
     interactionEventType: string | null;

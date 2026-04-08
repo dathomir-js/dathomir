@@ -168,9 +168,25 @@ const colocatedCardStyles = css`
 `;
 
 const componentTargetArtifactCount = signal(0);
+const componentTargetKeyCount = signal(0);
+const componentTargetLastKey = signal("-");
 
-function incrementComponentTargetArtifactCount() {
-  componentTargetArtifactCount.set(componentTargetArtifactCount.value + 1);
+function incrementComponentTargetArtifactCount(label: string) {
+  if (label === "artifact-click") {
+    componentTargetArtifactCount.set(componentTargetArtifactCount.value + 1);
+  }
+}
+
+function recordComponentTargetKey(key: string, label: string) {
+  if (label === "artifact-keydown") {
+    componentTargetKeyCount.set(componentTargetKeyCount.value + 1);
+    componentTargetLastKey.set(key);
+  }
+}
+
+function recordComponentTargetKeyFromEvent(event: Event, label: string) {
+  const key = event instanceof KeyboardEvent ? event.key : "unknown";
+  recordComponentTargetKey(key, label);
 }
 
 const PlaygroundComponentTargetButton = defineComponent(
@@ -181,6 +197,16 @@ const PlaygroundComponentTargetButton = defineComponent(
         Click inside child shadow root
       </button>
     );
+  },
+  {
+    styles: [colocatedCardStyles],
+  },
+);
+
+const PlaygroundComponentTargetInput = defineComponent(
+  "playground-component-target-input",
+  () => {
+    return <input class="demo-input" type="text" placeholder="Press Enter in child" />;
   },
   {
     styles: [colocatedCardStyles],
@@ -446,6 +472,8 @@ const PlaygroundColocatedInteractionPointerCard = defineComponent(
 const PlaygroundComponentTargetArtifactCard = defineComponent(
   "playground-component-target-artifact-card",
   ({ client }) => {
+    const artifactLabel = "artifact-click";
+
     return (
       <article>
         <p class="syntax-chip">&lt;Child interaction:onClick /&gt;</p>
@@ -456,10 +484,43 @@ const PlaygroundComponentTargetArtifactCard = defineComponent(
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <PlaygroundComponentTargetButton
-          interaction:onClick={incrementComponentTargetArtifactCount}
+          interaction:onClick={() => incrementComponentTargetArtifactCount(artifactLabel)}
         />
         <p>
           Component target count: <span class="count">{componentTargetArtifactCount.value}</span>
+        </p>
+      </article>
+    );
+  },
+  {
+    styles: [colocatedCardStyles],
+  },
+);
+
+const PlaygroundComponentTargetKeydownCard = defineComponent(
+  "playground-component-target-keydown-card",
+  ({ client }) => {
+    const artifactLabel = "artifact-keydown";
+
+    return (
+      <article>
+        <p class="syntax-chip">&lt;Child interaction:onKeyDown /&gt;</p>
+        <h3>Component target interaction keydown</h3>
+        <p>
+          The child input dispatches a host-visible keydown event. The inline handler captures a
+          local label, which is serialized into the client action payload and restored on hydrate.
+        </p>
+        <p>Active strategy in setup: {client.strategy ?? "none"}</p>
+        <PlaygroundComponentTargetInput
+          interaction:onKeyDown={(event) =>
+            recordComponentTargetKeyFromEvent(event, artifactLabel)
+          }
+        />
+        <p>
+          Component target key count: <span class="count">{componentTargetKeyCount.value}</span>
+        </p>
+        <p>
+          Last key: <span class="count">{componentTargetLastKey.value}</span>
         </p>
       </article>
     );
@@ -629,6 +690,7 @@ function IslandsRuntimePage() {
           <PlaygroundColocatedInteractionFocusCard />
           <PlaygroundColocatedInteractionPointerCard />
           <PlaygroundComponentTargetArtifactCard />
+          <PlaygroundComponentTargetKeydownCard />
           <PlaygroundColocatedIdleCard />
         </div>
       </section>

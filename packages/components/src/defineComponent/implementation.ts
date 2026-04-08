@@ -429,7 +429,10 @@ function createReplayEvent(
   return new Event(eventType, baseInit);
 }
 
-function getHostClientActionBindings(host: HTMLElement): Record<string, string> {
+function getHostClientActionBindings(host: HTMLElement): Record<
+  string,
+  { id: string; payload: Record<string, unknown> }
+> {
   const raw = host.getAttribute(CLIENT_ACTIONS_METADATA_ATTRIBUTE);
   if (raw === null) {
     return {};
@@ -437,11 +440,33 @@ function getHostClientActionBindings(host: HTMLElement): Record<string, string> 
 
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const entries = Object.entries(parsed).filter(
-      ([eventType, actionId]) =>
-        typeof eventType === "string" && typeof actionId === "string",
-    );
-    return Object.fromEntries(entries) as Record<string, string>;
+    const entries = Object.entries(parsed).flatMap(([eventType, binding]) => {
+      if (typeof eventType !== "string" || typeof binding !== "object" || binding === null) {
+        return [];
+      }
+
+      const actionId = (binding as { id?: unknown }).id;
+      if (typeof actionId !== "string") {
+        return [];
+      }
+
+      const payload = (binding as { payload?: unknown }).payload;
+      return [[
+        eventType,
+        {
+          id: actionId,
+          payload:
+            typeof payload === "object" && payload !== null
+              ? (payload as Record<string, unknown>)
+              : {},
+        },
+      ] as const];
+    });
+
+    return Object.fromEntries(entries) as Record<
+      string,
+      { id: string; payload: Record<string, unknown> }
+    >;
   } catch {
     console.error(
       `[dathomir] Invalid ${CLIENT_ACTIONS_METADATA_ATTRIBUTE} metadata on component host`,
@@ -454,15 +479,18 @@ function bindHostClientActions(host: HTMLElement): () => void {
   const bindings = getHostClientActionBindings(host);
   const cleanups: Array<() => void> = [];
 
-  for (const [eventType, actionId] of Object.entries(bindings)) {
-    const handler = getClientAction(actionId);
-    if (handler === undefined) {
+  for (const [eventType, binding] of Object.entries(bindings)) {
+    const factory = getClientAction(binding.id) as
+      | ((payload: Record<string, unknown>, host: HTMLElement) => EventListener)
+      | undefined;
+    if (factory === undefined) {
       console.warn(
-        `[dathomir] Missing client action artifact for id ${actionId}`,
+        `[dathomir] Missing client action artifact for id ${binding.id}`,
       );
       continue;
     }
 
+    const handler = factory(binding.payload, host);
     host.addEventListener(eventType, handler);
     cleanups.push(() => {
       host.removeEventListener(eventType, handler);

@@ -101,6 +101,11 @@ interface ResolvedRenderAnalysis {
   usedHelper: boolean;
 }
 
+interface WalkTransformState {
+  inJSX: boolean;
+  serializableBindings: Map<string, ESTNode>;
+}
+
 const KNOWN_IMPORTED_TRANSPARENT_THUNK_WRAPPERS = new Map<
   string,
   ReadonlySet<string>
@@ -1963,6 +1968,95 @@ function collectTopLevelBindings(program: Program): Set<string> {
   return bindings;
 }
 
+function isSerializableBindingExpression(
+  node: ESTNode | null | undefined,
+  availableBindings: ReadonlyMap<string, ESTNode>,
+): boolean {
+  if (node === null || node === undefined) {
+    return false;
+  }
+
+  if (node.type === "Literal") {
+    return (
+      node.value === null ||
+      typeof node.value === "string" ||
+      typeof node.value === "number" ||
+      typeof node.value === "boolean"
+    );
+  }
+
+  if (isIdentifier(node)) {
+    return availableBindings.has(node.name);
+  }
+
+  if (node.type === "TemplateLiteral") {
+    return (node.expressions as ESTNode[]).every((expression) =>
+      isSerializableBindingExpression(expression, availableBindings),
+    );
+  }
+
+  if (node.type === "ArrayExpression") {
+    return (node.elements as Array<ESTNode | null>).every(
+      (element) =>
+        element === null ||
+        isSerializableBindingExpression(element, availableBindings),
+    );
+  }
+
+  if (node.type === "ObjectExpression") {
+    return (node.properties as ESTNode[]).every((property) => {
+      if (property.type === "SpreadElement") {
+        return false;
+      }
+
+      return (
+        (!property.computed ||
+          isSerializableBindingExpression(
+            property.key as ESTNode,
+            availableBindings,
+          )) &&
+        isSerializableBindingExpression(property.value as ESTNode, availableBindings)
+      );
+    });
+  }
+
+  return false;
+}
+
+function collectSerializableBindingsFromStatements(
+  statements: readonly ESTNode[],
+  inherited: ReadonlyMap<string, ESTNode>,
+): Map<string, ESTNode> {
+  const bindings = new Map(inherited);
+
+  for (const statement of statements) {
+    const declaration =
+      isVariableDeclaration(statement) && statement.kind === "const"
+        ? statement
+        : isExportNamedDeclaration(statement) &&
+            statement.declaration &&
+            isVariableDeclaration(statement.declaration) &&
+            statement.declaration.kind === "const"
+          ? statement.declaration
+          : null;
+    if (declaration === null) {
+      continue;
+    }
+
+    for (const declarator of declaration.declarations) {
+      if (!isIdentifier(declarator.id) || declarator.init == null) {
+        continue;
+      }
+
+      if (isSerializableBindingExpression(declarator.init, bindings)) {
+        bindings.set(declarator.id.name, declarator.init);
+      }
+    }
+  }
+
+  return bindings;
+}
+
 /**
  * Guard: throw if the component body contains colocated client
  * directives while its setup pattern is unsupported for hydration
@@ -2055,6 +2149,10 @@ function buildComponentHydrationMetadata(
 
   const analysisState = createInitialState("csr");
   analysisState.moduleBindings = new Set(moduleBindings);
+  analysisState.currentSerializableBindings = collectSerializableBindingsFromStatements(
+    collisionSafeAnalysis.preludeStatements,
+    new Map(),
+  );
   const { dynamicParts } = jsxToTree(
     collisionSafeAnalysis.jsxRoot,
     analysisState,
@@ -2245,36 +2343,72 @@ function transform(
 
   const transformedProgram = walk(
     adaptParsedProgram(parsed.program),
-    { inJSX: false },
+    { inJSX: false, serializableBindings: new Map() },
     {
+      ArrowFunctionExpression(
+        node: ESTNode,
+        { state: walkState, next }: { state: WalkTransformState; next: (s?: WalkTransformState) => void },
+      ) {
+        const body = (node as FunctionLikeNode).body;
+        const serializableBindings = isBlockStatement(body)
+          ? collectSerializableBindingsFromStatements(body.body, walkState.serializableBindings)
+          : new Map(walkState.serializableBindings);
+        next({ inJSX: false, serializableBindings });
+      },
+      FunctionExpression(
+        node: ESTNode,
+        { state: walkState, next }: { state: WalkTransformState; next: (s?: WalkTransformState) => void },
+      ) {
+        const body = (node as FunctionLikeNode).body;
+        const serializableBindings = isBlockStatement(body)
+          ? collectSerializableBindingsFromStatements(body.body, walkState.serializableBindings)
+          : new Map(walkState.serializableBindings);
+        next({ inJSX: false, serializableBindings });
+      },
+      FunctionDeclaration(
+        node: ESTNode,
+        { state: walkState, next }: { state: WalkTransformState; next: (s?: WalkTransformState) => void },
+      ) {
+        const body = (node as unknown as { body: ESTNode }).body;
+        const serializableBindings = isBlockStatement(body)
+          ? collectSerializableBindingsFromStatements(body.body, walkState.serializableBindings)
+          : new Map(walkState.serializableBindings);
+        next({ inJSX: false, serializableBindings });
+      },
       JSXElement(
         node: ESTNode,
         {
           state: walkState,
           next,
         }: {
-          state: { inJSX: boolean };
-          next: (s?: { inJSX: boolean }) => void;
+          state: WalkTransformState;
+          next: (s?: WalkTransformState) => void;
         },
       ) {
         /* c8 ignore next @preserve -- structurally unreachable: replacing a JSXElement prevents visiting nested original JSX nodes */
         if (walkState.inJSX) {
-          next({ inJSX: true });
+          next({ inJSX: true, serializableBindings: walkState.serializableBindings });
           return;
         }
 
         /* c8 ignore next @preserve -- defensive guard: typed JSXElement visitor only receives JSXElement nodes */
         if (!isJSXElement(node)) return;
 
-        if (isComponentTag(node.openingElement.name)) {
-          return buildComponentCall(node, state, nested);
-        }
+        const previousSerializableBindings = state.currentSerializableBindings;
+        state.currentSerializableBindings = walkState.serializableBindings;
+        try {
+          if (isComponentTag(node.openingElement.name)) {
+            return buildComponentCall(node, state, nested);
+          }
 
-        if (mode === "ssr") {
-          return transformJSXForSSRNode(node, state, nested);
-        }
+          if (mode === "ssr") {
+            return transformJSXForSSRNode(node, state, nested);
+          }
 
-        return transformJSXNode(node, state, nested);
+          return transformJSXNode(node, state, nested);
+        } finally {
+          state.currentSerializableBindings = previousSerializableBindings;
+        }
       },
       JSXFragment(
         node: ESTNode,
@@ -2282,24 +2416,30 @@ function transform(
           state: walkState,
           next,
         }: {
-          state: { inJSX: boolean };
-          next: (s?: { inJSX: boolean }) => void;
+          state: WalkTransformState;
+          next: (s?: WalkTransformState) => void;
         },
       ) {
         /* c8 ignore next @preserve -- structurally unreachable: replacing a JSXFragment prevents visiting nested original JSX nodes */
         if (walkState.inJSX) {
-          next({ inJSX: true });
+          next({ inJSX: true, serializableBindings: walkState.serializableBindings });
           return;
         }
 
         /* c8 ignore next @preserve -- defensive guard: typed JSXFragment visitor only receives JSXFragment nodes */
         if (!isJSXFragment(node)) return;
 
-        if (mode === "ssr") {
-          return transformJSXForSSRNode(node, state, nested);
-        }
+        const previousSerializableBindings = state.currentSerializableBindings;
+        state.currentSerializableBindings = walkState.serializableBindings;
+        try {
+          if (mode === "ssr") {
+            return transformJSXForSSRNode(node, state, nested);
+          }
 
-        return transformJSXNode(node, state, nested);
+          return transformJSXNode(node, state, nested);
+        } finally {
+          state.currentSerializableBindings = previousSerializableBindings;
+        }
       },
     },
   ) as Program;
@@ -2321,7 +2461,7 @@ function transform(
       nExprStmt(
         nCall(nId("registerClientAction"), [
           nLit(action.id),
-          cloneNode(action.handler),
+          cloneNode(action.factory),
         ]),
       ),
     );

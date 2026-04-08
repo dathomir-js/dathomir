@@ -1203,11 +1203,15 @@ describe("defineComponent", () => {
     );
     vi.stubGlobal("cancelIdleCallback", vi.fn());
 
-    registerClientAction(actionId, clickSpy);
+    registerClientAction(actionId, (payload: Record<string, unknown>) => {
+      return () => {
+        clickSpy(payload.label as string);
+      };
+    });
     defineComponent(tag, () => document.createElement("button"));
 
     const container = document.createElement("div");
-    container.innerHTML = `<${tag} data-dh-island="idle" data-dh-client-actions='{"click":"${actionId}"}'><template shadowrootmode="open"><button type="button">SSR</button></template></${tag}>`;
+    container.innerHTML = `<${tag} data-dh-island="idle" data-dh-client-actions='{"click":{"id":"${actionId}","payload":{"label":"idle-ready"}}}'><template shadowrootmode="open"><button type="button">SSR</button></template></${tag}>`;
     const el = container.firstElementChild as HTMLElement;
 
     document.body.appendChild(el);
@@ -1223,7 +1227,7 @@ describe("defineComponent", () => {
 
     el.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
     await waitForMicrotask();
-    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledWith("idle-ready");
 
     el.remove();
   });
@@ -1233,11 +1237,15 @@ describe("defineComponent", () => {
     const actionId = `action:${tag}`;
     const clickSpy = vi.fn();
 
-    registerClientAction(actionId, clickSpy);
+    registerClientAction(actionId, (payload: Record<string, unknown>) => {
+      return () => {
+        clickSpy(payload.label as string);
+      };
+    });
     defineComponent(tag, () => document.createElement("button"));
 
     const container = document.createElement("div");
-    container.innerHTML = `<${tag} data-dh-island="interaction" data-dh-island-value="click" data-dh-client-actions='{"click":"${actionId}"}'><template shadowrootmode="open"><button type="button">SSR</button></template></${tag}>`;
+    container.innerHTML = `<${tag} data-dh-island="interaction" data-dh-island-value="click" data-dh-client-actions='{"click":{"id":"${actionId}","payload":{"label":"interaction-ready"}}}'><template shadowrootmode="open"><button type="button">SSR</button></template></${tag}>`;
     const el = container.firstElementChild as HTMLElement;
 
     document.body.appendChild(el);
@@ -1247,7 +1255,7 @@ describe("defineComponent", () => {
     el.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
     await waitForMicrotask();
 
-    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledWith("interaction-ready");
     expect(Reflect.get(el, HYDRATE_ISLANDS_STATUS)).toBe("hydrated");
 
     el.remove();

@@ -53,7 +53,11 @@ import type {
  */
 const hydratedRoots = new WeakMap<ShadowRoot, boolean>();
 const scheduledIslandCleanups = new WeakMap<HTMLElement, () => void>();
-const clientActionRegistry = new Map<string, EventListener>();
+type ClientActionFactory = (
+  payload: Record<string, unknown>,
+  host: HTMLElement,
+) => EventListener;
+const clientActionRegistry = new Map<string, ClientActionFactory>();
 
 const HYDRATE_ISLANDS_HOOK = Symbol("dathomir.hydrateIslandsHook");
 const HYDRATE_ISLANDS_STATUS = Symbol("dathomir.hydrateIslandsStatus");
@@ -84,11 +88,11 @@ interface ReplayEventSnapshot {
     | PointerEventInit;
 }
 
-function registerClientAction(id: string, handler: EventListener): void {
-  clientActionRegistry.set(id, handler);
+function registerClientAction(id: string, factory: ClientActionFactory): void {
+  clientActionRegistry.set(id, factory);
 }
 
-function getClientAction(id: string): EventListener | undefined {
+function getClientAction(id: string): ClientActionFactory | undefined {
   return clientActionRegistry.get(id);
 }
 

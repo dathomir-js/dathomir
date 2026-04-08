@@ -2697,7 +2697,8 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "csr" });
 
-      expect(result.code).toContain('registerClientAction("dh-ca-1", handleClick)');
+      expect(result.code).toContain('registerClientAction("dh-ca-1", (__dh_payload, __dh_host) =>');
+      expect(result.code).toContain('return handleClick;');
       expect(result.code).toContain('"data-dh-island": "load"');
       expect(result.code).toContain('"data-dh-client-actions"');
       expect(result.code).toContain('dh-ca-1');
@@ -2712,7 +2713,8 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "csr" });
 
-      expect(result.code).toContain('registerClientAction("dh-ca-1", handleKeyDown)');
+      expect(result.code).toContain('registerClientAction("dh-ca-1", (__dh_payload, __dh_host) =>');
+      expect(result.code).toContain('return handleKeyDown;');
       expect(result.code).toContain('"data-dh-island": "interaction"');
       expect(result.code).toContain('"data-dh-island-value": "keydown"');
       expect(result.code).toContain('"data-dh-client-actions"');
@@ -2730,6 +2732,34 @@ describe("transform", () => {
 
       expect(() => transform(code)).toThrow(
         "[dathomir] load:onClick component-target colocated handlers cannot capture local bindings: bump, localCount",
+      );
+    });
+
+    it("should serialize local const captures for component-target inline handlers", () => {
+      const code = `
+        function report(value) { return value; }
+        const Parent = defineComponent("x-parent", () => {
+          const label = "captured-label";
+          return <Counter load:onClick={() => report(label)} />;
+        });
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain('registerClientAction("dh-ca-1"');
+      expect(result.code).toContain('__dh_payload');
+      expect(result.code).toContain('"data-dh-client-actions"');
+      expect(result.code).toContain('payload: { label: "captured-label" }');
+      expect(result.code).toContain('"captured-label"');
+    });
+
+    it("should reject component-target interaction:onFocus because child host cannot observe focus", () => {
+      const code = `
+        const element = <Counter interaction:onFocus={handleFocus} />;
+      `;
+
+      expect(() => transform(code)).toThrow(
+        "[dathomir] interaction:onFocus is not supported on component targets because the child host cannot observe that event without an explicit host re-emit",
       );
     });
 

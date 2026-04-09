@@ -7,7 +7,7 @@
       "ESNext.Iterator",
       "ESNext.Promise",
       "DOM",
-      "DOM.Iterable"
+      "DOM.Iterable",
     ],
     "module": "ESNext",
     "target": "es2024",
@@ -17,10 +17,15 @@
     "moduleResolution": "bundler",
     "outDir": "${configDir}/dist",
     "paths": {
-      "@/*": ["${configDir}/src/*"]
+      "@/*": ["${configDir}/src/*"],
     },
-    "types": ["@types/node"]
+    "types": ["@types/node"],
   },
-  "include": ["${configDir}/src", "${configDir}/test", "${configDir}/bench"],
-  "exclude": ["${configDir}/dist", "${configDir}/node_modules"]
+  "include": [
+    "${configDir}/src",
+    "${configDir}/test",
+    "${configDir}/bench",
+    "./global.d.ts",
+  ],
+  "exclude": ["${configDir}/dist", "${configDir}/node_modules"],
 }

@@ -28,7 +28,7 @@ const compiledTemplateCache = new WeakMap<
 function isCompiledTemplateDescriptor(
   value: readonly Tree[] | CompiledTemplateDescriptor,
 ): value is CompiledTemplateDescriptor {
-  return !Array.isArray(value) && value.kind === "compiled";
+  return "kind" in value && value.kind === "compiled";
 }
 
 function parseCompiledMarkup(

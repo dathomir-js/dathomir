@@ -1,3 +1,4 @@
+import type { ESTNode } from "@/transform/ast/implementation";
 import {
   nArrowBlock,
   nBlock,
@@ -11,17 +12,22 @@ import {
   nProp,
   nReturn,
 } from "@/transform/ast/implementation";
-import type { ESTNode } from "@/transform/ast/implementation";
-import { generateNavigation } from "@/transform/navigation/implementation";
-import { createTemplateId } from "@/transform/state/implementation";
-import type { TransformState } from "@/transform/state/implementation";
+import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
 import { getTagName } from "@/transform/jsx/implementation";
+import { generateNavigation } from "@/transform/navigation/implementation";
+import type { TransformState } from "@/transform/state/implementation";
+import { createTemplateId } from "@/transform/state/implementation";
+import type { NestedTransformers } from "@/transform/tree/implementation";
 import {
   containsReactiveAccess,
   jsxToTree,
 } from "@/transform/tree/implementation";
-import type { NestedTransformers } from "@/transform/tree/implementation";
-import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
+
+/**
+ * Namespace enum values matching @dathomir/runtime Namespace const enum.
+ * Duplicated here to avoid a runtime dependency from transformer.
+ */
+type Namespace = 0 | 1 | 2;
 
 const HTML_VOID_ELEMENTS = new Set([
   "area",
@@ -58,13 +64,17 @@ type StaticTreeNode =
       children: StaticTreeNode[];
     };
 
-function getLiteralValue(node: ESTNode): string | number | boolean | null | null {
+function getLiteralValue(
+  node: ESTNode,
+): string | number | boolean | null | null {
   return node.type === "Literal"
     ? ((node.value as string | number | boolean | null | undefined) ?? null)
     : null;
 }
 
-function readStyleObject(node: ESTNode): Record<string, StaticStyleValue> | null {
+function readStyleObject(
+  node: ESTNode,
+): Record<string, StaticStyleValue> | null {
   if (node.type !== "ObjectExpression") {
     return null;
   }
@@ -79,7 +89,7 @@ function readStyleObject(node: ESTNode): Record<string, StaticStyleValue> | null
     const valueNode = property.value as ESTNode;
     const key =
       keyNode.type === "Identifier"
-        ? keyNode.name
+        ? (keyNode.name as string)
         : typeof keyNode.value === "string"
           ? keyNode.value
           : null;
@@ -116,7 +126,7 @@ function readAttrs(node: ESTNode): Record<string, StaticAttrValue> | null {
     const valueNode = property.value as ESTNode;
     const key =
       keyNode.type === "Identifier"
-        ? keyNode.name
+        ? (keyNode.name as string)
         : typeof keyNode.value === "string"
           ? keyNode.value
           : null;
@@ -150,13 +160,14 @@ function readStaticTreeNode(node: ESTNode): StaticTreeNode | null {
     return null;
   }
 
-  const [tagNode, attrsNode, ...childNodes] = node.elements as ESTNode[];
+  const elements = node.elements as ESTNode[];
+  const [tagNode, attrsNode, ...childNodes] = elements;
   if (
     tagNode?.type === "Literal" &&
     typeof tagNode.value === "string" &&
     attrsNode?.type === "Literal" &&
     attrsNode.value === null &&
-    node.elements.length === 2 &&
+    elements.length === 2 &&
     tagNode.value.startsWith("{")
   ) {
     if (tagNode.value === "{text}") {
@@ -179,7 +190,11 @@ function readStaticTreeNode(node: ESTNode): StaticTreeNode | null {
   }
 
   const attrs = readAttrs(attrsNode as ESTNode);
-  if (attrsNode !== undefined && attrs === null && !(attrsNode.type === "Literal" && attrsNode.value === null)) {
+  if (
+    attrsNode !== undefined &&
+    attrs === null &&
+    !(attrsNode.type === "Literal" && attrsNode.value === null)
+  ) {
     return null;
   }
 
@@ -242,9 +257,7 @@ function camelToKebab(value: string): string {
   return value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 }
 
-function serializeStyleObject(
-  value: Record<string, StaticStyleValue>,
-): string {
+function serializeStyleObject(value: Record<string, StaticStyleValue>): string {
   const parts: string[] = [];
   for (const [key, entry] of Object.entries(value)) {
     if (entry == null || entry === "") {
@@ -307,14 +320,12 @@ function serializeMarkupNode(
   }
 
   const nextNamespace =
-    node.tag === "svg"
-      ? "svg"
-      : node.tag === "math"
-        ? "math"
-        : namespace;
+    node.tag === "svg" ? "svg" : node.tag === "math" ? "math" : namespace;
   const openingTag = `<${node.tag}${serializeAttrs(node.attrs)}>`;
   const children = node.children
-    .map((child) => serializeMarkupNode(child, nextNamespace, textPlaceholderId))
+    .map((child) =>
+      serializeMarkupNode(child, nextNamespace, textPlaceholderId),
+    )
     .join("");
 
   if (namespace === "html" && HTML_VOID_ELEMENTS.has(node.tag.toLowerCase())) {
@@ -454,11 +465,7 @@ function transformJSXNode(
         state.runtimeImports.add("setAttr");
 
         const attrUpdate = nExprStmt(
-          nCall(nId("setAttr"), [
-            nodeId,
-            nLit(part.key),
-            part.expression,
-          ]),
+          nCall(nId("setAttr"), [nodeId, nLit(part.key), part.expression]),
         );
 
         if (containsReactiveAccess(part.expression)) {
@@ -481,11 +488,7 @@ function transformJSXNode(
 
         updateStatements.push(
           nExprStmt(
-            nCall(nId("event"), [
-              nLit(part.key),
-              nodeId,
-              part.expression,
-            ]),
+            nCall(nId("event"), [nLit(part.key), nodeId, part.expression]),
           ),
         );
         break;

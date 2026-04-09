@@ -1,3 +1,4 @@
+import type { ESTNode } from "@/transform/ast/implementation";
 import {
   nArr,
   nCall,
@@ -7,11 +8,10 @@ import {
   nNew,
   nObj,
 } from "@/transform/ast/implementation";
-import type { ESTNode } from "@/transform/ast/implementation";
 import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
 import type { TransformState } from "@/transform/state/implementation";
-import { jsxToTree } from "@/transform/tree/implementation";
 import type { NestedTransformers } from "@/transform/tree/implementation";
+import { jsxToTree } from "@/transform/tree/implementation";
 
 const HTML_VOID_ELEMENTS = new Set([
   "area",
@@ -48,13 +48,17 @@ type StaticTreeNode =
       children: StaticTreeNode[];
     };
 
-function getLiteralValue(node: ESTNode): string | number | boolean | null | null {
+function getLiteralValue(
+  node: ESTNode,
+): string | number | boolean | null | null {
   return node.type === "Literal"
     ? ((node.value as string | number | boolean | null | undefined) ?? null)
     : null;
 }
 
-function readStyleObject(node: ESTNode): Record<string, StaticStyleValue> | null {
+function readStyleObject(
+  node: ESTNode,
+): Record<string, StaticStyleValue> | null {
   if (node.type !== "ObjectExpression") {
     return null;
   }
@@ -69,7 +73,7 @@ function readStyleObject(node: ESTNode): Record<string, StaticStyleValue> | null
     const valueNode = property.value as ESTNode;
     const key =
       keyNode.type === "Identifier"
-        ? keyNode.name
+        ? (keyNode.name as string)
         : typeof keyNode.value === "string"
           ? keyNode.value
           : null;
@@ -102,7 +106,7 @@ function readAttrs(node: ESTNode): Record<string, StaticAttrValue> | null {
     const valueNode = property.value as ESTNode;
     const key =
       keyNode.type === "Identifier"
-        ? keyNode.name
+        ? (keyNode.name as string)
         : typeof keyNode.value === "string"
           ? keyNode.value
           : null;
@@ -136,13 +140,14 @@ function readStaticTreeNode(node: ESTNode): StaticTreeNode | null {
     return null;
   }
 
-  const [tagNode, attrsNode, ...childNodes] = node.elements as ESTNode[];
+  const elements = node.elements as ESTNode[];
+  const [tagNode, attrsNode, ...childNodes] = elements;
   if (
     tagNode?.type === "Literal" &&
     typeof tagNode.value === "string" &&
     attrsNode?.type === "Literal" &&
     attrsNode.value === null &&
-    node.elements.length === 2 &&
+    elements.length === 2 &&
     tagNode.value.startsWith("{")
   ) {
     if (tagNode.value === "{text}") {
@@ -244,9 +249,7 @@ function camelToKebab(value: string): string {
   return value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 }
 
-function serializeStyleObject(
-  value: Record<string, StaticStyleValue>,
-): string {
+function serializeStyleObject(value: Record<string, StaticStyleValue>): string {
   const parts: string[] = [];
   for (const [key, entry] of Object.entries(value)) {
     if (entry == null || entry === "") {
@@ -259,7 +262,9 @@ function serializeStyleObject(
   return parts.join("; ");
 }
 
-function serializeStaticAttrs(attrs: Record<string, StaticAttrValue> | null): string {
+function serializeStaticAttrs(
+  attrs: Record<string, StaticAttrValue> | null,
+): string {
   if (attrs === null) {
     return "";
   }
@@ -426,7 +431,10 @@ function transformJSXForSSRNode(
           ? "math"
           : namespace;
 
-    mergeStaticPart(parts, `<${currentNode.tag}${serializeStaticAttrs(currentNode.attrs)}`);
+    mergeStaticPart(
+      parts,
+      `<${currentNode.tag}${serializeStaticAttrs(currentNode.attrs)}`,
+    );
 
     for (const dynamicPart of dynamicParts) {
       if (dynamicPart.path.join(".") !== path.join(".")) {
@@ -445,9 +453,7 @@ function transformJSXForSSRNode(
 
       if (dynamicPart.type === "spread") {
         state.runtimeImports.add("renderDynamicSpread");
-        parts.push(
-          nCall(nId("renderDynamicSpread"), [dynamicPart.expression]),
-        );
+        parts.push(nCall(nId("renderDynamicSpread"), [dynamicPart.expression]));
       }
     }
 

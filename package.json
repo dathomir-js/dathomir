@@ -20,7 +20,8 @@
     "test": "pnpm -r --filter \"./packages/**\" --parallel run test",
     "dev": "pnpm -r --filter \"./packages/**\" --parallel run dev",
     "lint": "pnpm -r --filter \"./packages/**\" --parallel run lint",
-    "fmt": "pnpm -r --filter \"./packages/**\" --parallel run fmt"
+    "fmt": "pnpm -r --filter \"./packages/**\" --parallel run fmt",
+    "typecheck": "pnpm -r --filter \"./packages/**\" --parallel run typecheck"
   },
   "license": "MPL-2.0",
   "packageManager": "pnpm@10.17.1",

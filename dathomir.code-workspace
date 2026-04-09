@@ -118,6 +118,7 @@
     "eslint.useFlatConfig": true,
     "typst.fontPaths": ["SPEC/fonts"],
     "json.schemaDownload.enable": true,
+    "js/ts.tsdk.path": "node_modules/typescript/lib",
   },
   "tasks": {
     "version": "2.0.0",

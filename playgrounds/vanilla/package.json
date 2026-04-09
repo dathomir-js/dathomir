@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@dathomir/plugin": "workspace:*",
-    "typescript": "~6.0.0",
+    "typescript": "catalog:",
     "vite": "^6.3.4"
   }
 }

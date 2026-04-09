@@ -24,11 +24,6 @@
   },
   "license": "MPL-2.0",
   "packageManager": "pnpm@10.17.1",
-  "pnpm": {
-    "overrides": {
-      "typescript": "^6.0.0"
-    }
-  },
   "devDependencies": {
     "@opencode-ai/plugin": "^1.2.19"
   }

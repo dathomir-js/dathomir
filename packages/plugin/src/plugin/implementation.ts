@@ -202,7 +202,10 @@ function parseJsonc(text: string): unknown {
       while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) {
         i++;
       }
-      i += 2;
+      // Only advance past the closing */ if we found it
+      if (i < text.length) {
+        i += 2;
+      }
     } else {
       result += char;
       i++;

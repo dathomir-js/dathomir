@@ -160,6 +160,21 @@ function findNearestTsconfigPath(importer: string): string | null {
   }
 }
 
+/**
+ * Parse a JSON or JSONC (JSON with comments and trailing commas) string.
+ * Supports tsconfig.json files which may use JSONC format.
+ */
+function parseJsonc(text: string): unknown {
+  // Remove single-line comments (// ...)
+  // Remove block comments (/* ... */)
+  // Remove trailing commas before closing brace/bracket
+  const stripped = text
+    .replace(/\/\/[^\n]*/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/,(\s*[}\]])/g, "$1");
+  return JSON.parse(stripped);
+}
+
 function readTsconfigPaths(
   tsconfigPath: string,
   sourceDirectory = path.dirname(tsconfigPath),
@@ -172,7 +187,7 @@ function readTsconfigPaths(
 
   try {
     const raw = fs.readFileSync(tsconfigPath, "utf8");
-    const parsed = JSON.parse(raw) as unknown;
+    const parsed = parseJsonc(raw) as unknown;
     if (!isObjectRecord(parsed)) {
       tsconfigPathCache.set(cacheKey, null);
       return null;

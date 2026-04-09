@@ -42,6 +42,7 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
     - `@dathomir/transformer` の `transform()` を呼び出し、`filename` と `runtimeModule` を渡す
     - transform 失敗時はファイルパスを付与したエラーとして再スローする
     - Vite plugin は importer から最も近い `tsconfig.json` の `compilerOptions.paths` を参照して path alias import を解決できる
+    - `tsconfig.json` のパース時は JSONC 形式（行コメント `//`、ブロックコメント `/* */`、末尾カンマ）をサポートする
   ],
 )
 
@@ -68,6 +69,7 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
      - `runtimeModule` オプションが transformer に正しく渡される
      - `filename` が変換対象ファイルの ID として渡される
      - Vite plugin が最寄り `tsconfig.json` の path alias を使って importer 基準で `.ts` / `.tsx` / `index.ts` まで解決する
+     - JSONC 形式の `tsconfig.json`（末尾カンマ、コメント）からも path alias を正しく解決する
      - 実 transformer を使った integration test で islands metadata contract (`data-dh-island*`, `data-dh-client-*`) が plugin 出力に残る
 
       *エラーハンドリング*:

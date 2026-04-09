@@ -1,6 +1,8 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { transform } from "@dathomir/transformer";
 
@@ -326,6 +328,65 @@ describe("plugin", () => {
       const resolved = await resolveId.call({}, "#internal/foo", importer);
 
       expect(resolved).toBeNull();
+    });
+
+    describe("JSONC tsconfig support", () => {
+      let tempDir: string;
+
+      beforeEach(() => {
+        tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "dathomir-test-"));
+        fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+        fs.writeFileSync(
+          path.join(tempDir, "src", "foo.ts"),
+          "export const foo = 1;",
+        );
+      });
+
+      afterEach(() => {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      });
+
+      it("should resolve @/ aliases from a tsconfig with trailing commas", async () => {
+        const jsoncTsconfig = `{
+  // JSONC format tsconfig with trailing commas
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+    },
+  },
+}`;
+        fs.writeFileSync(path.join(tempDir, "tsconfig.json"), jsoncTsconfig);
+
+        const plugin = dathomirVitePlugin();
+        const resolveId = plugin.resolveId as Function;
+        const importer = path.join(tempDir, "src", "index.ts");
+        const expected = path.join(tempDir, "src", "foo.ts");
+
+        const resolved = await resolveId.call({}, "@/foo", importer);
+
+        expect(resolved).toBe(expected);
+      });
+
+      it("should resolve @/ aliases from a tsconfig with block comments", async () => {
+        const jsoncTsconfig = `{
+  /* block comment */
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"] /* inline comment */
+    }
+  }
+}`;
+        fs.writeFileSync(path.join(tempDir, "tsconfig.json"), jsoncTsconfig);
+
+        const plugin = dathomirVitePlugin();
+        const resolveId = plugin.resolveId as Function;
+        const importer = path.join(tempDir, "src", "index.ts");
+        const expected = path.join(tempDir, "src", "foo.ts");
+
+        const resolved = await resolveId.call({}, "@/foo", importer);
+
+        expect(resolved).toBe(expected);
+      });
     });
   });
 

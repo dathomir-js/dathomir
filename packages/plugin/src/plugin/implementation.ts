@@ -163,16 +163,55 @@ function findNearestTsconfigPath(importer: string): string | null {
 /**
  * Parse a JSON or JSONC (JSON with comments and trailing commas) string.
  * Supports tsconfig.json files which may use JSONC format.
+ * Correctly handles // and /* */ patterns inside string literals.
  */
 function parseJsonc(text: string): unknown {
-  // Remove single-line comments (// ...)
-  // Remove block comments (/* ... */)
+  let result = "";
+  let i = 0;
+
+  while (i < text.length) {
+    const char = text[i];
+
+    if (char === '"') {
+      // Scan through the string literal, preserving its content as-is
+      result += char;
+      i++;
+      while (i < text.length) {
+        const inner = text[i];
+        result += inner;
+        i++;
+        if (inner === "\\") {
+          // Escaped character — include the next char unchanged
+          if (i < text.length) {
+            result += text[i];
+            i++;
+          }
+        } else if (inner === '"') {
+          // End of string literal
+          break;
+        }
+      }
+    } else if (char === "/" && text[i + 1] === "/") {
+      // Skip single-line comment
+      while (i < text.length && text[i] !== "\n") {
+        i++;
+      }
+    } else if (char === "/" && text[i + 1] === "*") {
+      // Skip block comment
+      i += 2;
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) {
+        i++;
+      }
+      i += 2;
+    } else {
+      result += char;
+      i++;
+    }
+  }
+
   // Remove trailing commas before closing brace/bracket
-  const stripped = text
-    .replace(/\/\/[^\n]*/g, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/,(\s*[}\]])/g, "$1");
-  return JSON.parse(stripped);
+  const withoutTrailingCommas = result.replace(/,(\s*[}\]])/g, "$1");
+  return JSON.parse(withoutTrailingCommas);
 }
 
 function readTsconfigPaths(

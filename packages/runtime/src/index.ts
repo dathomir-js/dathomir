@@ -55,6 +55,14 @@ export type {
 
 export { getClientAction, registerClientAction } from "./hydration/hydrate/implementation";
 
+export {
+  renderDynamicAttr,
+  renderDynamicEach,
+  renderDynamicInsert,
+  renderDynamicSpread,
+  renderDynamicText,
+} from "./ssr/render/implementation";
+
 // Tree types
 export { Namespace } from "./types/tree";
 export type {

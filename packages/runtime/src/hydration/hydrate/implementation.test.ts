@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   clearClientActions,
+  createHydrationContext,
   getClientAction,
   type GenericHydrationPlan,
   HydrationMismatchError,
@@ -193,6 +194,14 @@ describe("hydrateRoot", () => {
         storeSnapshotSchema: schema,
       } as never);
     }).toThrow("storeSnapshotSchema requires a store");
+  });
+
+  it("indexes markers by id with first-match semantics", () => {
+    shadowRoot.innerHTML = "<!--dh:t:1-->outer<!--dh:t:1-->later";
+
+    const ctx = createHydrationContext(shadowRoot);
+
+    expect(ctx.markerLookup.get(1)?.node).toBe(shadowRoot.firstChild);
   });
 });
 
@@ -380,6 +389,39 @@ describe("hydrateWithPlan", () => {
 
     const child = shadowRoot.querySelector("child-box");
     expect(child?.hasAttribute("data-should-not-change")).toBe(false);
+  });
+
+  it("resolves text markers outside nested boundaries when ids overlap", async () => {
+    const value = signal("outer-ready");
+    shadowRoot.innerHTML =
+      '<section><child-box><!--dh:t:1-->inner</child-box><!--dh:t:1-->outer</section>';
+
+    const plan: GenericHydrationPlan = {
+      namespace: "html",
+      bindings: [
+        {
+          kind: "text",
+          markerId: 1,
+          expression: () => value.value,
+        },
+      ],
+      nestedBoundaries: [
+        { path: [0, 0], tagName: "child-box", islandStrategy: "load" },
+      ],
+    };
+
+    hydrateWithPlan(shadowRoot, plan);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const child = shadowRoot.querySelector("child-box");
+    expect(child?.textContent).toBe("inner");
+    expect(shadowRoot.textContent).toContain("innerouter-ready");
+
+    value.set("outer-updated");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(child?.textContent).toBe("inner");
+    expect(shadowRoot.textContent).toContain("innerouter-updated");
   });
 
   it("hydrates insert bindings at stable placeholder paths", async () => {

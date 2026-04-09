@@ -84,7 +84,6 @@ interface TreeResult {
 interface ProcessedAttributes {
   attrs: ESTNode;
   events: { type: string; handler: ESTNode }[];
-  spreads: ESTNode[];
 }
 
 interface ColocatedClientState {
@@ -1017,11 +1016,10 @@ function processAttributes(
 ): ProcessedAttributes {
   const staticProps: ESTNode[] = [];
   const events: { type: string; handler: ESTNode }[] = [];
-  const spreads: ESTNode[] = [];
 
   for (const attr of attributes) {
     if (attr.type === "JSXSpreadAttribute") {
-      spreads.push(attr.argument);
+      dynamicParts.push({ type: "spread", path, expression: attr.argument });
       continue;
     }
 
@@ -1159,7 +1157,6 @@ function processAttributes(
   return {
     attrs: staticProps.length > 0 ? nObj(staticProps) : nLit(null),
     events,
-    spreads,
   };
 }
 
@@ -1183,7 +1180,7 @@ function jsxElementToTree(
   state.currentElementNamespace = nextElementNamespace;
 
   try {
-    const { attrs, events, spreads } = processAttributes(
+    const { attrs, events } = processAttributes(
       opening.attributes,
       dynamicParts,
       path,
@@ -1215,10 +1212,6 @@ function jsxElementToTree(
         expression: evt.handler,
         key: evt.type,
       });
-    }
-
-    for (const spread of spreads) {
-      dynamicParts.push({ type: "spread", path, expression: spread });
     }
 
     return {

@@ -33,32 +33,19 @@ function makeElement(
 }
 
 describe("transform/mode-ssr", () => {
-  it("generates empty Map when no dynamic parts exist", () => {
+  it("returns a static string literal when no dynamic parts exist", () => {
     const state = createInitialState("ssr");
     const output = transformJSXForSSRNode(
       makeElement([{ type: "JSXText", value: "Hello" }]),
       state,
       nested,
-    ) as unknown as {
-      arguments: Array<{
-        type: string;
-        callee?: { name: string };
-        arguments?: Array<{ type: string; elements: unknown[] }>;
-      }>;
-    };
+    ) as unknown as { type: string; value?: unknown };
 
-    // Third argument should be new Map([])
-    expect(output.arguments[2]?.type).toBe("NewExpression");
-    expect(output.arguments[2]?.callee?.name).toBe("Map");
-    const mapArg = output.arguments[2]?.arguments?.[0] as {
-      type: string;
-      elements: unknown[];
-    };
-    expect(mapArg.type).toBe("ArrayExpression");
-    expect(mapArg.elements.length).toBe(0);
+    expect(output.type).toBe("Literal");
+    expect(output.value).toBe("<div>Hello</div>");
   });
 
-  it("excludes event dynamic parts from the dynamic Map", () => {
+  it("excludes event dynamic parts from compiled SSR output", () => {
     const state = createInitialState("ssr");
     const output = transformJSXForSSRNode(
       {
@@ -88,28 +75,21 @@ describe("transform/mode-ssr", () => {
       },
       state,
       nested,
-    ) as unknown as {
-      arguments: Array<{ type: string; arguments?: unknown[] }>;
-    };
+    );
 
-    const mapArg = output.arguments[2]?.arguments?.[0] as {
-      type: string;
-      elements: Array<{ type: string; elements: Array<{ value?: unknown }> }>;
-    };
-    expect(mapArg.type).toBe("ArrayExpression");
-    // Only the text dynamic part (label) should be in the Map, not the event (onClick)
-    expect(mapArg.elements.length).toBe(1);
+    expect(JSON.stringify(output)).toContain('"name":"renderDynamicText"');
+    expect(JSON.stringify(output)).not.toContain("handleClick");
   });
 
-  it("registers renderToString runtime import", () => {
+  it("registers compiled SSR helper imports", () => {
     const state = createInitialState("ssr");
     const output = transformJSXForSSRNode(makeElement(), state, nested);
 
-    expect(output.type).toBe("CallExpression");
-    expect(state.runtimeImports.has("renderToString")).toBe(true);
+    expect(output.type).toBe("Literal");
+    expect(state.runtimeImports.has("renderDynamicText")).toBe(false);
   });
 
-  it("uses Map entries for dynamic parts", () => {
+  it("uses helper calls for dynamic parts", () => {
     const state = createInitialState("ssr");
     const output = transformJSXForSSRNode(
       makeElement([
@@ -120,20 +100,12 @@ describe("transform/mode-ssr", () => {
       ]),
       state,
       nested,
-    ) as unknown as {
-      arguments: Array<{ type: string; arguments?: unknown[] }>;
-    };
+    );
 
-    expect(output.arguments[2]?.type).toBe("NewExpression");
-    const mapArg = output.arguments[2]?.arguments?.[0] as {
-      type: string;
-      elements: unknown[];
-    };
-    expect(mapArg.type).toBe("ArrayExpression");
-    expect(mapArg.elements.length).toBeGreaterThan(0);
+    expect(JSON.stringify(output)).toContain('"name":"renderDynamicText"');
   });
 
-  it("keeps text/insert keys stable even when attr dynamic part appears first", () => {
+  it("keeps text/insert marker ids stable even when attr dynamic part appears first", () => {
     const state = createInitialState("ssr");
     const output = transformJSXForSSRNode(
       {
@@ -184,18 +156,32 @@ describe("transform/mode-ssr", () => {
       },
       state,
       nested,
-    ) as unknown as {
-      arguments: Array<{ type: string; arguments?: unknown[] }>;
-    };
+    );
 
-    const mapArg = output.arguments[2]?.arguments?.[0] as {
-      type: string;
-      elements: Array<{ type: string; elements: Array<{ value?: unknown }> }>;
-    };
+    const serialized = JSON.stringify(output);
+    expect(serialized).toContain("<!--dh:i:1-->");
+    expect(serialized).toContain('"name":"renderDynamicAttr"');
+  });
 
-    expect(mapArg.type).toBe("ArrayExpression");
-    expect(mapArg.elements.length).toBe(2);
-    expect(mapArg.elements[0]?.elements[0]?.value).toBe(1);
-    expect(mapArg.elements[1]?.elements[0]?.value).toBe(2);
+  it("falls back to renderToString for custom elements", () => {
+    const state = createInitialState("ssr");
+    const output = transformJSXForSSRNode(
+      {
+        type: "JSXElement",
+        openingElement: {
+          type: "JSXOpeningElement",
+          name: { type: "JSXIdentifier", name: "my-widget" },
+          attributes: [],
+          selfClosing: false,
+        },
+        children: [{ type: "JSXText", value: "Hello" }],
+        closingElement: null,
+      },
+      state,
+      nested,
+    ) as unknown as { callee?: { name?: string } };
+
+    expect(output.callee?.name).toBe("renderToString");
+    expect(state.runtimeImports.has("renderToString")).toBe(true);
   });
 });

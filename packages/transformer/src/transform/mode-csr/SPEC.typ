@@ -37,14 +37,15 @@
     ```
   ],
   constraints: [
-    - `fromTree(tree, 0)` でテンプレートを作成する
+    - `fromTree()` には compiler-generated な static template descriptor を渡してテンプレートを作成する
     - dynamic parts に応じて `setText`, `setAttr`, `event`, `spread`, `insert` を生成する
     - コンポーネント insert は `templateEffect` でラップしない
     - 条件式 / map / logical expression / JSX を含む一般式 / `JSXSpreadChild` は動的 insert として扱う
     - reactive access を含まない attr dynamic part は `templateEffect` なしで `setAttr()` を 1 回だけ実行する
   ],
   test_cases: [
-    - 静的要素が IIFE + fragment return に変換される
+    - 静的要素が compiler-generated template descriptor + IIFE + fragment return に変換される
+    - static template descriptor には pre-serialized markup が含まれる
     - text / attr が `templateEffect` を使用する
     - static attr expression は `templateEffect` なしで `setAttr()` を使用する
     - event が `event(type, node, handler)` で生成される

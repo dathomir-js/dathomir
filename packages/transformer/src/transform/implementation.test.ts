@@ -25,7 +25,9 @@ describe("transform", () => {
     expect(result.code).toContain("class");
     expect(result.code).toContain("btn");
     expect(result.code).toContain("disabled");
-    expect(result.code).toContain("true");
+    expect(result.code).toContain("markup:");
+    expect(result.code).toContain("button class");
+    expect(result.code).toContain("Click</button>");
   });
 
   it("should transform JSX with onClick handler", () => {
@@ -2443,9 +2445,9 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "csr" });
 
-      expect(result.code).toContain('"data-dh-client-target"');
-      expect(result.code).toContain('"data-dh-client-strategy"');
-      expect(result.code).toContain('"load"');
+      expect(result.code).toContain("data-dh-client-target=");
+      expect(result.code).toContain("data-dh-client-strategy=");
+      expect(result.code).toContain("load");
       expect(result.code).toContain("event");
       expect(result.code).toContain('"click"');
     });
@@ -2457,9 +2459,9 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "ssr" });
 
-      expect(result.code).toContain('"data-dh-client-target"');
-      expect(result.code).toContain('"data-dh-client-strategy"');
-      expect(result.code).toContain('"interaction"');
+      expect(result.code).toContain("data-dh-client-target=");
+      expect(result.code).toContain("data-dh-client-strategy=");
+      expect(result.code).toContain("interaction");
     });
 
     it("should transform visible:onClick on html elements into visible target metadata plus click binding", () => {
@@ -2469,9 +2471,9 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "csr" });
 
-      expect(result.code).toContain('"data-dh-client-target"');
-      expect(result.code).toContain('"data-dh-client-strategy"');
-      expect(result.code).toContain('"visible"');
+      expect(result.code).toContain("data-dh-client-target=");
+      expect(result.code).toContain("data-dh-client-strategy=");
+      expect(result.code).toContain("visible");
       expect(result.code).toContain('"click"');
       expect(result.code).not.toContain("visible:onClick");
     });
@@ -2483,9 +2485,9 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "ssr" });
 
-      expect(result.code).toContain('"data-dh-client-target"');
-      expect(result.code).toContain('"data-dh-client-strategy"');
-      expect(result.code).toContain('"idle"');
+      expect(result.code).toContain("data-dh-client-target=");
+      expect(result.code).toContain("data-dh-client-strategy=");
+      expect(result.code).toContain("idle");
       expect(result.code).not.toContain("idle:onClick");
     });
 
@@ -2496,9 +2498,9 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "csr" });
 
-      expect(result.code).toContain('"data-dh-client-target"');
-      expect(result.code).toContain('"data-dh-client-strategy"');
-      expect(result.code).toContain('"idle"');
+      expect(result.code).toContain("data-dh-client-target=");
+      expect(result.code).toContain("data-dh-client-strategy=");
+      expect(result.code).toContain("idle");
     });
 
     it("should support all canonical colocated strategies for onClick", () => {
@@ -2509,9 +2511,9 @@ describe("transform", () => {
 
         const result = transform(code, { mode: "csr" });
 
-        expect(result.code).toContain('"data-dh-client-target"');
-        expect(result.code).toContain('"data-dh-client-strategy"');
-        expect(result.code).toContain(`"${strategy}"`);
+        expect(result.code).toContain("data-dh-client-target=");
+        expect(result.code).toContain("data-dh-client-strategy=");
+        expect(result.code).toContain(strategy);
         expect(result.code).toContain('"click"');
       }
     });
@@ -2639,9 +2641,9 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "csr" });
 
-      expect(result.code).toContain('"data-dh-client-target"');
-      expect(result.code).toContain('"data-dh-client-strategy"');
-      expect(result.code).toContain('"load"');
+      expect(result.code).toContain("data-dh-client-target=");
+      expect(result.code).toContain("data-dh-client-strategy=");
+      expect(result.code).toContain("load");
       expect(result.code).toContain('"mouseenter"');
     });
 
@@ -2656,9 +2658,9 @@ describe("transform", () => {
       const visibleResult = transform(visibleCode, { mode: "csr" });
       const idleResult = transform(idleCode, { mode: "csr" });
 
-      expect(visibleResult.code).toContain('"visible"');
+      expect(visibleResult.code).toContain("visible");
       expect(visibleResult.code).toContain('"focus"');
-      expect(idleResult.code).toContain('"idle"');
+      expect(idleResult.code).toContain("idle");
       expect(idleResult.code).toContain('"scroll"');
     });
 
@@ -2669,9 +2671,9 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "csr" });
 
-      expect(result.code).toContain('"interaction"');
+      expect(result.code).toContain("interaction");
       expect(result.code).toContain('"keydown"');
-      expect(result.code).toContain('"data-dh-client-event"');
+      expect(result.code).toContain("data-dh-client-event=");
     });
 
     it("should throw when mixed interaction event types are used in one jsx root", () => {
@@ -4016,8 +4018,8 @@ describe("transform", () => {
       const result = transform(code);
 
       // Hyphenated attribute names must be quoted in the output object
-      expect(result.code).toContain('"data-foo"');
-      expect(result.code).toContain('"aria-label"');
+      expect(result.code).toContain("data-foo=");
+      expect(result.code).toContain("aria-label=");
       expect(result.code).toContain("bar");
       expect(result.code).toContain("test");
     });
@@ -4059,7 +4061,7 @@ describe("transform", () => {
 
       const result = transform(code);
 
-      expect(result.code).toContain('"xlink:href"');
+      expect(result.code).toContain("xlink:href=");
       expect(result.code).toContain("#icon");
     });
   });
@@ -4112,7 +4114,7 @@ describe("transform", () => {
       const result = transform(code, { mode: "ssr" });
 
       expect(result.code).not.toContain("fromTree");
-      expect(result.code).toContain("renderToString");
+      expect(result.code).toContain("renderDynamicInsert");
     });
   });
 
@@ -4127,8 +4129,7 @@ describe("transform", () => {
 
       // SSR mode: no DOM-dependent fromTree must appear
       expect(result.code).not.toContain("fromTree");
-      // Both branches must be wrapped in renderToString (SSR)
-      expect(result.code).toContain("renderToString");
+      expect(result.code).toContain("renderDynamicInsert");
     });
 
     it("should not use setText/templateEffect for SSR conditional branches", () => {
@@ -4156,7 +4157,7 @@ describe("transform", () => {
 
       // SSR mode: no DOM-dependent fromTree must appear
       expect(result.code).not.toContain("fromTree");
-      expect(result.code).toContain("renderToString");
+      expect(result.code).toContain("renderDynamicEach");
     });
   });
 
@@ -5653,7 +5654,7 @@ describe("transform", () => {
         const element = <div load:onMouseEnter={handler}>hover</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('"load"');
+      expect(result.code).toContain("load");
       expect(result.code).toContain('"mouseenter"');
     });
 
@@ -5663,9 +5664,9 @@ describe("transform", () => {
         const element = <div interaction:onKeyDown={handler}>key</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('"interaction"');
+      expect(result.code).toContain("interaction");
       expect(result.code).toContain('"keydown"');
-      expect(result.code).toContain('"data-dh-client-event"');
+      expect(result.code).toContain("data-dh-client-event=");
     });
 
     it("should transform colocated visible:onFocus", () => {
@@ -5674,7 +5675,7 @@ describe("transform", () => {
         const element = <input visible:onFocus={handler} />;
       `;
       const result = transform(code);
-      expect(result.code).toContain('"visible"');
+      expect(result.code).toContain("visible");
       expect(result.code).toContain('"focus"');
     });
 
@@ -5684,7 +5685,7 @@ describe("transform", () => {
         const element = <div idle:onScroll={handler}>scroll</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('"idle"');
+      expect(result.code).toContain("idle");
       expect(result.code).toContain('"scroll"');
     });
   });
@@ -5902,9 +5903,9 @@ describe("transform", () => {
         });
       `;
       const result = transform(code, { mode: "ssr" });
-      expect(result.code).toContain("data-dh-client-target");
-      expect(result.code).toContain("data-dh-client-strategy");
-      expect(result.code).toContain('"load"');
+      expect(result.code).toContain("data-dh-client-target=");
+      expect(result.code).toContain("data-dh-client-strategy=");
+      expect(result.code).toContain("load");
     });
 
     it("should remove colocated syntax and keep click binding in SSR planFactory", () => {
@@ -6124,7 +6125,7 @@ describe("transform", () => {
       `;
       const result = transform(code);
       expect(result.code).toContain("fromTree");
-      expect(result.code).toContain('"br"');
+      expect(result.code).toContain("<br />");
     });
 
     it("should handle self-closing hr element", () => {
@@ -6133,7 +6134,7 @@ describe("transform", () => {
       `;
       const result = transform(code);
       expect(result.code).toContain("fromTree");
-      expect(result.code).toContain('"hr"');
+      expect(result.code).toContain("<hr />");
     });
 
     it("should handle img with dynamic src", () => {
@@ -6143,7 +6144,7 @@ describe("transform", () => {
       `;
       const result = transform(code);
       expect(result.code).toContain("fromTree");
-      expect(result.code).toContain('"img"');
+      expect(result.code).toContain("<img");
     });
 
     it("should handle input with multiple attributes", () => {
@@ -6153,7 +6154,7 @@ describe("transform", () => {
       `;
       const result = transform(code);
       expect(result.code).toContain("fromTree");
-      expect(result.code).toContain('"input"');
+      expect(result.code).toContain("<input");
     });
 
     it("should handle meta element", () => {
@@ -6162,7 +6163,7 @@ describe("transform", () => {
       `;
       const result = transform(code);
       expect(result.code).toContain("fromTree");
-      expect(result.code).toContain('"meta"');
+      expect(result.code).toContain("<meta");
     });
 
     it("should handle link element", () => {
@@ -6171,7 +6172,7 @@ describe("transform", () => {
       `;
       const result = transform(code);
       expect(result.code).toContain("fromTree");
-      expect(result.code).toContain('"link"');
+      expect(result.code).toContain("<link");
     });
   });
 
@@ -6262,8 +6263,7 @@ describe("transform", () => {
       `;
       const result = transform(code);
       expect(result.code).toContain("fromTree");
-      // esrap outputs unquoted property key: { disabled: true }
-      expect(result.code).toContain("disabled: true");
+      expect(result.code).toContain("disabled");
     });
 
     it("should handle boolean attribute (explicit true)", () => {
@@ -6298,7 +6298,7 @@ describe("transform", () => {
       `;
       const result = transform(code);
       expect(result.code).toContain("fromTree");
-      expect(result.code).toContain('"data-testid"');
+      expect(result.code).toContain("data-testid=");
     });
 
     it("should handle aria-* attribute", () => {
@@ -6307,7 +6307,7 @@ describe("transform", () => {
       `;
       const result = transform(code);
       expect(result.code).toContain("fromTree");
-      expect(result.code).toContain('"aria-label"');
+      expect(result.code).toContain("aria-label=");
     });
 
     it("should handle style attribute as string", () => {
@@ -6316,8 +6316,7 @@ describe("transform", () => {
       `;
       const result = transform(code);
       expect(result.code).toContain("fromTree");
-      // esrap outputs unquoted property key: { style: "color: red; ..." }
-      expect(result.code).toContain('style: "color: red;');
+      expect(result.code).toContain("color: red; font-size: 14px;");
     });
 
     it("should handle className attribute", () => {

@@ -2,6 +2,13 @@ import { Namespace, type Tree, type TreeNode } from "@/types/tree";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MATHML_NS = "http://www.w3.org/1998/Math/MathML";
+const COMPILED_TEXT_MARKER_PREFIX = "dh-csr:text:";
+
+interface CompiledTemplateDescriptor {
+  readonly kind: "compiled";
+  readonly markup: string;
+  readonly namespace: Namespace;
+}
 
 /**
  * Cache for template factories to enable DOM cloning optimization.
@@ -13,6 +20,68 @@ const templateCache = new WeakMap<
   readonly Tree[],
   Map<Namespace, () => DocumentFragment>
 >();
+const compiledTemplateCache = new WeakMap<
+  CompiledTemplateDescriptor,
+  () => DocumentFragment
+>();
+
+function isCompiledTemplateDescriptor(
+  value: readonly Tree[] | CompiledTemplateDescriptor,
+): value is CompiledTemplateDescriptor {
+  return !Array.isArray(value) && value.kind === "compiled";
+}
+
+function parseCompiledMarkup(
+  markup: string,
+  namespace: Namespace,
+): DocumentFragment {
+  const template = document.createElement("template");
+
+  if (namespace === Namespace.HTML) {
+    template.innerHTML = markup;
+    return template.content.cloneNode(true) as DocumentFragment;
+  }
+
+  const wrapperTag = namespace === Namespace.SVG ? "svg" : "math";
+  template.innerHTML = `<${wrapperTag}>${markup}</${wrapperTag}>`;
+
+  const fragment = document.createDocumentFragment();
+  const wrapper = template.content.firstChild;
+  let child = wrapper?.firstChild ?? null;
+  while (child !== null) {
+    const nextSibling = child.nextSibling;
+    fragment.appendChild(child);
+    child = nextSibling;
+  }
+
+  return fragment;
+}
+
+function upgradeCompiledTextPlaceholders(fragment: DocumentFragment): void {
+  const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_COMMENT);
+  const markers: Comment[] = [];
+
+  let current = walker.nextNode();
+  while (current !== null) {
+    const marker = current as Comment;
+    if (marker.data.startsWith(COMPILED_TEXT_MARKER_PREFIX)) {
+      markers.push(marker);
+    }
+    current = walker.nextNode();
+  }
+
+  for (const marker of markers) {
+    marker.parentNode?.replaceChild(document.createTextNode(""), marker);
+  }
+}
+
+function buildCompiledFragment(
+  descriptor: CompiledTemplateDescriptor,
+): DocumentFragment {
+  const fragment = parseCompiledMarkup(descriptor.markup, descriptor.namespace);
+  upgradeCompiledTextPlaceholders(fragment);
+  return fragment;
+}
 
 /**
  * Check if a tree node is a placeholder.
@@ -181,9 +250,21 @@ function buildFragment(
  * @returns A factory function that returns a cloned DocumentFragment.
  */
 function fromTree(
-  structure: readonly Tree[],
+  structure: readonly Tree[] | CompiledTemplateDescriptor,
   flags: Namespace = Namespace.HTML,
 ): () => DocumentFragment {
+  if (isCompiledTemplateDescriptor(structure)) {
+    const cached = compiledTemplateCache.get(structure);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const template = buildCompiledFragment(structure);
+    const factory = () => template.cloneNode(true) as DocumentFragment;
+    compiledTemplateCache.set(structure, factory);
+    return factory;
+  }
+
   // Check cache first (two-level: structure → flags)
   let byFlags = templateCache.get(structure);
   if (byFlags !== undefined) {

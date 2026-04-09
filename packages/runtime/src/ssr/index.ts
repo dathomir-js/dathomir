@@ -9,6 +9,11 @@ export {
   MarkerType,
 } from "./markers/implementation";
 export {
+  renderDynamicAttr,
+  renderDynamicEach,
+  renderDynamicInsert,
+  renderDynamicSpread,
+  renderDynamicText,
   renderToString,
   renderTree,
   setComponentRenderer,

@@ -61,11 +61,12 @@ interface Literal extends ESTNode {
 }
 
 describe("SSR Mode Transformation", () => {
-  it("generates renderToString import in SSR mode", () => {
+  it("emits a static string for pure static SSR html", () => {
     const code = `const element = <div>Hello</div>;`;
     const result = transform(code, { mode: "ssr" });
 
-    expect(result.code).toContain("renderToString");
+    expect(result.code).toContain('"<div>Hello</div>"');
+    expect(result.code).not.toContain("renderToString");
   });
 
   it("generates different output for SSR vs CSR", () => {
@@ -77,8 +78,9 @@ describe("SSR Mode Transformation", () => {
     // CSR should use fromTree
     expect(csrResult.code).toContain("fromTree");
 
-    // SSR should use renderToString
-    expect(ssrResult.code).toContain("renderToString");
+    // SSR should emit string output and avoid DOM helpers
+    expect(ssrResult.code).not.toContain("fromTree");
+    expect(ssrResult.code).toContain("<div>Hello</div>");
   });
 
   it("handles dynamic text in SSR mode", () => {
@@ -88,23 +90,22 @@ describe("SSR Mode Transformation", () => {
     `;
     const result = transform(code, { mode: "ssr" });
 
-    expect(result.code).toContain("renderToString");
-    expect(result.code).toContain("Map");
+    expect(result.code).toContain("renderDynamicText");
+    expect(result.code).toContain("<!--dh:t:1-->");
   });
 
   it("inserts SSR markers for dynamic text content", () => {
     const code = `const element = <div>{name}</div>;`;
     const result = transform(code, { mode: "ssr" });
 
-    // The tree should contain a {text} marker placeholder for the dynamic text child
-    expect(result.code).toContain("{text}");
+    expect(result.code).toContain("<!--dh:t:1-->");
   });
 
   it("handles attributes in SSR mode", () => {
     const code = `const element = <div class="container">Content</div>;`;
     const result = transform(code, { mode: "ssr" });
 
-    expect(result.code).toContain("renderToString");
+    expect(result.code).not.toContain("fromTree");
     expect(result.code).toContain("container");
   });
 
@@ -119,7 +120,7 @@ describe("SSR Mode Transformation", () => {
     `;
     const result = transform(code, { mode: "ssr" });
 
-    expect(result.code).toContain("renderToString");
+    expect(result.code).not.toContain("fromTree");
     expect(result.code).toContain("div");
     expect(result.code).toContain("span");
     expect(result.code).toContain("p");
@@ -144,7 +145,7 @@ describe("SSR Mode Transformation", () => {
     `;
     const result = transform(code, { mode: "ssr" });
 
-    expect(result.code).toContain("renderToString");
+    expect(result.code).not.toContain("fromTree");
     expect(result.code).toContain("div");
     expect(result.code).toContain("span");
   });

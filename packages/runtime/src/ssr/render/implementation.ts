@@ -229,6 +229,28 @@ function renderAttrs(attrs: Record<string, unknown>): string {
   return parts.length > 0 ? " " + parts.join(" ") : "";
 }
 
+function renderDynamicText(value: unknown): string {
+  return value == null ? "" : escapeHtml(String(value));
+}
+
+function renderDynamicInsert(value: unknown): string {
+  return typeof value === "string" ? value : "<!--empty-->";
+}
+
+function renderDynamicEach(value: unknown): string {
+  return Array.isArray(value) ? value.join("") : "";
+}
+
+function renderDynamicAttr(name: string, value: unknown): string {
+  return renderAttrs({ [name]: value });
+}
+
+function renderDynamicSpread(
+  props: Record<string, unknown> | null | undefined,
+): string {
+  return props == null ? "" : renderAttrs(props);
+}
+
 /**
  * Check if a tree node is a placeholder.
  */
@@ -418,4 +440,11 @@ function renderToString(
 }
 
 export { createContext, renderToString, renderTree, setComponentRenderer };
+export {
+  renderDynamicAttr,
+  renderDynamicEach,
+  renderDynamicInsert,
+  renderDynamicSpread,
+  renderDynamicText,
+};
 export type { ComponentRenderer, RenderContext, RenderOptions };

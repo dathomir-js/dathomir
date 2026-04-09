@@ -40,6 +40,7 @@ import {
   getTextNodeAfterMarker,
   HydrationMarkerType,
   type MarkerInfo,
+  parseMarker,
 } from "@/hydration/walker/implementation";
 
 import type {
@@ -126,6 +127,8 @@ interface HydrationContext {
   walker: TreeWalker;
   /** Collected markers */
   markers: MarkerInfo[];
+  /** O(1) lookup table for markers by id */
+  markerLookup: Map<number, MarkerInfo>;
   /** Current marker index */
   markerIndex: number;
   /** Event handlers to connect */
@@ -283,26 +286,103 @@ function handleMismatch(
 function createHydrationContext(
   root: ShadowRoot,
   options: HydrationOptions = {},
+  markers: MarkerInfo[] = collectMarkers(root),
 ): HydrationContext {
   const state = parseStateScript(root) ?? {};
   const walker = createWalker(root);
+
+  return {
+    state,
+    walker,
+    markers,
+    markerLookup: createMarkerLookup(markers),
+    markerIndex: 0,
+    eventHandlers: new Map(),
+    store: options.store,
+  };
+}
+
+function collectMarkers(root: Node): MarkerInfo[] {
+  const walker = createWalker(root);
   const markers: MarkerInfo[] = [];
 
-  // Collect all markers
   let marker = findMarker(walker);
   while (marker) {
     markers.push(marker);
     marker = findMarker(walker);
   }
 
-  return {
-    state,
-    walker,
-    markers,
-    markerIndex: 0,
-    eventHandlers: new Map(),
-    store: options.store,
-  };
+  return markers;
+}
+
+function createMarkerLookup(
+  markers: readonly MarkerInfo[],
+): Map<number, MarkerInfo> {
+  const markerLookup = new Map<number, MarkerInfo>();
+
+  for (const marker of markers) {
+    if (marker.type === HydrationMarkerType.BlockEnd) {
+      continue;
+    }
+
+    if (!markerLookup.has(marker.id)) {
+      markerLookup.set(marker.id, marker);
+    }
+  }
+
+  return markerLookup;
+}
+
+function pathEquals(path: readonly number[], target: readonly number[]): boolean {
+  if (path.length !== target.length) {
+    return false;
+  }
+
+  for (let i = 0; i < path.length; i += 1) {
+    if (path[i] !== target[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function collectMarkersOutsideNestedBoundaries(
+  root: ShadowRoot,
+  nestedBoundaries: readonly NestedBoundaryRef[],
+): MarkerInfo[] {
+  if (nestedBoundaries.length === 0) {
+    return collectMarkers(root);
+  }
+
+  const markers: MarkerInfo[] = [];
+
+  function visit(node: Node, path: readonly number[]): void {
+    if (node.nodeType === Node.COMMENT_NODE) {
+      const marker = parseMarker(node as Comment);
+      if (marker !== null) {
+        markers.push(marker);
+      }
+      return;
+    }
+
+    for (const boundary of nestedBoundaries) {
+      if (pathEquals(path, boundary.path)) {
+        return;
+      }
+    }
+
+    let child = node.firstChild;
+    let index = 0;
+    while (child !== null) {
+      visit(child, [...path, index]);
+      child = child.nextSibling;
+      index += 1;
+    }
+  }
+
+  visit(root, []);
+  return markers;
 }
 
 /**
@@ -343,13 +423,7 @@ function findMarkerById(
   ctx: HydrationContext,
   markerId: number,
 ): MarkerInfo | null {
-  for (const marker of ctx.markers) {
-    if (marker.id === markerId) {
-      return marker;
-    }
-  }
-
-  return null;
+  return ctx.markerLookup.get(markerId) ?? null;
 }
 
 function resolveNodeAtPath(
@@ -861,6 +935,20 @@ function hydrateRoot(
   setup: (ctx: HydrationContext) => void,
   options: HydrationOptions = {},
 ): RootDispose | null {
+  return hydrateRootWithContext(root, setup, options, (currentRoot, currentOptions) =>
+    createHydrationContext(currentRoot, currentOptions),
+  );
+}
+
+function hydrateRootWithContext(
+  root: ShadowRoot,
+  setup: (ctx: HydrationContext) => void,
+  options: HydrationOptions,
+  createContext: (
+    root: ShadowRoot,
+    options: HydrationOptions,
+  ) => HydrationContext,
+): RootDispose | null {
   if (
     options.storeSnapshotSchema !== undefined &&
     options.store === undefined
@@ -882,7 +970,7 @@ function hydrateRoot(
   }
 
   // Create hydration context
-  const ctx = createHydrationContext(root, options);
+  const ctx = createContext(root, options);
 
   if (
     options.storeSnapshotSchema !== undefined &&
@@ -960,7 +1048,7 @@ function hydrateWithPlan(
   plan: GenericHydrationPlan,
   options: HydrationOptions = {},
 ): RootDispose | null {
-  return hydrateRoot(
+  return hydrateRootWithContext(
     root,
     (ctx) => {
       for (const binding of plan.bindings) {
@@ -1092,6 +1180,15 @@ function hydrateWithPlan(
       }
     },
     options,
+    (currentRoot, currentOptions) =>
+      createHydrationContext(
+        currentRoot,
+        currentOptions,
+        collectMarkersOutsideNestedBoundaries(
+          currentRoot,
+          plan.nestedBoundaries,
+        ),
+      ),
   );
 }
 

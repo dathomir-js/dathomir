@@ -1704,7 +1704,10 @@ describe("transform/tree", () => {
       { strategy: null, interactionEventType: null },
     );
 
-    expect(result.spreads).toHaveLength(1);
+    expect(result.attrs).toEqual(expect.objectContaining({ type: "Literal" }));
+    expect(dynamicParts).toEqual([
+      expect.objectContaining({ type: "spread", expression: nId("props") }),
+    ]);
   });
 
   it("buildComponentCall handles spread attribute on component", () => {

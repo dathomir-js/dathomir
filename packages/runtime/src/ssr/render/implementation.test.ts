@@ -13,6 +13,11 @@ import { describe, expect, it } from "vitest";
 import {
   MarkerType,
   createMarker,
+  renderDynamicAttr,
+  renderDynamicEach,
+  renderDynamicInsert,
+  renderDynamicSpread,
+  renderDynamicText,
   renderToString,
   renderTree,
   setComponentRenderer,
@@ -224,6 +229,49 @@ describe("SSR Render", () => {
     expect(() => {
       renderTree(tree, { storeSnapshotSchema: schema } as never);
     }).toThrow("storeSnapshotSchema requires a store");
+  });
+});
+
+describe("compiled SSR helpers", () => {
+  it("renders dynamic text with HTML escaping", () => {
+    expect(renderDynamicText('<script>alert("x")</script>')).toBe(
+      "&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;",
+    );
+  });
+
+  it("renders dynamic insert content only for strings", () => {
+    expect(renderDynamicInsert("<span>ok</span>")).toBe("<span>ok</span>");
+    expect(renderDynamicInsert(42)).toBe("<!--empty-->");
+  });
+
+  it("renders dynamic each content by joining string arrays", () => {
+    expect(renderDynamicEach(["<li>a</li>", "<li>b</li>"])).toBe(
+      "<li>a</li><li>b</li>",
+    );
+  });
+
+  it("renders dynamic attrs with the same rules as generic attr rendering", () => {
+    expect(renderDynamicAttr("disabled", true)).toBe(" disabled");
+    expect(renderDynamicAttr("disabled", false)).toBe("");
+    expect(
+      renderDynamicAttr("style", {
+        paddingTop: "10px",
+        borderRadius: "8px",
+        display: null,
+        opacity: "",
+      }),
+    ).toBe(' style="padding-top: 10px; border-radius: 8px"');
+  });
+
+  it("renders dynamic spread while skipping event handlers", () => {
+    expect(
+      renderDynamicSpread({
+        class: "card",
+        disabled: true,
+        onClick: () => {},
+        style: { paddingTop: "10px" },
+      }),
+    ).toBe(' class="card" disabled style="padding-top: 10px"');
   });
 });
 

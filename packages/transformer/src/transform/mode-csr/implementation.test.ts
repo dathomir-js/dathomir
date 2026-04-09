@@ -42,6 +42,45 @@ describe("transform/mode-csr", () => {
     expect(state.runtimeImports.has("fromTree")).toBe(true);
   });
 
+  it("passes a compiled template descriptor to fromTree", () => {
+    const state = createInitialState("csr");
+    transformJSXNode(makeElement(), state, nested);
+
+    const template = state.templates[0] as unknown as {
+      declarations?: Array<{
+        init?: {
+          arguments?: Array<{
+            type: string;
+            properties?: Array<{
+              key?: { name?: string };
+              value?: { value?: unknown };
+            }>;
+          }>;
+        };
+      }>;
+    };
+
+    const descriptor = template.declarations?.[0]?.init?.arguments?.[0] as {
+      type: string;
+      properties?: Array<{
+        key?: { name?: string };
+        value?: { value?: unknown };
+      }>;
+    };
+
+    expect(descriptor.type).toBe("ObjectExpression");
+    expect(
+      descriptor.properties?.some(
+        (property) => property.key?.name === "kind" && property.value?.value === "compiled",
+      ),
+    ).toBe(true);
+    expect(
+      descriptor.properties?.some(
+        (property) => property.key?.name === "markup" && property.value?.value === "<div>Hello</div>",
+      ),
+    ).toBe(true);
+  });
+
   it("adds templateEffect for reactive text", () => {
     const state = createInitialState("csr");
     const node = {

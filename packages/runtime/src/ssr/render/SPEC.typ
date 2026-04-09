@@ -64,6 +64,7 @@
     - nested render で active store boundary を render option の store より優先する
     - storeSnapshotSchema 指定時に store snapshot script を出力する
     - style オブジェクトを CSS 文字列にシリアライズして SSR 出力に含める
+    - compiled SSR helper が dynamic text / attr / spread / insert / each を文字列へレンダリングできる
     - setComponentRenderer で設定したグローバル componentRenderer を使用する
     - storeSnapshotSchema を store なしで指定するとエラーをスローする
   ],
@@ -77,6 +78,7 @@
     - `camelToKebab`: CSS プロパティ名を camelCase → kebab-case に変換
     - `serializeStyleObject`: style オブジェクトを CSS 文字列に変換
     - `renderAttrs`: 属性のレンダリング（boolean 属性、style オブジェクト対応）
+    - compiled SSR helper 群は transformer が事前生成した静的 shell へ動的値だけを埋め込む
     - Void 要素（`<br>`、`<img>` 等）の閉じタグ省略
     - Boolean 属性（`disabled`, `checked` 等）の判定
     - Declarative Shadow DOM の生成（カスタム要素向け）
@@ -105,6 +107,29 @@
   ],
   impl_notes: [
     - render API 自体の public surface は増やさず、component renderer と `planFactory` が前提とする marker/path 契約として扱ってよい
+  ],
+)
+
+#feature_spec(
+  name: "compiled SSR helper primitives",
+  summary: [
+    transformer が事前生成した static shell へ dynamic text / attr / spread / insert / each を埋め込むための helper を提供する。
+  ],
+  api: [
+    ```typescript
+    function renderDynamicText(value: unknown): string
+    function renderDynamicInsert(value: unknown): string
+    function renderDynamicEach(value: unknown): string
+    function renderDynamicAttr(name: string, value: unknown): string
+    function renderDynamicSpread(props: Record<string, unknown> | null | undefined): string
+    ```
+  ],
+  test_cases: [
+    - dynamic text を HTML escape してレンダリングする
+    - dynamic insert は string のみをそのまま出力し、それ以外は空 placeholder comment を返す
+    - dynamic each は string array を連結する
+    - dynamic attr は boolean / style object / nullish を generic render と同じ規則で処理する
+    - dynamic spread は event handler を除外し、各 key を attr helper と同じ規則で処理する
   ],
 )
 

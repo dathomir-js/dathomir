@@ -27,6 +27,10 @@
     - プレースホルダー（`{text}`、`{insert}`、`{each}` 等）はスキップし、静的部分のみ生成
     - `flags` で名前空間を指定（HTML=0、SVG=1、MathML=2）
     - キャッシュキーは `structure` 配列参照と `flags` の組み合わせ（異なる `flags` は独立したキャッシュエントリ）
+    - compiler-generated output 向けに、tree 配列の代わりに事前シリアライズ済みテンプレート descriptor も受け取れる
+      - descriptor は静的 markup 文字列と root namespace を含む
+      - runtime は descriptor を再度 tree 解釈せず、markup を 1 回だけ template 化してクローンする
+      - compiler が text placeholder を comment marker として埋め込んだ場合、runtime は template 初期化時に空 text node へ置き換える
 
     *型定義*:
 
@@ -52,13 +56,17 @@
     - 深くネストした要素
     - テンプレートファクトリのキャッシュ
     - クローンされたフラグメントを返す
+    - compiler-generated descriptor からフラグメントを生成する
+    - compiler-generated text placeholder marker を空 text node に変換する
     - SVG 要素を正しい名前空間で生成
     - 異なる flags で独立したキャッシュエントリを生成
     - MathML 名前空間の自動検出
+    - bare SVG markup descriptor を正しい名前空間で生成する
   ],
   impl_notes: [
     - テンプレートキャッシュに `WeakMap` を使用し、GC によるメモリ解放を保証
     - `cloneNode(true)` による DOM クローンは、`innerHTML` パースより高速かつ予測可能
+    - compiler-generated descriptor path は tree 解釈の代わりに HTML/template parser を利用して初期テンプレートを作る
   ],
 )
 

@@ -47,6 +47,11 @@ export type { Owner, RootDispose } from "@dathomir/reactivity";
 export {
   MarkerType,
   createMarker,
+  renderDynamicAttr,
+  renderDynamicEach,
+  renderDynamicInsert,
+  renderDynamicSpread,
+  renderDynamicText,
   renderToString,
   renderTree,
   serializeState,

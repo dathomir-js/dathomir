@@ -213,4 +213,51 @@ describe("fromTree", () => {
     expect(mi.namespaceURI).toBe("http://www.w3.org/1998/Math/MathML");
     expect(mi.textContent).toBe("x");
   });
+
+  it("should create a fragment from a compiled template descriptor", () => {
+    const factory = fromTree({
+      kind: "compiled",
+      markup:
+        '<div class="box">Hello <!--dh-csr:text:0--><!--{insert}--></div>',
+      namespace: 0,
+    } as never);
+
+    const fragment = factory();
+    const div = fragment.firstChild as HTMLDivElement;
+
+    expect(div.className).toBe("box");
+    expect(div.childNodes[0]?.nodeType).toBe(Node.TEXT_NODE);
+    expect((div.childNodes[0] as Text).data).toBe("Hello ");
+    expect(div.childNodes[1]?.nodeType).toBe(Node.TEXT_NODE);
+    expect((div.childNodes[1] as Text).data).toBe("");
+    expect(div.childNodes[2]?.nodeType).toBe(Node.COMMENT_NODE);
+    expect((div.childNodes[2] as Comment).data).toBe("{insert}");
+  });
+
+  it("should cache compiled template factories by descriptor identity", () => {
+    const descriptor = {
+      kind: "compiled",
+      markup: "<div>cached</div>",
+      namespace: 0,
+    };
+
+    const factory1 = fromTree(descriptor as never);
+    const factory2 = fromTree(descriptor as never);
+
+    expect(factory1).toBe(factory2);
+  });
+
+  it("should create bare SVG markup descriptors in the SVG namespace", () => {
+    const factory = fromTree({
+      kind: "compiled",
+      markup: '<circle cx="50" cy="50" r="40"></circle>',
+      namespace: 1,
+    } as never);
+
+    const fragment = factory();
+    const circle = fragment.firstChild as SVGCircleElement;
+
+    expect(circle.namespaceURI).toBe("http://www.w3.org/2000/svg");
+    expect(circle.getAttribute("cx")).toBe("50");
+  });
 });

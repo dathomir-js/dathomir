@@ -25,7 +25,7 @@
 #feature_spec(
   name: "SSR JSX transform",
   summary: [
-    SSR モードで JSX を `renderToString(tree, state, new Map(...))` 呼び出しへ変換する。
+    SSR モードで JSX を compile-time shell と dynamic helper 呼び出しへ変換する。custom element DSD など generic runtime が必要なケースでは `renderToString(tree, state, new Map(...))` fallback を許可する。
   ],
   api: [
     ```typescript
@@ -37,16 +37,18 @@
     ```
   ],
   constraints: [
-    - `jsxToTree` の結果を `renderToString(tree, state, new Map(...))` に変換する
+    - compiler が static HTML shell を事前生成できる場合は `renderDynamicText` / `renderDynamicAttr` / `renderDynamicSpread` / `renderDynamicInsert` / `renderDynamicEach` を使う文字列結合へ変換する
+    - custom element DSD など generic runtime renderer が必要なケースでは従来の `renderToString(tree, state, new Map(...))` fallback を使ってよい
     - text / insert / attr / spread を動的値へ反映する
     - logical expression や JSX を含む一般式は `insert` dynamic part として扱う
     - event は SSR HTML 出力に不要のため除外する
   ],
   test_cases: [
-    - `renderToString` import が登録される
-    - 動的値なしで `new Map([])` を生成する
-    - 動的値ありで `[1, expr]` 形式のエントリを生成する
-    - event dynamic part は dynamic Map に含まれない
-    - attr dynamic part が先に出現しても text / insert のキー対応が崩れない
+    - compile-time shell path では dynamic helper import が登録される
+    - 動的値なしなら static string literal を直接返す
+    - 動的値ありなら helper 呼び出しを含む文字列結合を生成する
+    - event dynamic part は SSR 出力 helper に含まれない
+    - attr dynamic part が先に出現しても text / insert marker id 対応が崩れない
+    - custom element を含む tree は `renderToString` fallback を使える
   ],
 )

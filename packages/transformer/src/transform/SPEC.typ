@@ -9,7 +9,7 @@
 #interface_spec(
   name: "transform API",
   summary: [
-    JSX を含む JavaScript コードを解析し、CSR では `fromTree()` ベース、SSR では `renderToString()` ベースのコードへ変換する。`oxc-parser` で ESTree 互換 AST を生成し、`zimmerframe` で走査・変換、`esrap` で再生成する。
+    JSX を含む JavaScript コードを解析し、CSR では compiler-generated template descriptor + `fromTree()`、SSR では compile-time shell + dynamic helper 群（必要時のみ `renderToString()` fallback）へ変換する。`oxc-parser` で ESTree 互換 AST を生成し、`zimmerframe` で走査・変換、`esrap` で再生成する。
   ],
   format: [
     ```typescript
@@ -53,7 +53,7 @@
     CSR モードでは JSX を `fromTree()` と DOM 更新ランタイム呼び出しへ変換する。
   ],
   steps: [
-    1. JSX 式を `fromTree()` 呼び出しに変換する。
+    1. JSX の静的部分を compile-time template descriptor にシリアライズし、`fromTree()` 呼び出しに変換する。
     2. リテラル属性は構造化配列に含める。
     3. reactive access を含む属性は `templateEffect` でラップする。
     4. reactive access を含まない式属性は lexical scope を壊さないよう `setAttr()` で一度だけ初期化する。
@@ -71,16 +71,16 @@
 #behavior_spec(
   name: "SSR モード変換",
   summary: [
-    SSR モードでは JSX を `renderToString()` を用いた HTML 文字列生成コードへ変換する。
+    SSR モードでは JSX を compile-time shell と dynamic helper 群を用いた HTML 文字列生成コードへ変換し、generic runtime renderer が必要な場合のみ `renderToString()` fallback を用いる。
   ],
   steps: [
-    1. HTML 要素を tree と動的値 Map へ分解する。
-    2. `renderToString()` 呼び出しを生成する。
-    3. SSR マーカーを挿入する。
-     4. Signal の初期値シリアライズコードを生成する。
-     5. コンポーネント要素は関数呼び出しに変換し、動的値として渡す。
+    1. HTML 要素を tree と dynamic part 群へ分解する。
+    2. compile-time で static shell と SSR marker 文字列を生成する。
+    3. text / attr / spread / insert dynamic part は helper 呼び出しへ変換する。
+     4. custom element DSD など generic runtime renderer が必要な場合は `renderToString()` fallback を生成する。
+     5. コンポーネント要素は関数呼び出しに変換し、insert dynamic part として渡す。
      6. 式コンテナ内のローカル static expression は、ランタイム補助変数へ退避せず元の式のまま出力する。
-   ],
+    ],
   postconditions: [
     - SSR 出力は DOM 依存コードを含まない
     - 条件式や `.map()` 内のネスト JSX も SSR 方式で変換される

@@ -340,6 +340,46 @@ importers:
         specifier: 'catalog:'
         version: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(happy-dom@20.5.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2)
 
+  playgrounds/e2e:
+    dependencies:
+      '@dathomir/components':
+        specifier: workspace:*
+        version: link:../../packages/components
+      '@dathomir/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@dathomir/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
+      '@dathomir/store':
+        specifier: workspace:*
+        version: link:../../packages/store
+    devDependencies:
+      '@dathomir/config':
+        specifier: workspace:*
+        version: link:../../config
+      '@dathomir/plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.2.0
+      playwright:
+        specifier: ^1.56.1
+        version: 1.56.1
+      tsx:
+        specifier: ^4.20.6
+        version: 4.20.6
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: ^6.4.1
+        version: 6.4.1(@types/node@24.2.0)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.4(@types/node@24.2.0)(@vitest/browser-playwright@4.0.4)(happy-dom@20.5.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.20.6)(yaml@2.8.2)
+
   playgrounds/nuxt:
     dependencies:
       '@dathomir/components':
@@ -380,6 +420,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/runtime
     devDependencies:
+      '@dathomir/config':
+        specifier: workspace:*
+        version: link:../../config
       '@dathomir/plugin':
         specifier: workspace:*
         version: link:../../packages/plugin
@@ -402,6 +445,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core
     devDependencies:
+      '@dathomir/config':
+        specifier: workspace:*
+        version: link:../../config
       '@dathomir/plugin':
         specifier: workspace:*
         version: link:../../packages/plugin

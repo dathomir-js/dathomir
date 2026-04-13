@@ -1,5 +1,5 @@
 {
-  "name": "@playground/ssr",
+  "name": "@playground/e2e",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,19 +11,24 @@
     "build": "pnpm build:deps && pnpm build:client && pnpm build:server",
     "preview": "tsx server.ts --preview",
     "fmt": "oxfmt --ignore-path ../../.gitignore --no-error-on-unmatched-pattern --write \"**/*.{ts,tsx,js,mjs,cjs,cts,mts,json}\"",
-    "fmt:check": "oxfmt --ignore-path ../../.gitignore --no-error-on-unmatched-pattern --check \"**/*.{ts,tsx,js,mjs,cjs,cts,mts,json}\""
+    "fmt:check": "oxfmt --ignore-path ../../.gitignore --no-error-on-unmatched-pattern --check \"**/*.{ts,tsx,js,mjs,cjs,cts,mts,json}\"",
+    "test": "pnpm --dir ../.. exec vitest run --config playgrounds/e2e/vitest.config.ts",
+    "test:watch": "pnpm --dir ../.. exec vitest --config playgrounds/e2e/vitest.config.ts"
   },
   "dependencies": {
-    "@dathomir/core": "workspace:*",
     "@dathomir/components": "workspace:*",
-    "@dathomir/runtime": "workspace:*"
+    "@dathomir/core": "workspace:*",
+    "@dathomir/runtime": "workspace:*",
+    "@dathomir/store": "workspace:*"
   },
   "devDependencies": {
     "@dathomir/config": "workspace:*",
     "@dathomir/plugin": "workspace:*",
     "@types/node": "catalog:",
-    "tsx": "^4.19.0",
-    "typescript": "~5.8.3",
-    "vite": "^6.3.4"
+    "playwright": "^1.56.1",
+    "typescript": "catalog:",
+    "tsx": "^4.20.6",
+    "vite": "^6.4.1",
+    "vitest": "catalog:"
   }
 }

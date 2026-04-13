@@ -16,6 +16,11 @@ import { getPlaygroundRoute, normalizePlaygroundPath } from "./src/routes";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isPreview = process.argv.includes("--preview");
 let pageRequestCount = 0;
+const port = Number(process.env.PORT ?? "3090");
+
+function buildRequestId(requestUrl: URL): string {
+  return requestUrl.searchParams.get("requestId") ?? `page-${++pageRequestCount}`;
+}
 
 function resolveRoutePath(pathname: string): string | undefined {
   const normalizedPath = normalizePlaygroundPath(pathname);
@@ -27,10 +32,7 @@ function renderClientFallback(routePath: string): string {
 }
 
 async function createServer() {
-  const port = 3090;
-
   if (isPreview) {
-    // Production preview mode
     console.log("Preview mode not yet implemented");
     return;
   }
@@ -73,9 +75,7 @@ async function createServer() {
 
         // Load and execute SSR module
         try {
-          const requestId =
-            requestUrl.searchParams.get("requestId") ??
-            `page-${++pageRequestCount}`;
+          const requestId = buildRequestId(requestUrl);
           const ssrModule = await vite.ssrLoadModule("/src/entry-server.tsx");
           const appHtml = await ssrModule.render({
             requestId,

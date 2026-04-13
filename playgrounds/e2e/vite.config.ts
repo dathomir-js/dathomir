@@ -15,11 +15,14 @@ const workspacePackages = [
 ];
 
 function storeNodeInternalSwap() {
-  const withStoreDir = path.resolve(projectRoot, "../../packages/store/src/withStore");
+  const withStoreDir = path.resolve(
+    projectRoot,
+    "../../packages/store/src/withStore",
+  );
   const storeSrcDir = path.resolve(projectRoot, "../../packages/store/src");
 
   return {
-    name: "playground-store-node-internal-swap",
+    name: "playground-e2e-store-node-internal-swap",
     enforce: "pre" as const,
     resolveId(source: string, importer?: string, options?: { ssr?: boolean }) {
       if (!options?.ssr || importer === undefined) {
@@ -33,10 +36,7 @@ function storeNodeInternalSwap() {
         return path.join(withStoreDir, "internal.node.ts");
       }
 
-      if (
-        source === "./withStore/internal" &&
-        importerDir === storeSrcDir
-      ) {
+      if (source === "./withStore/internal" && importerDir === storeSrcDir) {
         return path.join(withStoreDir, "internal.node.ts");
       }
     },
@@ -53,7 +53,6 @@ export default defineConfig({
     noExternal: workspacePackages,
   },
   esbuild: {
-    // Disable esbuild JSX transform - let our plugin handle it
     jsx: "preserve",
   },
   build: {

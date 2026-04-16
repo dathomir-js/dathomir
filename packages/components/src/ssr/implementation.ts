@@ -195,6 +195,23 @@ function escapeAttr(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
+function stringifyAttrValue(value: unknown): string {
+  switch (typeof value) {
+    case "string":
+      return value;
+    case "number":
+    case "boolean":
+    case "bigint":
+      return String(value);
+    case "object":
+      return JSON.stringify(value);
+    case "symbol":
+      return value.description ?? "";
+    default:
+      return String(value);
+  }
+}
+
 /**
  * Render Declarative Shadow DOM content (inner template only).
  *

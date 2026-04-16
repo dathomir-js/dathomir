@@ -8,8 +8,8 @@ import {
   DEFAULT_INTERACTION_EVENT_TYPE,
   ISLAND_METADATA_ATTRIBUTE,
   ISLAND_VALUE_METADATA_ATTRIBUTE,
+  type ColocatedClientStrategyName,
 } from "@dathomir/shared";
-import type { ColocatedClientStrategyName } from "@dathomir/shared";
 
 import {
   isCallExpression,
@@ -28,8 +28,9 @@ import {
   nProp,
   nReturn,
   nSpread,
+  type CallExpression,
+  type ESTNode,
 } from "@/transform/ast/implementation";
-import type { CallExpression, ESTNode } from "@/transform/ast/implementation";
 import {
   getColocatedClientDirective,
   getIslandsDirectiveName,
@@ -39,22 +40,20 @@ import {
   isValidIdentifier,
   jsxNameToExpression,
   normalizeIslandsDirectiveValue,
+  type IslandsDirectiveName,
+  type JSXAttribute,
+  type JSXChild,
+  type JSXElement,
+  type JSXEmptyExpression,
+  type JSXExpressionContainer,
+  type JSXFragment,
+  type JSXSpreadAttribute,
+  type JSXSpreadChild,
 } from "@/transform/jsx/implementation";
-import type {
-  IslandsDirectiveName,
-  JSXAttribute,
-  JSXChild,
-  JSXElement,
-  JSXEmptyExpression,
-  JSXExpressionContainer,
-  JSXFragment,
-  JSXSpreadAttribute,
-  JSXSpreadChild,
-} from "@/transform/jsx/implementation";
-import type { TransformState } from "@/transform/state/implementation";
 import {
   createClientActionId,
   createClientTargetId,
+  type TransformState,
 } from "@/transform/state/implementation";
 
 type DynamicPart =
@@ -212,6 +211,14 @@ const UNSUPPORTED_COMPONENT_TARGET_EVENTS = new Set([
   "scroll",
 ]);
 
+function isESTNode(value: unknown): value is ESTNode {
+  return typeof value === "object" && value !== null && "type" in value;
+}
+
+function isComputedProperty(value: unknown): value is true {
+  return value === true;
+}
+
 function collectBlockBindingNames(body: ESTNode[], names: Set<string>): void {
   for (const statement of body) {
     if (statement.type === "VariableDeclaration") {
@@ -223,7 +230,7 @@ function collectBlockBindingNames(body: ESTNode[], names: Set<string>): void {
       continue;
     }
 
-    if (statement.type === "FunctionDeclaration" && statement.id) {
+    if (statement.type === "FunctionDeclaration" && isESTNode(statement.id)) {
       collectBindingNames(statement.id as ESTNode, names);
     }
   }
@@ -252,7 +259,7 @@ function collectFreeIdentifiers(
     case "MemberExpression":
       return (
         collectFreeIdentifiers(node.object as ESTNode, available, free) &&
-        (!node.computed ||
+        (!isComputedProperty(node.computed) ||
           collectFreeIdentifiers(node.property as ESTNode, available, free))
       );
     case "CallExpression":
@@ -263,7 +270,7 @@ function collectFreeIdentifiers(
     case "ArrowFunctionExpression":
     case "FunctionExpression": {
       const nextAvailable = new Set(available);
-      if (node.type === "FunctionExpression" && node.id) {
+      if (node.type === "FunctionExpression" && isESTNode(node.id)) {
         collectBindingNames(node.id as ESTNode, nextAvailable);
       }
       for (const param of (node.params ?? []) as ESTNode[]) {
@@ -323,7 +330,7 @@ function collectFreeIdentifiers(
         }
 
         return (
-          (!property.computed ||
+          (!isComputedProperty(property.computed) ||
             collectFreeIdentifiers(property.key as ESTNode, available, free)) &&
           collectFreeIdentifiers(property.value as ESTNode, available, free)
         );
@@ -404,11 +411,11 @@ function isSerializableCaptureExpression(
         return false;
       }
 
-      return (
-        (!property.computed ||
-          isSerializableCaptureExpression(
-            property.key as ESTNode,
-            serializableBindings,
+        return (
+          (!isComputedProperty(property.computed) ||
+            isSerializableCaptureExpression(
+              property.key as ESTNode,
+              serializableBindings,
             visited,
           )) &&
         isSerializableCaptureExpression(
@@ -457,7 +464,8 @@ function analyzeComponentActionHandler(
     return { captures: [] };
   }
 
-  const currentSerializableBindings = serializableBindings ?? new Map();
+  const currentSerializableBindings: ReadonlyMap<string, ESTNode> =
+    serializableBindings ?? new Map<string, ESTNode>();
   for (const capture of captures) {
     if (
       !isSerializableCaptureExpression(
@@ -533,7 +541,7 @@ function assertNoHostIslandsMixing(
   hasHostIslandMetadata: boolean | undefined,
   strategy: ColocatedClientState["strategy"],
 ): void {
-  if (!hasHostIslandMetadata || strategy === null) {
+  if (hasHostIslandMetadata !== true || strategy === null) {
     return;
   }
 
@@ -863,7 +871,7 @@ function buildComponentCall(
       for (const child of significantChildren) {
         if (child.type === "JSXText") {
           const text = child.value.trim();
-          if (text) childExprs.push(nLit(text));
+          if (text !== "") childExprs.push(nLit(text));
           continue;
         }
 
@@ -900,7 +908,7 @@ function buildComponentCall(
           for (const fragChild of child.children) {
             if (fragChild.type === "JSXText") {
               const text = fragChild.value.trim();
-              if (text) childExprs.push(nLit(text));
+              if (text !== "") childExprs.push(nLit(text));
               continue;
             }
 
@@ -1241,7 +1249,7 @@ function processChildren(
   for (const child of children) {
     if (child.type === "JSXText") {
       const text = child.value.trim();
-      if (text) {
+      if (text !== "") {
         results.push({ tree: nLit(text), dynamicParts: [] });
         childIndex++;
       }

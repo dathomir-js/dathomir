@@ -3,8 +3,7 @@
  * Provides the core reactive primitives and flags.
  * @module
  */
-import type { Link } from "alien-signals/system";
-import { createReactiveSystem, ReactiveFlags } from "alien-signals/system";
+import { createReactiveSystem, ReactiveFlags, type Link } from "alien-signals/system";
 
 import type { BaseNode, ComputedNode, SignalNode, WatcherNode } from "./nodes";
 
@@ -45,8 +44,19 @@ function startBatch(): void {
   ++batchDepth;
 }
 
+function flush(): void {
+  while (notifyIndex < queuedEffectsLength) {
+    const watcher = queuedEffects[notifyIndex] as WatcherNode;
+    queuedEffects[notifyIndex++] = undefined;
+    runWatcher(watcher, (watcher.flags &= ~QUEUED_FLAG));
+  }
+  notifyIndex = 0;
+  queuedEffectsLength = 0;
+}
+
 function endBatch(): void {
-  if (!--batchDepth) {
+  batchDepth -= 1;
+  if (batchDepth === 0) {
     flush();
   }
 }
@@ -55,9 +65,35 @@ function getBatchDepth(): number {
   return batchDepth;
 }
 
+const { link, unlink, propagate, checkDirty, shallowPropagate } =
+  createReactiveSystem({
+    update(node: SignalNode<unknown> | ComputedNode<unknown>): boolean {
+      return node.kind === "computed"
+        ? updateComputed(node)
+        : updateSignal(node, node.value);
+    },
+    notify(node: WatcherNode) {
+      notifyWatcher(node);
+    },
+    unwatched(node: SignalNode<unknown> | ComputedNode<unknown> | WatcherNode) {
+      if (node.kind === "computed") {
+        let toRemove = node.deps;
+        if (toRemove !== undefined) {
+          do {
+            toRemove = unlink(toRemove, node);
+          } while (toRemove !== undefined);
+        }
+      } else if (node.kind === "effect") {
+        effectCleanup(node as WatcherNode);
+      } else if (node.kind === "scope") {
+        scopeCleanup(node as WatcherNode);
+      }
+    },
+  });
+
 function scheduleWatcher(node: WatcherNode): void {
   const flags = node.flags;
-  if (!(flags & QUEUED_FLAG)) {
+  if ((flags & QUEUED_FLAG) === 0) {
     node.flags = flags | QUEUED_FLAG;
     const subs = node.subs;
     if (subs !== undefined) {
@@ -82,8 +118,8 @@ function purgeDeps(sub: BaseNode): void {
 
 function runWatcher(node: WatcherNode, flags: number): void {
   if (
-    flags & ReactiveFlags.Dirty ||
-    (flags & ReactiveFlags.Pending &&
+    (flags & ReactiveFlags.Dirty) !== 0 ||
+    ((flags & ReactiveFlags.Pending) !== 0 &&
       (checkDirty(node.deps as Link, node) ||
         ((node.flags = flags & ~ReactiveFlags.Pending), false)))
   ) {
@@ -105,25 +141,15 @@ function runWatcher(node: WatcherNode, flags: number): void {
     }
   } else {
     let linkNode = node.deps;
-    while (linkNode !== undefined) {
-      const dep = linkNode.dep as BaseNode;
-      const depFlags = dep.flags;
-      if (depFlags & QUEUED_FLAG) {
-        runWatcher(dep as WatcherNode, (dep.flags = depFlags & ~QUEUED_FLAG));
-      }
-      linkNode = linkNode.nextDep;
+      while (linkNode !== undefined) {
+        const dep = linkNode.dep as BaseNode;
+        const depFlags = dep.flags;
+        if ((depFlags & QUEUED_FLAG) !== 0) {
+          runWatcher(dep as WatcherNode, (dep.flags = depFlags & ~QUEUED_FLAG));
+        }
+        linkNode = linkNode.nextDep;
     }
   }
-}
-
-function flush(): void {
-  while (notifyIndex < queuedEffectsLength) {
-    const watcher = queuedEffects[notifyIndex] as WatcherNode;
-    queuedEffects[notifyIndex++] = undefined;
-    runWatcher(watcher, (watcher.flags &= ~QUEUED_FLAG));
-  }
-  notifyIndex = 0;
-  queuedEffectsLength = 0;
 }
 
 function updateComputed<T>(computed: ComputedNode<T>): boolean {
@@ -159,32 +185,6 @@ function updateSignal<T>(signal: SignalNode<T>, value: T): boolean {
   signal.previousValue = value;
   return !Object.is(prev, value);
 }
-
-const { link, unlink, propagate, checkDirty, shallowPropagate } =
-  createReactiveSystem({
-    update(node: SignalNode<unknown> | ComputedNode<unknown>): boolean {
-      return node.kind === "computed"
-        ? updateComputed(node)
-        : updateSignal(node, node.value);
-    },
-    notify(node: WatcherNode) {
-      notifyWatcher(node);
-    },
-    unwatched(node: SignalNode<unknown> | ComputedNode<unknown> | WatcherNode) {
-      if (node.kind === "computed") {
-        let toRemove = node.deps;
-        if (toRemove !== undefined) {
-          do {
-            toRemove = unlink(toRemove, node);
-          } while (toRemove !== undefined);
-        }
-      } else if (node.kind === "effect") {
-        effectCleanup(node as WatcherNode);
-      } else if (node.kind === "scope") {
-        scopeCleanup(node as WatcherNode);
-      }
-    },
-  });
 
 function effectCleanup(node: WatcherNode): void {
   scopeCleanup(node);

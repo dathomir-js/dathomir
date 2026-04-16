@@ -7,7 +7,9 @@ describe("templateEffect", () => {
     it("runs synchronously on first execution", () => {
       const spy = vi.fn();
       createRoot(() => {
-        templateEffect(() => spy());
+        templateEffect(() => {
+          spy();
+        });
       });
       expect(spy).toHaveBeenCalledTimes(1);
     });
@@ -17,7 +19,9 @@ describe("templateEffect", () => {
       const spy = vi.fn();
 
       createRoot(() => {
-        templateEffect(() => spy(count.value));
+        templateEffect(() => {
+          spy(count.value);
+        });
       });
 
       expect(spy).toHaveBeenCalledTimes(1);
@@ -37,7 +41,9 @@ describe("templateEffect", () => {
       const spy = vi.fn();
 
       const dispose = createRoot(() => {
-        templateEffect(() => spy(count.value));
+        templateEffect(() => {
+          spy(count.value);
+        });
       });
 
       expect(spy).toHaveBeenCalledTimes(1);
@@ -161,7 +167,9 @@ describe("templateEffect", () => {
       const count = signal(0);
       const spy = vi.fn();
 
-      templateEffect(() => spy(count.value));
+      templateEffect(() => {
+        spy(count.value);
+      });
 
       expect(spy).toHaveBeenCalledTimes(1);
 
@@ -179,7 +187,9 @@ describe("templateEffect", () => {
       const spy = vi.fn();
 
       createRoot(() => {
-        templateEffect(() => spy(count.value));
+        templateEffect(() => {
+          spy(count.value);
+        });
       });
 
       expect(spy).toHaveBeenCalledWith(0);
@@ -191,7 +201,9 @@ describe("templateEffect", () => {
       const count = signal(0);
       const spy = vi.fn();
       const dispose = createRoot(() => {
-        templateEffect(() => spy(count.value));
+        templateEffect(() => {
+          spy(count.value);
+        });
       });
 
       count.set(1);
@@ -205,7 +217,9 @@ describe("templateEffect", () => {
       const spy = vi.fn();
 
       const dispose = createRoot(() => {
-        templateEffect(() => spy(count.value));
+        templateEffect(() => {
+          spy(count.value);
+        });
       });
 
       expect(spy).toHaveBeenCalledWith(0);
@@ -221,7 +235,9 @@ describe("templateEffect", () => {
       const count = signal(0);
       const spy = vi.fn();
 
-      templateEffect(() => spy(count.value));
+      templateEffect(() => {
+        spy(count.value);
+      });
 
       expect(spy).toHaveBeenCalledWith(0);
       count.set(1);

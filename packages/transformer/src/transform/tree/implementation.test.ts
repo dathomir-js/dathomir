@@ -9,9 +9,8 @@ import {
   ISLAND_VALUE_METADATA_ATTRIBUTE,
 } from "@dathomir/shared";
 
-import { nId, nLit } from "@/transform/ast/implementation";
+import { nId, nLit, type ESTNode } from "@/transform/ast/implementation";
 import { createInitialState } from "@/transform/state/implementation";
-import type { ESTNode } from "@/transform/ast/implementation";
 import type {
   JSXElement,
   JSXExpressionContainer,
@@ -25,8 +24,8 @@ import {
   containsReactiveAccess,
   jsxToTree,
   processAttributes,
+  type NestedTransformers,
 } from "./implementation";
-import type { NestedTransformers } from "./implementation";
 
 interface ObjectExpressionLike {
   type: "ObjectExpression";
@@ -141,7 +140,7 @@ describe("transform/tree", () => {
     expect(dynamicParts).toHaveLength(1);
     const attrPart = dynamicParts[0];
     expect(attrPart?.type).toBe("attr");
-    expect(attrPart && attrPart.type === "attr" ? attrPart.key : null).toBe(
+    expect(attrPart?.type === "attr" ? attrPart.key : null).toBe(
       "class",
     );
   });
@@ -168,9 +167,9 @@ describe("transform/tree", () => {
     expect(dynamicParts).toHaveLength(1);
     const attrPart = dynamicParts[0];
     expect(attrPart?.type).toBe("attr");
-    expect(
-      attrPart && attrPart.type === "attr" ? attrPart.key : null,
-    ).toBe("data-render-mode");
+    expect(attrPart?.type === "attr" ? attrPart.key : null).toBe(
+      "data-render-mode",
+    );
     expect(attrPart?.expression).toEqual(nId("modeLabel"));
   });
 
@@ -411,7 +410,7 @@ describe("transform/tree", () => {
 
     const eventPart = result.dynamicParts.find((part) => part.type === "event");
     expect(eventPart).toBeDefined();
-    expect(eventPart && eventPart.type === "event" ? eventPart.key : null).toBe(
+    expect(eventPart?.type === "event" ? eventPart.key : null).toBe(
       "click",
     );
   });
@@ -1607,9 +1606,9 @@ describe("transform/tree", () => {
           property.value.value === "keydown",
       ),
     ).toBe(true);
-    expect(result.events).toEqual([
-      { type: "keydown", handler: expect.objectContaining({ type: "Identifier" }) },
-    ]);
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]?.type).toBe("keydown");
+    expect(result.events[0]?.handler.type).toBe("Identifier");
   });
 
   it("processAttributes throws for mixed interaction event types", () => {

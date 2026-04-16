@@ -42,6 +42,7 @@
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
+    "lint:type-aware": "oxlint --type-aware",
     "fmt": "oxfmt --ignore-path ../../.gitignore --write .",
     "fmt:check": "oxfmt --ignore-path ../../.gitignore --check .",
     "test": "vitest run --coverage",

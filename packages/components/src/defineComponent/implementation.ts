@@ -122,7 +122,7 @@ interface IslandsDirectiveJSXProps {
   readonly "client:load"?: true | "";
   readonly "client:visible"?: true | "";
   readonly "client:idle"?: true | "";
-  readonly "client:interaction"?: true | "" | string;
+  readonly "client:interaction"?: true | string;
   readonly "client:media"?: string;
 }
 
@@ -183,7 +183,7 @@ type HydrationPlanFactory = (
 
 interface ComponentHydrationMetadata {
   readonly kind: "generic-plan";
-  readonly planFactory?: HydrationPlanFactory | unknown;
+  readonly planFactory?: HydrationPlanFactory | null;
   readonly unsupportedReason?: string;
 }
 

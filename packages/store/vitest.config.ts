@@ -9,7 +9,7 @@ export default defineConfig({
       name: "store-als-swap",
       enforce: "pre",
       resolveId(source, importer) {
-        if (!importer || source !== "./internal") return;
+        if (importer === undefined || source !== "./internal") return;
         if (path.dirname(importer) === withStoreSrc) {
           return path.join(withStoreSrc, "internal.node.ts");
         }

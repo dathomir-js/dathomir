@@ -7,7 +7,12 @@
  * - Inserts state script for Signal initialization
  */
 
-import { withStore } from "@dathomir/store";
+import {
+  type AtomStore,
+  type AtomStoreSnapshot,
+  type PrimitiveAtom,
+  withStore,
+} from "@dathomir/store";
 import { getCurrentStore } from "@dathomir/store/internal";
 
 import {
@@ -24,12 +29,6 @@ import {
   type StateObject,
 } from "@/ssr/serialize/implementation";
 import { type Tree, type TreeNode } from "@/types/tree";
-
-import type {
-  AtomStore,
-  AtomStoreSnapshot,
-  PrimitiveAtom,
-} from "@dathomir/store";
 
 const VOID_ELEMENTS = new Set([
   "area",

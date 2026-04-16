@@ -70,7 +70,7 @@ function detectMode(
   optionsSsr?: boolean,
 ): TransformOptions["mode"] {
   // User-specified mode takes highest priority
-  if (forcedMode) {
+  if (forcedMode !== undefined) {
     return forcedMode;
   }
 
@@ -104,6 +104,19 @@ type TsconfigPaths = Record<string, string[]>;
 
 const tsconfigPathCache = new Map<string, TsconfigPaths | null>();
 const require = createRequire(import.meta.url);
+
+function parseSourceMap(
+  sourceMap: string | undefined,
+): TransformResult["map"] | undefined {
+  if (sourceMap === undefined) {
+    return undefined;
+  }
+
+  const parsedSourceMap: unknown = JSON.parse(sourceMap);
+  return isObjectRecord(parsedSourceMap)
+    ? (parsedSourceMap as TransformResult["map"])
+    : undefined;
+}
 
 function stripQueryAndHash(value: string): string {
   return value.split("?")[0]?.split("#")[0] ?? value;
@@ -318,7 +331,7 @@ function doTransform(
 
     return {
       code: result.code,
-      map: result.map ? JSON.parse(result.map) : undefined,
+      map: parseSourceMap(result.map),
     };
   } catch (error) {
     if (error instanceof Error) {
@@ -338,7 +351,7 @@ function createVitePlugin(options: PluginOptions = {}): VitePlugin {
     enforce: "pre",
 
     resolveId(source: string, importer?: string) {
-      if (!importer) {
+      if (importer === undefined) {
         return null;
       }
 

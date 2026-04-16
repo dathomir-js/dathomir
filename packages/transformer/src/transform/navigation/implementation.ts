@@ -1,5 +1,9 @@
-import { nCall, nId } from "@/transform/ast/implementation";
-import type { ESTNode, Identifier } from "@/transform/ast/implementation";
+import {
+  nCall,
+  nId,
+  type ESTNode,
+  type Identifier,
+} from "@/transform/ast/implementation";
 import type { TransformState } from "@/transform/state/implementation";
 
 /**

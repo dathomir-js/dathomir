@@ -118,7 +118,7 @@ function renderComponentContent(
             : propName;
       const rawValue =
         attrName !== null && attrs[attrName] != null
-          ? String(attrs[attrName])
+          ? stringifyAttrValue(attrs[attrName])
           : null;
       propSignals[propName] = signal(coerceForSSR(def, rawValue));
     }
@@ -274,7 +274,7 @@ function renderDSD(
       continue;
     }
 
-    attrStr += ` ${key}="${escapeAttr(String(value))}"`;
+    attrStr += ` ${key}="${escapeAttr(stringifyAttrValue(value))}"`;
   }
 
   return `<${tagName}${attrStr}>${dsdTemplate}</${tagName}>`;

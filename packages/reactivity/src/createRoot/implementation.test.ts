@@ -42,8 +42,12 @@ describe("createRoot", () => {
     const spy1 = vi.fn();
     const spy2 = vi.fn();
     const dispose = createRoot(() => {
-      templateEffect(() => spy1(count.value));
-      templateEffect(() => spy2(count.value * 2));
+      templateEffect(() => {
+        spy1(count.value);
+      });
+      templateEffect(() => {
+        spy2(count.value * 2);
+      });
     });
 
     expect(spy1).toHaveBeenCalledWith(0);
@@ -67,7 +71,9 @@ describe("createRoot", () => {
 
     createRoot((dispose) => {
       internalDispose = dispose;
-      templateEffect(() => spy(count.value));
+      templateEffect(() => {
+        spy(count.value);
+      });
     });
 
     count.set(1);
@@ -86,10 +92,14 @@ describe("createRoot", () => {
     const innerSpy = vi.fn();
     let innerDispose: (() => void) | undefined;
     const outerDispose = createRoot(() => {
-      templateEffect(() => outerSpy(count.value));
+      templateEffect(() => {
+        outerSpy(count.value);
+      });
 
       innerDispose = createRoot(() => {
-        templateEffect(() => innerSpy(count.value));
+        templateEffect(() => {
+          innerSpy(count.value);
+        });
       });
     });
 
@@ -114,7 +124,9 @@ describe("createRoot", () => {
     const spy = vi.fn();
 
     // Effect created outside createRoot
-    const cleanup = effect(() => spy(count.value));
+    const cleanup = effect(() => {
+      spy(count.value);
+    });
 
     const dispose = createRoot(() => {
       // Empty scope
@@ -140,10 +152,14 @@ describe("createRoot - nested scopes", () => {
     const innerSpy = vi.fn();
 
     const outerDispose = createRoot(() => {
-      templateEffect(() => outerSpy(count.value));
+      templateEffect(() => {
+        outerSpy(count.value);
+      });
 
       createRoot(() => {
-        templateEffect(() => innerSpy(count.value));
+        templateEffect(() => {
+          innerSpy(count.value);
+        });
       });
     });
 
@@ -165,10 +181,14 @@ describe("createRoot - nested scopes", () => {
     let innerDispose: (() => void) | undefined;
 
     const outerDispose = createRoot(() => {
-      templateEffect(() => outerSpy(count.value));
+      templateEffect(() => {
+        outerSpy(count.value);
+      });
 
       innerDispose = createRoot(() => {
-        templateEffect(() => innerSpy(count.value));
+        templateEffect(() => {
+          innerSpy(count.value);
+        });
       });
     });
 
@@ -206,7 +226,9 @@ describe("createRoot - edge cases", () => {
     const spy = vi.fn();
 
     const dispose = createRoot(() => {
-      templateEffect(() => spy(count.value));
+      templateEffect(() => {
+        spy(count.value);
+      });
     });
 
     expect(spy).toHaveBeenCalledTimes(1);
@@ -223,11 +245,15 @@ describe("createRoot - edge cases", () => {
     const log: string[] = [];
 
     const dispose = createRoot(() => {
-      onCleanup(() => log.push("first"));
+      onCleanup(() => {
+        log.push("first");
+      });
       onCleanup(() => {
         throw new Error("cleanup error");
       });
-      onCleanup(() => log.push("third"));
+      onCleanup(() => {
+        log.push("third");
+      });
     });
 
     // dispose() must not propagate the error and must run all cleanups
@@ -249,7 +275,9 @@ describe("createRoot - owner context restoration", () => {
       // If setCurrentOwner was not restored, this templateEffect would be
       // registered with the already-returned inner owner and never disposed
       // by disposeOuter.
-      templateEffect(() => spy(count.value));
+      templateEffect(() => {
+        spy(count.value);
+      });
     });
 
     count.set(1);
@@ -267,13 +295,17 @@ describe("createRoot - owner context restoration", () => {
     const spy2 = vi.fn();
 
     const dispose1 = createRoot(() => {
-      templateEffect(() => spy1(count.value));
+      templateEffect(() => {
+        spy1(count.value);
+      });
     });
 
     // After dispose1's root finished, owner must be restored so that
     // this second root is truly independent.
     const dispose2 = createRoot(() => {
-      templateEffect(() => spy2(count.value));
+      templateEffect(() => {
+        spy2(count.value);
+      });
     });
 
     count.set(1);

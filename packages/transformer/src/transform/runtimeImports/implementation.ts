@@ -1,5 +1,8 @@
-import { nImport, nImportSpecifier } from "@/transform/ast/implementation";
-import type { Program } from "@/transform/ast/implementation";
+import {
+  nImport,
+  nImportSpecifier,
+  type Program,
+} from "@/transform/ast/implementation";
 
 type RuntimeImportName =
   | "fromTree"

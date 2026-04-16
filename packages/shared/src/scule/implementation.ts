@@ -171,6 +171,37 @@ export type FlatCase<
 const NUMBER_CHAR_RE = /\d/;
 const STR_SPLITTERS = ["-", "_", "/", "."] as const;
 
+function shouldNormalizeWords(options?: CaseOptions): boolean {
+  return options?.normalize === true;
+}
+
+function getCaseWords(input: string | readonly string[]): readonly string[] {
+  return Array.isArray(input)
+    ? input
+    : (splitByCase(input) as readonly string[]);
+}
+
+function joinCapitalizedCaseWords(
+  input: string | readonly string[],
+  normalize: boolean,
+  joiner = "",
+): string {
+  return getCaseWords(input)
+    .filter((part) => part.length > 0)
+    .map((part) => upperFirst(normalize ? part.toLowerCase() : part))
+    .join(joiner);
+}
+
+function joinLowercaseCaseWords(
+  input: string | readonly string[],
+  joiner: string,
+): string {
+  return getCaseWords(input)
+    .filter((part) => part.length > 0)
+    .map((part) => part.toLowerCase())
+    .join(joiner);
+}
+
 export function isUppercase(char = ""): boolean | undefined {
   if (NUMBER_CHAR_RE.test(char)) {
     return undefined;
@@ -190,7 +221,7 @@ export function splitByCase<
   const splitters = separators ?? STR_SPLITTERS;
   const parts: string[] = [];
 
-  if (!str || typeof str !== "string") {
+  if (typeof str !== "string" || str.length === 0) {
     return parts as SplitByCase<T, Separator[number]>;
   }
 
@@ -244,11 +275,11 @@ export function splitByCase<
 }
 
 export function upperFirst<S extends string>(str: S): Capitalize<S> {
-  return (str ? str[0].toUpperCase() + str.slice(1) : "") as Capitalize<S>;
+  return (str.length > 0 ? str[0].toUpperCase() + str.slice(1) : "") as Capitalize<S>;
 }
 
 export function lowerFirst<S extends string>(str: S): Uncapitalize<S> {
-  return (str ? str[0].toLowerCase() + str.slice(1) : "") as Uncapitalize<S>;
+  return (str.length > 0 ? str[0].toLowerCase() + str.slice(1) : "") as Uncapitalize<S>;
 }
 
 export function pascalCase(): "";
@@ -260,11 +291,14 @@ export function pascalCase<
   T extends string | readonly string[],
   UserCaseOptions extends CaseOptions = CaseOptions,
 >(str?: T, opts?: UserCaseOptions) {
-  return str
-    ? ((Array.isArray(str) ? str : splitByCase(str as string))
-        .map((p) => upperFirst(opts?.normalize ? p.toLowerCase() : p))
-        .join("") as PascalCase<T, UserCaseOptions["normalize"]>)
-    : "";
+  if (str === undefined) {
+    return "";
+  }
+
+  return joinCapitalizedCaseWords(
+    str,
+    shouldNormalizeWords(opts),
+  ) as PascalCase<T, UserCaseOptions["normalize"]>;
 }
 
 export function camelCase(): "";
@@ -276,7 +310,7 @@ export function camelCase<
   T extends string | readonly string[],
   UserCaseOptions extends CaseOptions = CaseOptions,
 >(str?: T, opts?: UserCaseOptions) {
-  return lowerFirst(pascalCase(str || "", opts)) as CamelCase<
+  return lowerFirst(pascalCase(str ?? "", opts)) as CamelCase<
     T,
     UserCaseOptions["normalize"]
   >;
@@ -294,11 +328,11 @@ export function kebabCase<
   T extends string | readonly string[],
   Joiner extends string,
 >(str?: T, joiner?: Joiner) {
-  return str
-    ? ((Array.isArray(str) ? str : splitByCase(str as string))
-        .map((p) => p.toLowerCase())
-        .join(joiner ?? "-") as KebabCase<T, Joiner>)
-    : "";
+  if (str === undefined) {
+    return "";
+  }
+
+  return joinLowercaseCaseWords(str, joiner ?? "-") as KebabCase<T, Joiner>;
 }
 
 export function snakeCase(): "";
@@ -306,7 +340,7 @@ export function snakeCase<T extends string | readonly string[]>(
   str: T,
 ): SnakeCase<T>;
 export function snakeCase<T extends string | readonly string[]>(str?: T) {
-  return kebabCase(str || "", "_") as SnakeCase<T>;
+  return kebabCase(str ?? "", "_") as SnakeCase<T>;
 }
 
 export function flatCase(): "";
@@ -314,7 +348,7 @@ export function flatCase<T extends string | readonly string[]>(
   str: T,
 ): FlatCase<T>;
 export function flatCase<T extends string | readonly string[]>(str?: T) {
-  return kebabCase(str || "", "") as FlatCase<T>;
+  return kebabCase(str ?? "", "") as FlatCase<T>;
 }
 
 export function trainCase(): "";
@@ -326,10 +360,15 @@ export function trainCase<
   T extends string | readonly string[],
   UserCaseOptions extends CaseOptions = CaseOptions,
 >(str?: T, opts?: UserCaseOptions) {
-  return (Array.isArray(str) ? str : splitByCase(str as string))
-    .filter(Boolean)
-    .map((p) => upperFirst(opts?.normalize ? p.toLowerCase() : p))
-    .join("-") as TrainCase<T, UserCaseOptions["normalize"]>;
+  if (str === undefined) {
+    return "";
+  }
+
+  return joinCapitalizedCaseWords(
+    str,
+    shouldNormalizeWords(opts),
+    "-",
+  ) as TrainCase<T, UserCaseOptions["normalize"]>;
 }
 
 const titleCaseExceptions =
@@ -347,12 +386,18 @@ export function titleCase<
   T extends string | readonly string[],
   UserCaseOptions extends CaseOptions = CaseOptions,
 >(str?: T, opts?: UserCaseOptions) {
-  return (Array.isArray(str) ? str : splitByCase(str as string))
-    .filter(Boolean)
-    .map((p) =>
-      titleCaseExceptions.test(p)
-        ? p.toLowerCase()
-        : upperFirst(opts?.normalize ? p.toLowerCase() : p),
+  if (str === undefined) {
+    return "";
+  }
+
+  const normalize = shouldNormalizeWords(opts);
+
+  return getCaseWords(str)
+    .filter((part) => part.length > 0)
+    .map((part) =>
+      titleCaseExceptions.test(part)
+        ? part.toLowerCase()
+        : upperFirst(normalize ? part.toLowerCase() : part),
     )
     .join(" ") as TrainCase<T, UserCaseOptions["normalize"]>;
 }

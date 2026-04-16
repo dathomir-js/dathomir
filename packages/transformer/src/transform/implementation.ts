@@ -370,6 +370,11 @@ function renamePatternWithCollisions(
   };
 }
 
+interface ObjectLiteralHelperResolution {
+  helperName: string;
+  helperNode: ESTNode;
+}
+
 function renameStatementWithCollisions(
   statement: ESTNode,
   state: RenameState,
@@ -772,6 +777,62 @@ function resolveTransparentThunkWrapperCall(
   return thunkArgument;
 }
 
+function resolveObjectLiteralHelperMethod(
+  callee: ESTNode,
+  helperLookup: HelperLookup,
+): ObjectLiteralHelperResolution | null {
+  if (
+    !isMemberExpression(callee) ||
+    !isIdentifier(callee.object) ||
+    !isObjectExpression(helperLookup.get(callee.object.name))
+  ) {
+    return null;
+  }
+
+  const helperObject = helperLookup.get(callee.object.name);
+  if (!isObjectExpression(helperObject)) {
+    return null;
+  }
+
+  const propertyName =
+    isIdentifier(callee.property) && !callee.computed
+      ? callee.property.name
+      : isStringLiteral(callee.property)
+        ? String(callee.property.value)
+        : null;
+  if (propertyName === null) {
+    return null;
+  }
+
+  for (const property of helperObject.properties as ESTNode[]) {
+    if (property.type !== "Property") {
+      continue;
+    }
+
+    const keyNode = property.key as ESTNode;
+    const valueNode = property.value as ESTNode;
+    const keyName = isIdentifier(keyNode)
+      ? keyNode.name
+      : isStringLiteral(keyNode)
+        ? String(keyNode.value)
+        : null;
+    if (keyName !== propertyName) {
+      continue;
+    }
+
+    if (!isFunctionLikeNode(valueNode) && !isFunctionDeclaration(valueNode)) {
+      return null;
+    }
+
+    return {
+      helperName: `${callee.object.name}.${propertyName}`,
+      helperNode: valueNode,
+    };
+  }
+
+  return null;
+}
+
 function resolveTopLevelHelperNode(
   callExpression: ESTNode,
   helperLookup: HelperLookup,
@@ -801,6 +862,28 @@ function resolveTopLevelHelperNode(
       helperNode: transparentThunk,
       helperFrame,
       callArguments: [],
+    };
+  }
+
+  const objectLiteralHelper = resolveObjectLiteralHelperMethod(
+    callExpression.callee as ESTNode,
+    helperLookup,
+  );
+  if (objectLiteralHelper !== null) {
+    const helperFrame = extractFunctionRenderFrame(objectLiteralHelper.helperNode);
+    if (helperFrame === null) {
+      return null;
+    }
+
+    if (callExpression.arguments.length !== helperFrame.paramPatterns.length) {
+      return null;
+    }
+
+    return {
+      helperName: objectLiteralHelper.helperName,
+      helperNode: objectLiteralHelper.helperNode,
+      helperFrame,
+      callArguments: callExpression.arguments,
     };
   }
 
@@ -872,7 +955,10 @@ function containsNodeIdentityCreation(node: ESTNode): boolean {
   return found;
 }
 
-function hasNonNormalizableSpread(componentArg: ESTNode): boolean {
+function hasNonNormalizableSpread(
+  componentArg: ESTNode,
+  availableBindings: ReadonlyMap<string, ESTNode>,
+): boolean {
   const returnedExpression = getReturnedExpression(componentArg);
   if (
     returnedExpression === null ||
@@ -897,7 +983,7 @@ function hasNonNormalizableSpread(componentArg: ESTNode): boolean {
             (property) => property.type === "SpreadElement",
           )
         ) {
-          return true;
+          return !isNormalizableSpreadArgument(argument, availableBindings);
         }
       }
 
@@ -924,6 +1010,47 @@ function hasNonNormalizableSpread(componentArg: ESTNode): boolean {
   };
 
   return hasSpreadInNode(returnedExpression);
+}
+
+function isNormalizableSpreadArgument(
+  node: ESTNode | null | undefined,
+  availableBindings: ReadonlyMap<string, ESTNode>,
+  visitedBindings: Set<string> = new Set(),
+): boolean {
+  if (node === null || node === undefined) {
+    return false;
+  }
+
+  const unwrapped = unwrapParenthesizedExpression(node);
+  if (isIdentifier(unwrapped)) {
+    const binding = availableBindings.get(unwrapped.name);
+    if (binding === undefined || visitedBindings.has(unwrapped.name)) {
+      return false;
+    }
+
+    visitedBindings.add(unwrapped.name);
+    return isNormalizableSpreadArgument(binding, availableBindings, visitedBindings);
+  }
+
+  if (!isObjectExpression(unwrapped)) {
+    return false;
+  }
+
+  return (unwrapped.properties as ESTNode[]).every((property) => {
+    if (property.type === "SpreadElement") {
+      return isNormalizableSpreadArgument(
+        property.argument as ESTNode,
+        availableBindings,
+        new Set(visitedBindings),
+      );
+    }
+
+    return (
+      (!property.computed ||
+        isSerializableBindingExpression(property.key as ESTNode, availableBindings)) &&
+      isSerializableBindingExpression(property.value as ESTNode, availableBindings)
+    );
+  });
 }
 
 function hasRuntimeBranching(componentArg: ESTNode): boolean {
@@ -1290,6 +1417,13 @@ interface BranchAccumulator {
   jsxRoot: JSXElement | JSXFragment;
 }
 
+function createEmptyJSXFragment(): JSXFragment {
+  return {
+    type: "JSXFragment",
+    children: [],
+  };
+}
+
 /**
  * Flatten a branching construct (if/else chain, switch, ternary chain)
  * into a linear list of (condition, JSX) pairs.
@@ -1414,6 +1548,39 @@ function flattenBranches(
     return [...trueBranches, ...falseBranches];
   }
 
+  // Case 5.5: LogicalExpression guard pattern
+  if (node.type === "LogicalExpression") {
+    const logicalNode = node as ESTNode & {
+      operator: string;
+      left: ESTNode;
+      right: ESTNode;
+    };
+
+    if (logicalNode.operator !== "&&") {
+      return null;
+    }
+
+    const guardedJsx = extractJSXFromExpression(logicalNode.right);
+    if (guardedJsx === null) {
+      return null;
+    }
+
+    const truthyCondition = accumulatedCondition
+      ? andConditions(accumulatedCondition, logicalNode.left)
+      : cloneNode(logicalNode.left);
+
+    return [
+      {
+        condition: truthyCondition,
+        jsxRoot: guardedJsx,
+      },
+      {
+        condition: accumulatedCondition,
+        jsxRoot: createEmptyJSXFragment(),
+      },
+    ];
+  }
+
   // Case 6: SwitchStatement
   if (node.type === "SwitchStatement") {
     const switchNode = node as ESTNode & {
@@ -1483,34 +1650,6 @@ function tryExtractDispatchBranches(
     directBody.type === "ConditionalExpression" ||
     directBody.type === "LogicalExpression"
   ) {
-    // LogicalExpression (&& ||) — only handle if it's a guard pattern
-    if (directBody.type === "LogicalExpression") {
-      const logicalNode = directBody as ESTNode & {
-        operator: string;
-        left: ESTNode;
-        right: ESTNode;
-      };
-      // `cond && <JSX/>` → treat as dispatch with two branches
-      if (logicalNode.operator === "&&") {
-        const jsx = extractJSXFromExpression(logicalNode.right);
-        if (jsx !== null) {
-          return {
-            branches: [
-              {
-                condition: cloneNode(logicalNode.left),
-                jsxRoot: jsx,
-                preludeStatements: [],
-              },
-              { condition: null, jsxRoot: jsx, preludeStatements: [] },
-            ],
-            sharedPrelude: [],
-          };
-        }
-      }
-      return null;
-    }
-
-    // ConditionalExpression (ternary)
     const branches = flattenBranches(directBody, null);
     if (branches === null || branches.length < 2) {
       return null;
@@ -1694,6 +1833,7 @@ function getSpecificUnsupportedHydrationReason(
   helperLookup: HelperLookup,
   visitedHelpers: ReadonlySet<string>,
   importedTransparentThunkWrappers: ReadonlySet<string>,
+  availableBindings: ReadonlyMap<string, ESTNode>,
 ): string | null {
   if (
     !isFunctionLikeNode(componentArg) &&
@@ -1708,7 +1848,7 @@ function getSpecificUnsupportedHydrationReason(
     return "node-identity-reuse";
   }
 
-  if (hasNonNormalizableSpread(componentArg)) {
+  if (hasNonNormalizableSpread(componentArg, availableBindings)) {
     return "non-normalizable-spread";
   }
 
@@ -1745,12 +1885,14 @@ function getUnsupportedHydrationReason(
   helperLookup: HelperLookup,
   visitedHelpers: ReadonlySet<string>,
   importedTransparentThunkWrappers: ReadonlySet<string>,
+  availableBindings: ReadonlyMap<string, ESTNode>,
 ): string | null {
   const specificReason = getSpecificUnsupportedHydrationReason(
     componentArg,
     helperLookup,
     visitedHelpers,
     importedTransparentThunkWrappers,
+    availableBindings,
   );
   /* c8 ignore next @preserve -- structurally unreachable: buildComponentHydrationMetadata checks getSpecific first with same args */
   if (specificReason !== null) {
@@ -1918,7 +2060,8 @@ function collectTopLevelHelpers(program: Program): HelperLookup {
         isIdentifier(declarator.id) &&
         declarator.init !== null &&
         (isFunctionLikeNode(declarator.init) ||
-          isFunctionDeclaration(declarator.init))
+          isFunctionDeclaration(declarator.init) ||
+          isObjectExpression(declarator.init))
       ) {
         helpers.set(declarator.id.name, declarator.init);
       }
@@ -2057,6 +2200,10 @@ function collectSerializableBindingsFromStatements(
   return bindings;
 }
 
+function collectTopLevelSerializableBindings(program: Program): Map<string, ESTNode> {
+  return collectSerializableBindingsFromStatements(program.body, new Map());
+}
+
 /**
  * Guard: throw if the component body contains colocated client
  * directives while its setup pattern is unsupported for hydration
@@ -2081,12 +2228,14 @@ function buildComponentHydrationMetadata(
   helperLookup: HelperLookup,
   importedTransparentThunkWrappers: ReadonlySet<string>,
   moduleBindings: ReadonlySet<string>,
+  topLevelSerializableBindings: ReadonlyMap<string, ESTNode>,
 ): ComponentHydrationBuildResult | null {
   const specificUnsupportedReason = getSpecificUnsupportedHydrationReason(
     componentArg,
     helperLookup,
     new Set(),
     importedTransparentThunkWrappers,
+    topLevelSerializableBindings,
   );
   if (specificUnsupportedReason !== null) {
     assertNoUnsupportedColocatedCombination(
@@ -2124,6 +2273,7 @@ function buildComponentHydrationMetadata(
       helperLookup,
       new Set(),
       importedTransparentThunkWrappers,
+      topLevelSerializableBindings,
     );
     if (unsupportedReason === null) {
       return null;
@@ -2151,7 +2301,7 @@ function buildComponentHydrationMetadata(
   analysisState.moduleBindings = new Set(moduleBindings);
   analysisState.currentSerializableBindings = collectSerializableBindingsFromStatements(
     collisionSafeAnalysis.preludeStatements,
-    new Map(),
+    topLevelSerializableBindings,
   );
   const { dynamicParts } = jsxToTree(
     collisionSafeAnalysis.jsxRoot,
@@ -2211,6 +2361,7 @@ function collectComponentPlans(
 ): CollectedComponentPlan[] {
   const plans: CollectedComponentPlan[] = [];
   const helperLookup = collectTopLevelHelpers(program);
+  const topLevelSerializableBindings = collectTopLevelSerializableBindings(program);
   const importedTransparentThunkWrappers =
     collectImportedTransparentThunkWrappers(program);
 
@@ -2255,6 +2406,7 @@ function collectComponentPlans(
         helperLookup,
         importedTransparentThunkWrappers,
         moduleBindings,
+        topLevelSerializableBindings,
       );
       if (buildResult === null) {
         continue;
@@ -2341,9 +2493,13 @@ function transform(
     state.moduleBindings,
   );
 
+  const topLevelSerializableBindings = collectTopLevelSerializableBindings(
+    adaptParsedProgram(parsed.program) as Program,
+  );
+
   const transformedProgram = walk(
     adaptParsedProgram(parsed.program),
-    { inJSX: false, serializableBindings: new Map() },
+    { inJSX: false, serializableBindings: topLevelSerializableBindings },
     {
       ArrowFunctionExpression(
         node: ESTNode,

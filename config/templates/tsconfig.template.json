@@ -15,6 +15,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "moduleResolution": "bundler",
+    "rootDir": "${configDir}/src",
     "outDir": "${configDir}/dist",
     "paths": {
       "@/*": ["${configDir}/src/*"],

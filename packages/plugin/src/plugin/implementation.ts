@@ -100,6 +100,11 @@ interface ViteTransformContext extends UnpluginContext {
   };
 }
 
+type PluginTransformOutput = {
+  code: string;
+  map?: TransformResult["map"];
+};
+
 type TsconfigPaths = Record<string, string[]>;
 
 const tsconfigPathCache = new Map<string, TsconfigPaths | null>();
@@ -107,7 +112,7 @@ const require = createRequire(import.meta.url);
 
 function parseSourceMap(
   sourceMap: string | undefined,
-): TransformResult["map"] | undefined {
+): PluginTransformOutput["map"] | undefined {
   if (sourceMap === undefined) {
     return undefined;
   }
@@ -314,7 +319,7 @@ function doTransform(
   isSsr: boolean,
   environmentName: string | undefined,
   options: PluginOptions,
-): TransformResult | null {
+): PluginTransformOutput | null {
   if (!shouldTransform(id, options)) {
     return null;
   }
@@ -329,10 +334,16 @@ function doTransform(
       runtimeModule: options.runtimeModule ?? "@dathomir/core",
     });
 
-    return {
-      code: result.code,
-      map: parseSourceMap(result.map),
-    };
+    const map = parseSourceMap(result.map);
+
+    return map === undefined
+      ? {
+          code: result.code,
+        }
+      : {
+          code: result.code,
+          map,
+        };
   } catch (error) {
     if (error instanceof Error) {
       error.message = `[dathomir] Error transforming ${id}: ${error.message}`;

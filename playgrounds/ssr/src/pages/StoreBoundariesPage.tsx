@@ -1,11 +1,6 @@
 import { getCurrentStore, withStore } from "@dathomir/core";
 
-import {
-  countAtom,
-  createDemoStore,
-  nextTheme,
-  themeAtom,
-} from "../demoStore";
+import { countAtom, createDemoStore, nextTheme, themeAtom } from "../demoStore";
 
 function requireCurrentStore() {
   const store = getCurrentStore();
@@ -38,7 +33,9 @@ function ScopeCard(props: {
       <p>
         themeAtom: <strong>{theme.value}</strong>
       </p>
-      <button onClick={() => count.set((value) => value + 1)}>countAtom++</button>
+      <button onClick={() => count.set((value) => value + 1)}>
+        countAtom++
+      </button>
       <button onClick={() => theme.set(nextTheme(theme.peek()))}>
         cycle themeAtom
       </button>
@@ -64,7 +61,8 @@ function StoreBoundariesPage() {
       <section>
         <h2>Root boundary</h2>
         <p>
-          The page-level SSR request store is also the active root boundary for this demo.
+          The page-level SSR request store is also the active root boundary for
+          this demo.
         </p>
         <p>
           Root store appId: <strong>{rootStore.appId}</strong>
@@ -73,7 +71,10 @@ function StoreBoundariesPage() {
 
       <section>
         <h2>Shared siblings</h2>
-        <p>Both siblings use the same store instance, so updates propagate both ways.</p>
+        <p>
+          Both siblings use the same store instance, so updates propagate both
+          ways.
+        </p>
         {withStore(rootStore, () => (
           <ScopeCard
             title="Shared A"
@@ -92,7 +93,9 @@ function StoreBoundariesPage() {
 
       <section>
         <h2>Isolated siblings</h2>
-        <p>Each sibling gets its own createAtomStore(), so updates stay local.</p>
+        <p>
+          Each sibling gets its own createAtomStore(), so updates stay local.
+        </p>
         {withStore(isolatedLeftStore, () => (
           <ScopeCard
             title="Isolated A"

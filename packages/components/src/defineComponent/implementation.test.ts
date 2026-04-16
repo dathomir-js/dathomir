@@ -1218,14 +1218,18 @@ describe("defineComponent", () => {
     await waitForMicrotask();
 
     hydrateIslands(document);
-    el.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    el.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
     await waitForMicrotask();
     expect(clickSpy).not.toHaveBeenCalled();
 
     idleCallback?.();
     await waitForMicrotask();
 
-    el.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    el.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
     await waitForMicrotask();
     expect(clickSpy).toHaveBeenCalledWith("idle-ready");
 
@@ -1252,7 +1256,9 @@ describe("defineComponent", () => {
     await waitForMicrotask();
 
     hydrateIslands(document);
-    el.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    el.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
     await waitForMicrotask();
 
     expect(clickSpy).toHaveBeenCalledWith("interaction-ready");

@@ -53,7 +53,10 @@ export type {
   IslandStrategyName,
 } from "@dathomir/shared";
 
-export { getClientAction, registerClientAction } from "./hydration/hydrate/implementation";
+export {
+  getClientAction,
+  registerClientAction,
+} from "./hydration/hydrate/implementation";
 
 export {
   renderDynamicAttr,

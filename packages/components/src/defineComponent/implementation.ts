@@ -136,13 +136,7 @@ interface IslandHydrationTrigger {
 }
 
 interface ReplayEventSnapshot {
-  readonly kind:
-    | "event"
-    | "mouse"
-    | "keyboard"
-    | "focus"
-    | "input"
-    | "pointer";
+  readonly kind: "event" | "mouse" | "keyboard" | "focus" | "input" | "pointer";
   readonly init:
     | EventInit
     | MouseEventInit
@@ -429,10 +423,9 @@ function createReplayEvent(
   return new Event(eventType, baseInit);
 }
 
-function getHostClientActionBindings(host: HTMLElement): Record<
-  string,
-  { id: string; payload: Record<string, unknown> }
-> {
+function getHostClientActionBindings(
+  host: HTMLElement,
+): Record<string, { id: string; payload: Record<string, unknown> }> {
   const raw = host.getAttribute(CLIENT_ACTIONS_METADATA_ATTRIBUTE);
   if (raw === null) {
     return {};
@@ -441,7 +434,11 @@ function getHostClientActionBindings(host: HTMLElement): Record<
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const entries = Object.entries(parsed).flatMap(([eventType, binding]) => {
-      if (typeof eventType !== "string" || typeof binding !== "object" || binding === null) {
+      if (
+        typeof eventType !== "string" ||
+        typeof binding !== "object" ||
+        binding === null
+      ) {
         return [];
       }
 
@@ -451,16 +448,18 @@ function getHostClientActionBindings(host: HTMLElement): Record<
       }
 
       const payload = (binding as { payload?: unknown }).payload;
-      return [[
-        eventType,
-        {
-          id: actionId,
-          payload:
-            typeof payload === "object" && payload !== null
-              ? (payload as Record<string, unknown>)
-              : {},
-        },
-      ] as const];
+      return [
+        [
+          eventType,
+          {
+            id: actionId,
+            payload:
+              typeof payload === "object" && payload !== null
+                ? (payload as Record<string, unknown>)
+                : {},
+          },
+        ] as const,
+      ];
     });
 
     return Object.fromEntries(entries) as Record<
@@ -553,7 +552,9 @@ function replayHydrationTrigger(
     return;
   }
 
-  target.dispatchEvent(createReplayEvent(trigger.eventType, trigger.replayEvent));
+  target.dispatchEvent(
+    createReplayEvent(trigger.eventType, trigger.replayEvent),
+  );
 }
 
 function isIterableValue(value: unknown): value is Iterable<unknown> {
@@ -1046,7 +1047,9 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
         }
       };
 
-      const runHydrateWithPlan = (trigger?: IslandHydrationTrigger): boolean => {
+      const runHydrateWithPlan = (
+        trigger?: IslandHydrationTrigger,
+      ): boolean => {
         if (planFactory === null) {
           return false;
         }

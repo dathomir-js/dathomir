@@ -10,7 +10,10 @@ import {
 } from "@/transform/ast/implementation";
 import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
 import type { TransformState } from "@/transform/state/implementation";
-import { jsxToTree, type NestedTransformers } from "@/transform/tree/implementation";
+import {
+  jsxToTree,
+  type NestedTransformers,
+} from "@/transform/tree/implementation";
 
 const HTML_VOID_ELEMENTS = new Set([
   "area",
@@ -47,9 +50,7 @@ type StaticTreeNode =
       children: StaticTreeNode[];
     };
 
-function getLiteralValue(
-  node: ESTNode,
-): string | number | boolean | null {
+function getLiteralValue(node: ESTNode): string | number | boolean | null {
   return node.type === "Literal"
     ? ((node.value as string | number | boolean | null | undefined) ?? null)
     : null;

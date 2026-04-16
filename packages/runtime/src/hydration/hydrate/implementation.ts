@@ -72,13 +72,7 @@ interface IslandHydrationTrigger {
 }
 
 interface ReplayEventSnapshot {
-  readonly kind:
-    | "event"
-    | "mouse"
-    | "keyboard"
-    | "focus"
-    | "input"
-    | "pointer";
+  readonly kind: "event" | "mouse" | "keyboard" | "focus" | "input" | "pointer";
   readonly init:
     | EventInit
     | MouseEventInit
@@ -361,7 +355,10 @@ function createMarkerLookup(
   return markerLookup;
 }
 
-function pathEquals(path: readonly number[], target: readonly number[]): boolean {
+function pathEquals(
+  path: readonly number[],
+  target: readonly number[],
+): boolean {
   if (path.length !== target.length) {
     return false;
   }
@@ -435,9 +432,10 @@ function hydrateTextMarker(marker: MarkerInfo, getValue: () => unknown): void {
       markerId: marker.id,
       markerType: marker.type,
       expected: "Text node after comment marker",
-      actual: nextSibling !== null
-        ? `${nextSibling.nodeName} (nodeType: ${nextSibling.nodeType})`
-        : "no sibling node",
+      actual:
+        nextSibling !== null
+          ? `${nextSibling.nodeName} (nodeType: ${nextSibling.nodeType})`
+          : "no sibling node",
     });
     return;
   }
@@ -664,8 +662,7 @@ function createReplayEventSnapshot(event: Event): ReplayEventSnapshot {
       kind: "input",
       init: {
         ...baseInit,
-        data:
-          typeof eventRecord.data === "string" ? eventRecord.data : null,
+        data: typeof eventRecord.data === "string" ? eventRecord.data : null,
         inputType: stringifyEventField(eventRecord.inputType),
         isComposing: Boolean(eventRecord.isComposing),
       },
@@ -964,8 +961,12 @@ function hydrateRoot(
   setup: (ctx: HydrationContext) => void,
   options: HydrationOptions = {},
 ): RootDispose | null {
-  return hydrateRootWithContext(root, setup, options, (currentRoot, currentOptions) =>
-    createHydrationContext(currentRoot, currentOptions),
+  return hydrateRootWithContext(
+    root,
+    setup,
+    options,
+    (currentRoot, currentOptions) =>
+      createHydrationContext(currentRoot, currentOptions),
   );
 }
 

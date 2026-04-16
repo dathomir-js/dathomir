@@ -42,7 +42,11 @@ const cardStyles = css`
     padding: 20px;
     border-radius: 16px;
     border: 1px solid rgba(33, 71, 60, 0.12);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 241, 0.88));
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.96),
+      rgba(239, 246, 241, 0.88)
+    );
     box-shadow: 0 8px 24px rgba(23, 49, 39, 0.06);
   }
 
@@ -125,10 +129,18 @@ const codeBlockStyles = css`
     color: inherit;
   }
 
-  .keyword { color: #c084fc; }
-  .string { color: #86efac; }
-  .comment { color: #64748b; }
-  .function { color: #67e8f9; }
+  .keyword {
+    color: #c084fc;
+  }
+  .string {
+    color: #86efac;
+  }
+  .comment {
+    color: #64748b;
+  }
+  .function {
+    color: #67e8f9;
+  }
 `;
 
 /**
@@ -191,9 +203,9 @@ const PathAColocatedCard = defineComponent(
         <p class="badge badge-path-a">Path A — colocated</p>
         <h3>Colocated click handler</h3>
         <p>
-          The <code>load:onClick</code> directive stays next to the button markup.
-          The transformer generates a planFactory that wires this handler during
-          in-place hydration.
+          The <code>load:onClick</code> directive stays next to the button
+          markup. The transformer generates a planFactory that wires this
+          handler during in-place hydration.
         </p>
         <div class="counter-row">
           <button
@@ -231,12 +243,12 @@ function UnsupportedColocatedExample() {
       <p>
         This pattern throws at compile time. The transformer detects that the
         component cannot generate a planFactory (due to runtime branching) and
-        also contains a colocated directive — which would silently lose SSR state
-        on the fallback rerender.
+        also contains a colocated directive — which would silently lose SSR
+        state on the fallback rerender.
       </p>
       <pre>
         <code>
-{`const Comp = defineComponent("x-comp", () => {
+          {`const Comp = defineComponent("x-comp", () => {
   const count = signal(0);
   // runtime branching prevents planFactory
   if (someCondition) {
@@ -255,7 +267,11 @@ function UnsupportedColocatedExample() {
         </code>
       </pre>
       <p class="status-text">
-        Error: <code>Colocated client directives cannot be used in a component whose setup is unsupported for hydration plan generation</code>
+        Error:{" "}
+        <code>
+          Colocated client directives cannot be used in a component whose setup
+          is unsupported for hydration plan generation
+        </code>
       </p>
     </article>
   );
@@ -295,7 +311,8 @@ const NestedIslandsDemo = defineComponent(
     props: {
       description: {
         type: String,
-        default: "Outer generates planFactory; inner is tracked as nested boundary.",
+        default:
+          "Outer generates planFactory; inner is tracked as nested boundary.",
       },
     },
   },
@@ -308,7 +325,9 @@ const InnerIsland = defineComponent(
 
     return (
       <div style="padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.6);">
-        <p style="margin: 0 0 8px; font-size: 0.85rem; color: #6b7c74;">Inner island (client:load)</p>
+        <p style="margin: 0 0 8px; font-size: 0.85rem; color: #6b7c74;">
+          Inner island (client:load)
+        </p>
         <div class="counter-row">
           <button
             type="button"
@@ -342,8 +361,9 @@ const DispatchIfElseCounter = defineComponent(
           <p class="badge badge-path-a">dispatch — if/else</p>
           <h3>Primary mode</h3>
           <p>
-            The transformer generates independent planFactories for both branches.
-            Hydration evaluates the condition and applies the matching plan in-place.
+            The transformer generates independent planFactories for both
+            branches. Hydration evaluates the condition and applies the matching
+            plan in-place.
           </p>
           <div class="counter-row">
             <button
@@ -513,8 +533,8 @@ const DispatchSwitchCounter = defineComponent(
             <p class="badge badge-path-a">dispatch — switch (beta)</p>
             <h3>Beta variant</h3>
             <p>
-              Different JSX structure, same counter logic. Each variant gets
-              its own planFactory with independent bindings.
+              Different JSX structure, same counter logic. Each variant gets its
+              own planFactory with independent bindings.
             </p>
             <div class="counter-row">
               <button
@@ -632,31 +652,34 @@ function HydrationPlanPage() {
         </p>
         <ul>
           <li>
-            <strong>Path A (planFactory)</strong> — Static JSX generates a single planFactory.
-            SSR DOM is preserved; setup is not re-executed.
+            <strong>Path A (planFactory)</strong> — Static JSX generates a
+            single planFactory. SSR DOM is preserved; setup is not re-executed.
           </li>
           <li>
-            <strong>Path A (dispatch)</strong> — Branching patterns (if/else, nested if, switch,
-            ternary) generate multiple planFactories. The condition is evaluated at hydration
-            time and the matching plan applies in-place.
+            <strong>Path A (dispatch)</strong> — Branching patterns (if/else,
+            nested if, switch, ternary) generate multiple planFactories. The
+            condition is evaluated at hydration time and the matching plan
+            applies in-place.
           </li>
           <li>
-            <strong>Path B (fallback rerender)</strong> — Patterns the transformer cannot analyze
-            (try/catch, loops, imperative DOM) fall back to full rerender.
+            <strong>Path B (fallback rerender)</strong> — Patterns the
+            transformer cannot analyze (try/catch, loops, imperative DOM) fall
+            back to full rerender.
           </li>
         </ul>
         <p>
-          The <strong>compile-time guard</strong> throws a transform error when an unsupported
-          pattern is combined with colocated client directives (e.g., <code>load:onClick</code>),
-          preventing silent SSR state loss.
+          The <strong>compile-time guard</strong> throws a transform error when
+          an unsupported pattern is combined with colocated client directives
+          (e.g., <code>load:onClick</code>), preventing silent SSR state loss.
         </p>
       </section>
 
       <section>
         <h2>Path A: planFactory (static JSX)</h2>
         <p>
-          These components have static render bodies that the transformer can fully analyze.
-          The generated <code>planFactory</code> binds to the existing SSR DOM without re-executing setup.
+          These components have static render bodies that the transformer can
+          fully analyze. The generated <code>planFactory</code> binds to the
+          existing SSR DOM without re-executing setup.
         </p>
         <div class="demo-grid">
           <PathACounter
@@ -670,8 +693,9 @@ function HydrationPlanPage() {
       <section>
         <h2>Path A: dispatch (if/else)</h2>
         <p>
-          Two-branch if/else generates independent planFactories for each branch.
-          The condition is evaluated at hydration time; the matching plan applies in-place.
+          Two-branch if/else generates independent planFactories for each
+          branch. The condition is evaluated at hydration time; the matching
+          plan applies in-place.
         </p>
         <div class="demo-grid">
           <DispatchIfElseCounter mode="primary" />
@@ -682,9 +706,9 @@ function HydrationPlanPage() {
       <section>
         <h2>Path A: dispatch (nested if)</h2>
         <p>
-          Nested if conditions are flattened into a linear dispatch list with AND-combined
-          conditions. Three branches: <code>level === "high"</code>, <code>level === "medium"</code>,
-          and default.
+          Nested if conditions are flattened into a linear dispatch list with
+          AND-combined conditions. Three branches: <code>level === "high"</code>
+          , <code>level === "medium"</code>, and default.
         </p>
         <div class="demo-grid">
           <DispatchNestedIfCounter level="high" />
@@ -696,8 +720,9 @@ function HydrationPlanPage() {
       <section>
         <h2>Path A: dispatch (switch)</h2>
         <p>
-          Switch statements are flattened into dispatch branches. Each case generates a
-          <code>discriminant === value</code> condition; the default case becomes the fallback.
+          Switch statements are flattened into dispatch branches. Each case
+          generates a<code>discriminant === value</code> condition; the default
+          case becomes the fallback.
         </p>
         <div class="demo-grid">
           <DispatchSwitchCounter variant="alpha" />
@@ -709,8 +734,9 @@ function HydrationPlanPage() {
       <section>
         <h2>Path A: dispatch (ternary)</h2>
         <p>
-          Ternary expressions in the return position are also flattened into dispatch branches.
-          Direct body ternaries (<code>cond ? &lt;A/&gt; : &lt;B/&gt;</code>) are supported too.
+          Ternary expressions in the return position are also flattened into
+          dispatch branches. Direct body ternaries (
+          <code>cond ? &lt;A/&gt; : &lt;B/&gt;</code>) are supported too.
         </p>
         <div class="demo-grid">
           <DispatchTernaryCounter showDetails="true" />
@@ -721,8 +747,10 @@ function HydrationPlanPage() {
       <section>
         <h2>Path A: Nested islands</h2>
         <p>
-          The outer component generates a planFactory while tracking the inner <code>client:load</code>
-          component as a nested boundary. The inner island hydrates independently.
+          The outer component generates a planFactory while tracking the inner{" "}
+          <code>client:load</code>
+          component as a nested boundary. The inner island hydrates
+          independently.
         </p>
         <div class="demo-grid">
           <NestedIslandsDemo description="Outer planFactory + inner client:load boundary." />
@@ -732,9 +760,10 @@ function HydrationPlanPage() {
       <section>
         <h2>Compile-time guard: unsupported + colocated</h2>
         <p>
-          This guard prevents a subtle bug: when a component falls back to Path B (full rerender),
-          any colocated directive handlers would be attached to the SSR DOM that gets destroyed.
-          The transformer catches this at compile time instead of letting it fail silently.
+          This guard prevents a subtle bug: when a component falls back to Path
+          B (full rerender), any colocated directive handlers would be attached
+          to the SSR DOM that gets destroyed. The transformer catches this at
+          compile time instead of letting it fail silently.
         </p>
         <div class="demo-grid">
           <UnsupportedColocatedExample />
@@ -749,7 +778,8 @@ function HydrationPlanPage() {
             <p class="badge badge-path-b">imperative-dom-query</p>
             <h3>Imperative DOM access</h3>
             <p>
-              References to <code>document</code>, <code>window</code>, <code>host</code>, or
+              References to <code>document</code>, <code>window</code>,{" "}
+              <code>host</code>, or
               <code>shadowRoot</code> in the render body.
             </p>
           </article>
@@ -757,16 +787,18 @@ function HydrationPlanPage() {
             <p class="badge badge-path-b">node-identity-reuse</p>
             <h3>Node identity creation</h3>
             <p>
-              Direct calls to <code>document.createElement</code>, <code>new Text()</code>, etc.
-              that reuse node identities across renders.
+              Direct calls to <code>document.createElement</code>,{" "}
+              <code>new Text()</code>, etc. that reuse node identities across
+              renders.
             </p>
           </article>
           <article>
             <p class="badge badge-path-b">opaque-helper-call</p>
             <h3>Opaque helper returns</h3>
             <p>
-              Returning the result of a function call that the transformer cannot trace through
-              (not in the known transparent thunk wrappers list).
+              Returning the result of a function call that the transformer
+              cannot trace through (not in the known transparent thunk wrappers
+              list).
             </p>
           </article>
           <article>

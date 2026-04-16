@@ -71,12 +71,15 @@ describe("transform/mode-csr", () => {
     expect(descriptor.type).toBe("ObjectExpression");
     expect(
       descriptor.properties?.some(
-        (property) => property.key?.name === "kind" && property.value?.value === "compiled",
+        (property) =>
+          property.key?.name === "kind" && property.value?.value === "compiled",
       ),
     ).toBe(true);
     expect(
       descriptor.properties?.some(
-        (property) => property.key?.name === "markup" && property.value?.value === "<div>Hello</div>",
+        (property) =>
+          property.key?.name === "markup" &&
+          property.value?.value === "<div>Hello</div>",
       ),
     ).toBe(true);
   });

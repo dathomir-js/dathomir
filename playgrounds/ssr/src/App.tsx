@@ -44,7 +44,9 @@ function renderPlaygroundPage(props: {
       break;
 
     case "/islands-directive":
-      pageContent = <IslandsDirectivePage pagePayloadJson={props.pagePayloadJson} />;
+      pageContent = (
+        <IslandsDirectivePage pagePayloadJson={props.pagePayloadJson} />
+      );
       break;
 
     case "/islands-runtime":

@@ -4,7 +4,12 @@ import {
   ISLAND_STRATEGIES,
   isColocatedClientStrategyName,
 } from "@dathomir/shared";
-import { nId, nLit, nMember, type ESTNode } from "@/transform/ast/implementation";
+import {
+  nId,
+  nLit,
+  nMember,
+  type ESTNode,
+} from "@/transform/ast/implementation";
 
 interface JSXIdentifier {
   type: "JSXIdentifier";
@@ -151,7 +156,11 @@ function getRawAttributeName(name: JSXAttribute["name"]): string | null {
 }
 
 function isEventHandlerName(name: string): boolean {
-  return name.startsWith("on") && name.length > 2 && name[2] === name[2].toUpperCase();
+  return (
+    name.startsWith("on") &&
+    name.length > 2 &&
+    name[2] === name[2].toUpperCase()
+  );
 }
 
 function getEventTypeFromHandlerName(name: string): string {

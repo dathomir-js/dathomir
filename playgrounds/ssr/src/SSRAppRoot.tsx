@@ -19,7 +19,9 @@ type PlaygroundPageRenderProps = {
   pagePayloadJson: string;
 };
 
-function renderALSPlaygroundPage(props: PlaygroundPageRenderProps): JSX.Element {
+function renderALSPlaygroundPage(
+  props: PlaygroundPageRenderProps,
+): JSX.Element {
   return (
     <ALSPage
       requestStoreAppId={props.requestStoreAppId}
@@ -67,7 +69,10 @@ const playgroundPageRenderers = {
   "/islands-runtime": renderIslandsRuntimePlaygroundPage,
   "/hydration-plan": renderHydrationPlanPlaygroundPage,
   "/": renderOverviewPlaygroundPage,
-} satisfies Record<PlaygroundRoutePath, (props: PlaygroundPageRenderProps) => JSX.Element>;
+} satisfies Record<
+  PlaygroundRoutePath,
+  (props: PlaygroundPageRenderProps) => JSX.Element
+>;
 
 function renderResolvedPlaygroundPage(
   routePath: PlaygroundRoutePath,
@@ -101,11 +106,13 @@ export const SSRAppRoot = defineComponent(
   "playground-ssr-app",
   ({ props }) => {
     const inheritedStore = getCurrentStore();
-    const store = inheritedStore ?? createDemoStore({
-      appId: props.requestStoreAppId.value,
-      count: 3,
-      theme: "light",
-    });
+    const store =
+      inheritedStore ??
+      createDemoStore({
+        appId: props.requestStoreAppId.value,
+        count: 3,
+        theme: "light",
+      });
     const routePath = props.routePath.value as PlaygroundRoutePath;
     const route = getPlaygroundRouteOrDefault(routePath);
     const pageContent = renderResolvedPlaygroundPage(route.path, {

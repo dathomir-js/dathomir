@@ -15,7 +15,10 @@ const workspacePackages = [
 ];
 
 function storeNodeInternalSwap() {
-  const withStoreDir = path.resolve(projectRoot, "../../packages/store/src/withStore");
+  const withStoreDir = path.resolve(
+    projectRoot,
+    "../../packages/store/src/withStore",
+  );
   const storeSrcDir = path.resolve(projectRoot, "../../packages/store/src");
 
   return {
@@ -33,10 +36,7 @@ function storeNodeInternalSwap() {
         return path.join(withStoreDir, "internal.node.ts");
       }
 
-      if (
-        source === "./withStore/internal" &&
-        importerDir === storeSrcDir
-      ) {
+      if (source === "./withStore/internal" && importerDir === storeSrcDir) {
         return path.join(withStoreDir, "internal.node.ts");
       }
     },

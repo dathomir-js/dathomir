@@ -689,7 +689,9 @@ describe("transform", () => {
       expect(result.code).toContain("planFactory");
       expect(result.code).not.toContain("unsupportedReason");
       expect(result.code).toContain("const routePath = props.routePath.value");
-      expect(result.code).toContain("const pageContent = resolvePage(routePath)");
+      expect(result.code).toContain(
+        "const pageContent = resolvePage(routePath)",
+      );
       expect(result.code).toContain("renderPage: () => pageContent");
       expect(result.code).toContain("PlaygroundShell({");
     });
@@ -1451,7 +1453,9 @@ describe("transform", () => {
 
       expect(result.code).toContain("dispatch");
       expect(result.code).toContain("planFactory");
-      expect(result.code).not.toContain('unsupportedReason: "runtime-branching"');
+      expect(result.code).not.toContain(
+        'unsupportedReason: "runtime-branching"',
+      );
     });
 
     it("should classify return of logical expression as dispatch plan", () => {
@@ -2114,9 +2118,7 @@ describe("transform", () => {
       // No specific reason from getSpecificUnsupportedHydrationReason
       // containsNodeType finds IfStatement nested inside IIFE → "runtime-branching"
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain(
-        'unsupportedReason: "runtime-branching"',
-      );
+      expect(result.code).toContain('unsupportedReason: "runtime-branching"');
       expect(result.code).not.toContain("planFactory");
     });
 
@@ -2135,9 +2137,7 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain(
-        'unsupportedReason: "runtime-branching"',
-      );
+      expect(result.code).toContain('unsupportedReason: "runtime-branching"');
     });
 
     it("should cover getExplicitNestedBoundary with JSX component child having client:load (nested island)", () => {
@@ -2699,11 +2699,13 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "csr" });
 
-      expect(result.code).toContain('registerClientAction("dh-ca-1", (__dh_payload, __dh_host) =>');
-      expect(result.code).toContain('return handleClick;');
+      expect(result.code).toContain(
+        'registerClientAction("dh-ca-1", (__dh_payload, __dh_host) =>',
+      );
+      expect(result.code).toContain("return handleClick;");
       expect(result.code).toContain('"data-dh-island": "load"');
       expect(result.code).toContain('"data-dh-client-actions"');
-      expect(result.code).toContain('dh-ca-1');
+      expect(result.code).toContain("dh-ca-1");
       expect(result.code).not.toContain("load:onClick");
     });
 
@@ -2715,12 +2717,14 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "csr" });
 
-      expect(result.code).toContain('registerClientAction("dh-ca-1", (__dh_payload, __dh_host) =>');
-      expect(result.code).toContain('return handleKeyDown;');
+      expect(result.code).toContain(
+        'registerClientAction("dh-ca-1", (__dh_payload, __dh_host) =>',
+      );
+      expect(result.code).toContain("return handleKeyDown;");
       expect(result.code).toContain('"data-dh-island": "interaction"');
       expect(result.code).toContain('"data-dh-island-value": "keydown"');
       expect(result.code).toContain('"data-dh-client-actions"');
-      expect(result.code).toContain('dh-ca-1');
+      expect(result.code).toContain("dh-ca-1");
       expect(result.code).not.toContain("interaction:onKeyDown");
     });
 
@@ -2749,7 +2753,7 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain('registerClientAction("dh-ca-1"');
-      expect(result.code).toContain('__dh_payload');
+      expect(result.code).toContain("__dh_payload");
       expect(result.code).toContain('"data-dh-client-actions"');
       expect(result.code).toContain('payload: { label: "captured-label" }');
       expect(result.code).toContain('"captured-label"');
@@ -3578,9 +3582,7 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain(
-        'unsupportedReason: "node-identity-reuse"',
-      );
+      expect(result.code).toContain('unsupportedReason: "node-identity-reuse"');
     });
 
     it("should classify new Comment() as node-identity-reuse", () => {
@@ -3597,9 +3599,7 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain(
-        'unsupportedReason: "node-identity-reuse"',
-      );
+      expect(result.code).toContain('unsupportedReason: "node-identity-reuse"');
     });
 
     it("should classify new DocumentFragment() as node-identity-reuse", () => {
@@ -3616,9 +3616,7 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain(
-        'unsupportedReason: "node-identity-reuse"',
-      );
+      expect(result.code).toContain('unsupportedReason: "node-identity-reuse"');
     });
 
     it("should classify document.createElement as node-identity-reuse", () => {
@@ -3635,9 +3633,7 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain(
-        'unsupportedReason: "node-identity-reuse"',
-      );
+      expect(result.code).toContain('unsupportedReason: "node-identity-reuse"');
     });
 
     it("should support setup with function expression (not arrow) returning JSX", () => {
@@ -4174,7 +4170,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify while-loop in setup body as unsupported-component-body", () => {
@@ -4188,7 +4186,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify do-while in setup body as unsupported-component-body", () => {
@@ -4202,7 +4202,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify for-in in setup body as unsupported-component-body", () => {
@@ -4217,7 +4219,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify for-of in setup body as unsupported-component-body", () => {
@@ -4232,7 +4236,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify try-catch in setup body as unsupported-component-body", () => {
@@ -4246,7 +4252,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify try-finally in setup body as unsupported-component-body", () => {
@@ -4260,7 +4268,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify try-catch-finally in setup body as unsupported-component-body", () => {
@@ -4274,7 +4284,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify throw statement in setup body as unsupported-component-body", () => {
@@ -4288,7 +4300,9 @@ describe("transform", () => {
       `;
       const result = transform(code, { mode: "csr" });
       // throw is not a supported prelude statement and has no return
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify labeled statement in setup body as unsupported-component-body", () => {
@@ -4302,7 +4316,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify async arrow setup as unsupported-component-body", () => {
@@ -4313,7 +4329,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify async arrow block body setup as unsupported-component-body", () => {
@@ -4327,7 +4345,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify async function expression setup as unsupported-component-body", () => {
@@ -4338,7 +4358,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify generator function setup as unsupported-component-body", () => {
@@ -4349,7 +4371,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify IIFE containing complex branch in setup body as unsupported", () => {
@@ -4381,7 +4405,9 @@ describe("transform", () => {
       `;
       const result = transform(code, { mode: "csr" });
       // ExpressionStatement in prelude is unsupported
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify setup with debugger statement as unsupported-component-body", () => {
@@ -4396,7 +4422,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify setup returning conditional expression as dispatch plan", () => {
@@ -4498,7 +4526,9 @@ describe("transform", () => {
       `;
       const result = transform(code, { mode: "csr" });
       // return is not the last statement, so extractFunctionRenderFrame returns null
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
   });
 
@@ -4514,7 +4544,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify class declaration in prelude as unsupported-component-body", () => {
@@ -4528,7 +4560,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should produce no metadata for class expression as component arg", () => {
@@ -4556,7 +4590,9 @@ describe("transform", () => {
       `;
       const result = transform(code, { mode: "csr" });
       // 'let x' is VariableDeclaration (supported prelude), but 'x = 42' is ExpressionStatement (not supported)
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should support multiple const declarations in prelude", () => {
@@ -4621,7 +4657,9 @@ describe("transform", () => {
       `;
       const result = transform(code, { mode: "csr" });
       // containsJSXNode(statement) detects JSX in prelude const
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify prelude containing JSX inside function declaration as unsupported", () => {
@@ -4636,7 +4674,9 @@ describe("transform", () => {
       `;
       const result = transform(code, { mode: "csr" });
       // JSX inside prelude function declaration
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify empty block body (no return) as unsupported-component-body", () => {
@@ -4647,7 +4687,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify body with only const but no return as unsupported-component-body", () => {
@@ -4660,7 +4702,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
   });
 
@@ -4805,7 +4849,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "non-normalizable-spread"');
+      expect(result.code).toContain(
+        'unsupportedReason: "non-normalizable-spread"',
+      );
     });
 
     it("should support simple spread (no nested SpreadElement) as planFactory", () => {
@@ -4846,7 +4892,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain('unsupportedReason: "non-normalizable-spread"');
+      expect(result.code).toContain(
+        'unsupportedReason: "non-normalizable-spread"',
+      );
     });
 
     it("should support spread on fragment children", () => {
@@ -5442,7 +5490,7 @@ describe("transform", () => {
         const element = <div onMouseEnter={handler}>hover me</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"mouseenter"');
     });
 
@@ -5452,7 +5500,7 @@ describe("transform", () => {
         const element = <div onMouseLeave={handler}>leave me</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"mouseleave"');
     });
 
@@ -5462,7 +5510,7 @@ describe("transform", () => {
         const element = <div onKeyDown={handler}>key</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"keydown"');
     });
 
@@ -5472,7 +5520,7 @@ describe("transform", () => {
         const element = <div onKeyUp={handler}>key</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"keyup"');
     });
 
@@ -5482,7 +5530,7 @@ describe("transform", () => {
         const element = <input onFocus={handler} />;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"focus"');
     });
 
@@ -5492,7 +5540,7 @@ describe("transform", () => {
         const element = <input onBlur={handler} />;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"blur"');
     });
 
@@ -5502,7 +5550,7 @@ describe("transform", () => {
         const element = <input onInput={handler} />;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"input"');
     });
 
@@ -5512,7 +5560,7 @@ describe("transform", () => {
         const element = <select onChange={handler}><option>a</option></select>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"change"');
     });
 
@@ -5522,7 +5570,7 @@ describe("transform", () => {
         const element = <form onSubmit={handler}><button>submit</button></form>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"submit"');
     });
 
@@ -5532,7 +5580,7 @@ describe("transform", () => {
         const element = <div onScroll={handler}>scroll</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"scroll"');
     });
 
@@ -5542,7 +5590,7 @@ describe("transform", () => {
         const element = <div onDblClick={handler}>double click</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"dblclick"');
     });
 
@@ -5552,7 +5600,7 @@ describe("transform", () => {
         const element = <div onContextMenu={handler}>right click</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"contextmenu"');
     });
 
@@ -5562,7 +5610,7 @@ describe("transform", () => {
         const element = <div onTouchStart={handler}>touch</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"touchstart"');
     });
 
@@ -5572,7 +5620,7 @@ describe("transform", () => {
         const element = <div onDragStart={handler}>drag</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"dragstart"');
     });
 
@@ -5582,7 +5630,7 @@ describe("transform", () => {
         const element = <div onPointerDown={handler}>pointer</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"pointerdown"');
     });
 
@@ -5592,7 +5640,7 @@ describe("transform", () => {
         const element = <div onAnimationEnd={handler}>anim</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"animationend"');
     });
 
@@ -5602,7 +5650,7 @@ describe("transform", () => {
         const element = <div onTransitionEnd={handler}>transition</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"transitionend"');
     });
 
@@ -5612,7 +5660,7 @@ describe("transform", () => {
         const element = <div onWheel={handler}>wheel</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"wheel"');
     });
 
@@ -5622,7 +5670,7 @@ describe("transform", () => {
         const element = <div onCopy={handler}>copy</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"copy"');
     });
 
@@ -5632,7 +5680,7 @@ describe("transform", () => {
         const element = <div onPaste={handler}>paste</div>;
       `;
       const result = transform(code);
-      expect(result.code).toContain('event(');
+      expect(result.code).toContain("event(");
       expect(result.code).toContain('"paste"');
     });
 
@@ -5702,7 +5750,9 @@ describe("transform", () => {
       `;
       const result = transform(code, { mode: "ssr" });
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain('unsupportedReason: "unsupported-component-body"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should produce SSR metadata for runtime-branching (try/catch) in SSR mode", () => {
@@ -5760,7 +5810,9 @@ describe("transform", () => {
       `;
       const result = transform(code, { mode: "ssr" });
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain('unsupportedReason: "non-normalizable-spread"');
+      expect(result.code).toContain(
+        'unsupportedReason: "non-normalizable-spread"',
+      );
     });
 
     it("should produce SSR planFactory for supported helper in SSR mode", () => {

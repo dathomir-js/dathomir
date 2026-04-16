@@ -290,7 +290,11 @@ function collectFreeIdentifiers(
       );
     }
     case "ExpressionStatement":
-      return collectFreeIdentifiers(node.expression as ESTNode, available, free);
+      return collectFreeIdentifiers(
+        node.expression as ESTNode,
+        available,
+        free,
+      );
     case "ReturnStatement":
     case "AwaitExpression":
     case "YieldExpression":
@@ -393,7 +397,11 @@ function isSerializableCaptureExpression(
 
   if (node.type === "TemplateLiteral") {
     return (node.expressions as ESTNode[]).every((expression) =>
-      isSerializableCaptureExpression(expression, serializableBindings, visited),
+      isSerializableCaptureExpression(
+        expression,
+        serializableBindings,
+        visited,
+      ),
     );
   }
 
@@ -411,11 +419,11 @@ function isSerializableCaptureExpression(
         return false;
       }
 
-        return (
-          (!isComputedProperty(property.computed) ||
-            isSerializableCaptureExpression(
-              property.key as ESTNode,
-              serializableBindings,
+      return (
+        (!isComputedProperty(property.computed) ||
+          isSerializableCaptureExpression(
+            property.key as ESTNode,
+            serializableBindings,
             visited,
           )) &&
         isSerializableCaptureExpression(
@@ -501,14 +509,14 @@ function buildComponentActionFactory(
   captureNames: readonly string[],
 ): ESTNode {
   const statements: ESTNode[] = captureNames.map((name) =>
-    nConst(
-      nId(name),
-      nMember(nId("__dh_payload"), nLit(name), true),
-    ),
+    nConst(nId(name), nMember(nId("__dh_payload"), nLit(name), true)),
   );
   statements.push(nReturn(handler));
 
-  return nArrowBlock([nId("__dh_payload"), nId("__dh_host")], nBlock(statements));
+  return nArrowBlock(
+    [nId("__dh_payload"), nId("__dh_host")],
+    nBlock(statements),
+  );
 }
 
 function getElementNamespace(tagName: string): "html" | "svg" | "math" {
@@ -727,7 +735,10 @@ function buildComponentCall(
       });
       state.componentClientActions.push({
         id: actionId,
-        factory: buildComponentActionFactory(value.expression, analysis.captures),
+        factory: buildComponentActionFactory(
+          value.expression,
+          analysis.captures,
+        ),
       });
       state.runtimeImports.add("registerClientAction");
       continue;
@@ -811,19 +822,19 @@ function buildComponentCall(
     const clientActionMetadata = nObj(
       Array.from(componentActionBindings.entries()).map(
         ([eventType, binding]) =>
-        nProp(
-          nLit(eventType),
-          nObj([
-            nProp(nId("id"), nLit(binding.id)),
-            nProp(
-              nId("payload"),
-              buildComponentActionPayloadExpression(
-                binding.captureNames,
-                state.currentSerializableBindings,
+          nProp(
+            nLit(eventType),
+            nObj([
+              nProp(nId("id"), nLit(binding.id)),
+              nProp(
+                nId("payload"),
+                buildComponentActionPayloadExpression(
+                  binding.captureNames,
+                  state.currentSerializableBindings,
+                ),
               ),
-            ),
-          ]),
-        ),
+            ]),
+          ),
       ),
     );
 
@@ -1078,7 +1089,8 @@ function processAttributes(
       if (
         colocatedClientDirective.strategy === "interaction" &&
         colocatedClientState.interactionEventType !== null &&
-        colocatedClientState.interactionEventType !== colocatedClientDirective.event
+        colocatedClientState.interactionEventType !==
+          colocatedClientDirective.event
       ) {
         throw new Error(
           "[dathomir] Mixed colocated interaction event types are not supported in one JSX root",
@@ -1087,7 +1099,8 @@ function processAttributes(
 
       colocatedClientState.strategy = colocatedClientDirective.strategy;
       if (colocatedClientDirective.strategy === "interaction") {
-        colocatedClientState.interactionEventType = colocatedClientDirective.event;
+        colocatedClientState.interactionEventType =
+          colocatedClientDirective.event;
       }
       const targetId = createClientTargetId(state);
       staticProps.push(

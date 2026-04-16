@@ -353,8 +353,12 @@ describe("createAtomStore", () => {
       store.dispose();
 
       expect(() => store.ref(countAtom)).toThrow("AtomStore has been disposed");
-      expect(() => store.set(countAtom, 2)).toThrow("AtomStore has been disposed");
-      expect(() => store.peek(countAtom)).toThrow("AtomStore has been disposed");
+      expect(() => store.set(countAtom, 2)).toThrow(
+        "AtomStore has been disposed",
+      );
+      expect(() => store.peek(countAtom)).toThrow(
+        "AtomStore has been disposed",
+      );
       expect(() => count.value).toThrow("AtomStore has been disposed");
       expect(() => count.peek()).toThrow("AtomStore has been disposed");
       expect(() => doubled.value).toThrow("AtomStore has been disposed");

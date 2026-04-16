@@ -87,15 +87,9 @@ async function runParallelIsolationProbe(): Promise<ParallelIsolationProbe> {
     left,
     right,
     isolated:
-      left.stable &&
-      right.stable &&
-      left.expectedAppId !== right.expectedAppId,
+      left.stable && right.stable && left.expectedAppId !== right.expectedAppId,
   };
 }
 
-export {
-  collectCurrentStoreProbe,
-  probePhaseOrder,
-  runParallelIsolationProbe,
-};
+export { collectCurrentStoreProbe, probePhaseOrder, runParallelIsolationProbe };
 export type { AsyncStoreProbe, ParallelIsolationProbe, ProbePhaseName };

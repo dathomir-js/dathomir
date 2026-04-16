@@ -140,9 +140,7 @@ describe("transform/tree", () => {
     expect(dynamicParts).toHaveLength(1);
     const attrPart = dynamicParts[0];
     expect(attrPart?.type).toBe("attr");
-    expect(attrPart?.type === "attr" ? attrPart.key : null).toBe(
-      "class",
-    );
+    expect(attrPart?.type === "attr" ? attrPart.key : null).toBe("class");
   });
 
   it("processAttributes keeps non-reactive expression attributes as attr dynamic parts", () => {
@@ -410,9 +408,7 @@ describe("transform/tree", () => {
 
     const eventPart = result.dynamicParts.find((part) => part.type === "event");
     expect(eventPart).toBeDefined();
-    expect(eventPart?.type === "event" ? eventPart.key : null).toBe(
-      "click",
-    );
+    expect(eventPart?.type === "event" ? eventPart.key : null).toBe("click");
   });
 
   it("buildComponentCall injects island metadata for client:visible", () => {
@@ -521,7 +517,9 @@ describe("transform/tree", () => {
     const result = asCallExpressionLike(
       buildComponentCall(component, state, nested),
     );
-    const props = asObjectExpressionLike(result.arguments[0] as unknown as ESTNode);
+    const props = asObjectExpressionLike(
+      result.arguments[0] as unknown as ESTNode,
+    );
 
     expect(
       props.properties.some(
@@ -572,7 +570,9 @@ describe("transform/tree", () => {
     const result = asCallExpressionLike(
       buildComponentCall(component, state, nested),
     );
-    const props = asObjectExpressionLike(result.arguments[0] as unknown as ESTNode);
+    const props = asObjectExpressionLike(
+      result.arguments[0] as unknown as ESTNode,
+    );
 
     expect(
       props.properties.some(
@@ -859,8 +859,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     expect(childrenProp?.value?.type).toBe("Literal");
@@ -885,8 +885,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     expect(childrenProp?.value?.type).toBe("ArrayExpression");
@@ -910,8 +910,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
   });
@@ -940,8 +940,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     expect(childrenProp?.value?.type).toBe("Literal");
@@ -966,8 +966,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     expect(childrenProp?.value?.value).toBe("actual content");
@@ -996,8 +996,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
   });
@@ -1032,8 +1032,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     // Inner component should be a CallExpression (buildComponentCall result)
@@ -1070,8 +1070,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     // HTML child should be transformed by transformJSXNode (returns nId("CSR_NODE"))
@@ -1108,8 +1108,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     // SSR mode should use transformJSXForSSRNode (returns nId("SSR_NODE"))
@@ -1139,8 +1139,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     // Fragment flattens its children, so we should get an array of two text nodes
@@ -1170,8 +1170,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
   });
@@ -1204,8 +1204,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
   });
@@ -1245,8 +1245,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     expect(childrenProp?.value?.type).toBe("CallExpression");
@@ -1287,8 +1287,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     expect((childrenProp?.value as { name?: string })?.name).toBe("CSR_NODE");
@@ -1329,8 +1329,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     expect((childrenProp?.value as { name?: string })?.name).toBe("SSR_NODE");
@@ -1371,8 +1371,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
   });
@@ -1406,8 +1406,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
     expect(childrenProp?.value?.value).toBe("after");
@@ -1453,8 +1453,8 @@ describe("transform/tree", () => {
       buildComponentCall(component, state, nested),
     );
     const props = result.arguments[0];
-    const childrenProp = props?.properties.find(
-      (p) => hasIdentifierKey(p, "children"),
+    const childrenProp = props?.properties.find((p) =>
+      hasIdentifierKey(p, "children"),
     );
     expect(childrenProp).toBeDefined();
   });
@@ -1633,7 +1633,9 @@ describe("transform/tree", () => {
         state,
         { strategy: "interaction", interactionEventType: "keydown" },
       ),
-    ).toThrow("Mixed colocated interaction event types are not supported in one JSX root");
+    ).toThrow(
+      "Mixed colocated interaction event types are not supported in one JSX root",
+    );
   });
 
   it("processAttributes throws for unknown client directive on html element", () => {
@@ -1992,8 +1994,7 @@ describe("transform/tree", () => {
     expect(
       props?.properties.some(
         (p) =>
-          p.key.type === "Literal" &&
-          p.key.value === ISLAND_METADATA_ATTRIBUTE,
+          p.key.type === "Literal" && p.key.value === ISLAND_METADATA_ATTRIBUTE,
       ),
     ).toBe(true);
     expect(
@@ -2154,7 +2155,9 @@ describe("transform/tree", () => {
     const result = asCallExpressionLike(
       buildComponentCall(component, state, nested),
     );
-    const props = asObjectExpressionLike(result.arguments[0] as unknown as ESTNode);
+    const props = asObjectExpressionLike(
+      result.arguments[0] as unknown as ESTNode,
+    );
 
     expect(
       props.properties.some(

@@ -28,7 +28,8 @@ function PlaygroundShell(props: {
             Render mode: <strong>{renderMode}</strong>
           </p>
           <p>
-            Request id: <strong data-testid="request-id">{props.requestId}</strong>
+            Request id:{" "}
+            <strong data-testid="request-id">{props.requestId}</strong>
           </p>
         </div>
       </header>

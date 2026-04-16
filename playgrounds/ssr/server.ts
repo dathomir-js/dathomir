@@ -19,7 +19,9 @@ let pageRequestCount = 0;
 const port = Number(process.env.PORT ?? "3090");
 
 function buildRequestId(requestUrl: URL): string {
-  return requestUrl.searchParams.get("requestId") ?? `page-${++pageRequestCount}`;
+  return (
+    requestUrl.searchParams.get("requestId") ?? `page-${++pageRequestCount}`
+  );
 }
 
 function resolveRoutePath(pathname: string): string | undefined {
@@ -53,7 +55,9 @@ async function createServer() {
 
     try {
       if (pathname === "/api/als/parallel") {
-        const diagnosticsModule = await vite.ssrLoadModule("/src/alsDiagnostics.ts");
+        const diagnosticsModule = await vite.ssrLoadModule(
+          "/src/alsDiagnostics.ts",
+        );
         const payload = await diagnosticsModule.runParallelIsolationProbe();
 
         res.writeHead(200, {
@@ -67,7 +71,7 @@ async function createServer() {
       if (routePath !== undefined) {
         let template = fs.readFileSync(
           path.resolve(__dirname, "index.html"),
-          "utf-8"
+          "utf-8",
         );
 
         // Apply Vite HTML transforms

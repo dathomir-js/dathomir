@@ -67,8 +67,9 @@ function GlobalStylesPage() {
       <section>
         <h2>Shared Shadow DOM styles</h2>
         <p>
-          This page calls <code>adoptGlobalStyles()</code> once and lets multiple custom
-          elements pick up the same typography and card chrome through shared
+          This page calls <code>adoptGlobalStyles()</code> once and lets
+          multiple custom elements pick up the same typography and card chrome
+          through shared
           <code>adoptedStyleSheets</code>.
         </p>
       </section>
@@ -92,12 +93,12 @@ function GlobalStylesPage() {
       <section>
         <h2>What to verify</h2>
         <p>
-          Both cards should share typography and layout even though the component only
-          defines the tone-specific border locally.
+          Both cards should share typography and layout even though the
+          component only defines the tone-specific border locally.
         </p>
         <p>
-          On SSR, the same shared CSS is emitted once into the DSD template before the
-          component-local style.
+          On SSR, the same shared CSS is emitted once into the DSD template
+          before the component-local style.
         </p>
       </section>
     </>

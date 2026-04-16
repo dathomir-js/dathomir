@@ -24,7 +24,8 @@ function ComponentSSRPage() {
       <section>
         <h2>Custom element under the root boundary</h2>
         <p>
-          This counter reads <code>ctx.store</code>, so it follows the active root
+          This counter reads <code>ctx.store</code>, so it follows the active
+          root
           <code>withStore()</code> boundary too.
         </p>
         <SSRStoreCounter
@@ -34,8 +35,8 @@ function ComponentSSRPage() {
           accent={playgroundAccent}
         >
           <p>
-            This slotted content proves the callable return can pass children into the
-            host element.
+            This slotted content proves the callable return can pass children
+            into the host element.
           </p>
         </SSRStoreCounter>
         <div class="counter-actions">
@@ -43,7 +44,9 @@ function ComponentSSRPage() {
             Bump mirrored prop
           </button>
           <button
-            onClick={() => playgroundAccent.set(nextTheme(playgroundAccent.peek()))}
+            onClick={() =>
+              playgroundAccent.set(nextTheme(playgroundAccent.peek()))
+            }
           >
             Cycle accent prop
           </button>
@@ -64,15 +67,16 @@ function ComponentSSRPage() {
       <section>
         <h2>SSR markup generated from the same value</h2>
         <p>
-          The box below is produced by calling <code>renderDSD(SSRStoreCounter, ...)</code>
+          The box below is produced by calling{" "}
+          <code>renderDSD(SSRStoreCounter, ...)</code>
           with the callable object returned by <code>defineComponent()</code>.
         </p>
         {isServer ? (
           <pre class="ssr-markup-code">{ssrMarkup}</pre>
         ) : (
           <p>
-            This preview is server-only. Inspect the initial HTML response to see the
-            rendered DSD markup.
+            This preview is server-only. Inspect the initial HTML response to
+            see the rendered DSD markup.
           </p>
         )}
       </section>

@@ -40,13 +40,13 @@ function setAttr(element: Element, name: string, value: unknown): void {
     // Serialize style object to cssText
     const styleObj = value as Record<string, unknown>;
     const cssText = Object.entries(styleObj)
-        .filter(([, v]) => v != null && v !== "")
-        .map(([k, v]) => {
-          // Convert camelCase to kebab-case
-          const kebab = k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-          return `${kebab}: ${stringifyAttrValue(v)}`;
-        })
-        .join("; ");
+      .filter(([, v]) => v != null && v !== "")
+      .map(([k, v]) => {
+        // Convert camelCase to kebab-case
+        const kebab = k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+        return `${kebab}: ${stringifyAttrValue(v)}`;
+      })
+      .join("; ");
     if (cssText !== "") {
       element.setAttribute("style", cssText);
     } else {

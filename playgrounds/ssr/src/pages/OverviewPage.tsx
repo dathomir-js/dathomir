@@ -5,8 +5,8 @@ function OverviewPage() {
     <section>
       <h2>Available demos</h2>
       <p>
-        Each route isolates one SSR topic so new experiments do not have to grow the
-        same page forever.
+        Each route isolates one SSR topic so new experiments do not have to grow
+        the same page forever.
       </p>
 
       <div class="route-grid">

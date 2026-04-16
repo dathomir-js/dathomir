@@ -43,7 +43,10 @@ function signalOper<T>(node: SignalNode<T>, ...value: [] | [T]): T | void {
     }
     let sub = getActiveSub();
     while (sub !== undefined) {
-      if ((sub.flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)) !== 0) {
+      if (
+        (sub.flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)) !==
+        0
+      ) {
         link(node, sub, 0);
         break;
       }

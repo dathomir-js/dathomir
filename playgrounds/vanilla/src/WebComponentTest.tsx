@@ -76,9 +76,9 @@ defineComponent(
         <h2>Web Component Counter</h2>
         <div class="count">{count.value}</div>
         <div class="buttons">
-          <button onClick={() => count.update(v => v - 1)}>−</button>
+          <button onClick={() => count.update((v) => v - 1)}>−</button>
           <button onClick={() => count.set(0)}>Reset</button>
-          <button onClick={() => count.update(v => v + 1)}>+</button>
+          <button onClick={() => count.update((v) => v + 1)}>+</button>
         </div>
         <div class="info">
           This is a Web Component using Shadow DOM!
@@ -91,7 +91,7 @@ defineComponent(
   {
     styles: [counterStyles],
     props: { initial: { type: Number, default: 0 } },
-  }
+  },
 );
 
 // Create a simple greeting Web Component
@@ -127,7 +127,9 @@ defineComponent(
   {
     styles: [greetingStyles],
     props: { name: { type: String, default: "World" } },
-  }
+  },
 );
 
-console.log("✅ Web Components registered: dathomir-counter, dathomir-greeting");
+console.log(
+  "✅ Web Components registered: dathomir-counter, dathomir-greeting",
+);

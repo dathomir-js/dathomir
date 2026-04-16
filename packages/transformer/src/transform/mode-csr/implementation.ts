@@ -12,7 +12,11 @@ import {
   nReturn,
   type ESTNode,
 } from "@/transform/ast/implementation";
-import { getTagName, type JSXElement, type JSXFragment } from "@/transform/jsx/implementation";
+import {
+  getTagName,
+  type JSXElement,
+  type JSXFragment,
+} from "@/transform/jsx/implementation";
 import { generateNavigation } from "@/transform/navigation/implementation";
 import {
   createTemplateId,
@@ -65,9 +69,7 @@ type StaticTreeNode =
       children: StaticTreeNode[];
     };
 
-function getLiteralValue(
-  node: ESTNode,
-): string | number | boolean | null {
+function getLiteralValue(node: ESTNode): string | number | boolean | null {
   return node.type === "Literal"
     ? ((node.value as string | number | boolean | null | undefined) ?? null)
     : null;

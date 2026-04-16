@@ -3,7 +3,11 @@
  * Provides the core reactive primitives and flags.
  * @module
  */
-import { createReactiveSystem, ReactiveFlags, type Link } from "alien-signals/system";
+import {
+  createReactiveSystem,
+  ReactiveFlags,
+  type Link,
+} from "alien-signals/system";
 
 import type { BaseNode, ComputedNode, SignalNode, WatcherNode } from "./nodes";
 
@@ -141,13 +145,13 @@ function runWatcher(node: WatcherNode, flags: number): void {
     }
   } else {
     let linkNode = node.deps;
-      while (linkNode !== undefined) {
-        const dep = linkNode.dep as BaseNode;
-        const depFlags = dep.flags;
-        if ((depFlags & QUEUED_FLAG) !== 0) {
-          runWatcher(dep as WatcherNode, (dep.flags = depFlags & ~QUEUED_FLAG));
-        }
-        linkNode = linkNode.nextDep;
+    while (linkNode !== undefined) {
+      const dep = linkNode.dep as BaseNode;
+      const depFlags = dep.flags;
+      if ((depFlags & QUEUED_FLAG) !== 0) {
+        runWatcher(dep as WatcherNode, (dep.flags = depFlags & ~QUEUED_FLAG));
+      }
+      linkNode = linkNode.nextDep;
     }
   }
 }

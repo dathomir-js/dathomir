@@ -164,9 +164,7 @@ function isBlockStatement(
   return node?.type === "BlockStatement" && Array.isArray(node.body);
 }
 
-function isIfStatement(
-  node: ESTNode | null | undefined,
-): node is ESTNode & {
+function isIfStatement(node: ESTNode | null | undefined): node is ESTNode & {
   test: ESTNode | null;
   consequent: ESTNode;
   alternate: ESTNode | null;
@@ -733,11 +731,11 @@ function collectImportedTransparentThunkWrappers(
       continue;
     }
 
-      for (const specifier of statement.specifiers ?? []) {
-        /* c8 ignore next @preserve -- defensive guard: import specifiers always have proper structure */
-        if (!isESTNode(specifier)) {
-          continue;
-        }
+    for (const specifier of statement.specifiers ?? []) {
+      /* c8 ignore next @preserve -- defensive guard: import specifiers always have proper structure */
+      if (!isESTNode(specifier)) {
+        continue;
+      }
 
       const importSpecifier = specifier as ESTNode & {
         local?: ESTNode;
@@ -766,7 +764,10 @@ function resolveTransparentThunkWrapperCall(
   helperLookup: HelperLookup,
   importedTransparentThunkWrappers: ReadonlySet<string>,
 ): ESTNode | null {
-  if (!isCallExpression(callExpression) || !isIdentifier(callExpression.callee)) {
+  if (
+    !isCallExpression(callExpression) ||
+    !isIdentifier(callExpression.callee)
+  ) {
     return null;
   }
 
@@ -777,7 +778,8 @@ function resolveTransparentThunkWrapperCall(
       return null;
     }
 
-    const thunkArgument = callExpression.arguments[transparentWrapper.thunkArgumentIndex];
+    const thunkArgument =
+      callExpression.arguments[transparentWrapper.thunkArgumentIndex];
     if (!isZeroArgThunkFunction(thunkArgument)) {
       return null;
     }
@@ -890,7 +892,9 @@ function resolveTopLevelHelperNode(
     helperLookup,
   );
   if (objectLiteralHelper !== null) {
-    const helperFrame = extractFunctionRenderFrame(objectLiteralHelper.helperNode);
+    const helperFrame = extractFunctionRenderFrame(
+      objectLiteralHelper.helperNode,
+    );
     if (helperFrame === null) {
       return null;
     }
@@ -1049,7 +1053,11 @@ function isNormalizableSpreadArgument(
     }
 
     visitedBindings.add(unwrapped.name);
-    return isNormalizableSpreadArgument(binding, availableBindings, visitedBindings);
+    return isNormalizableSpreadArgument(
+      binding,
+      availableBindings,
+      visitedBindings,
+    );
   }
 
   if (!isObjectExpression(unwrapped)) {
@@ -1067,8 +1075,14 @@ function isNormalizableSpreadArgument(
 
     return (
       (!isComputedProperty(property.computed) ||
-        isSerializableBindingExpression(property.key as ESTNode, availableBindings)) &&
-      isSerializableBindingExpression(property.value as ESTNode, availableBindings)
+        isSerializableBindingExpression(
+          property.key as ESTNode,
+          availableBindings,
+        )) &&
+      isSerializableBindingExpression(
+        property.value as ESTNode,
+        availableBindings,
+      )
     );
   });
 }
@@ -1402,10 +1416,7 @@ function extractJSXFromExpression(
   return null;
 }
 
-function andConditions(
-  a: ESTNode,
-  b: ESTNode,
-): ESTNode {
+function andConditions(a: ESTNode, b: ESTNode): ESTNode {
   return {
     type: "LogicalExpression",
     operator: "&&",
@@ -1490,16 +1501,13 @@ function flattenBranches(
       return null;
     }
 
-    const newCondition = accumulatedCondition
-      !== null
-      ? andConditions(accumulatedCondition, node.test)
-      : cloneNode(node.test);
+    const newCondition =
+      accumulatedCondition !== null
+        ? andConditions(accumulatedCondition, node.test)
+        : cloneNode(node.test);
 
     // Flatten consequent
-    const consequentBranches = flattenBranches(
-      node.consequent,
-      newCondition,
-    );
+    const consequentBranches = flattenBranches(node.consequent, newCondition);
     if (consequentBranches === null) {
       return null;
     }
@@ -1528,10 +1536,10 @@ function flattenBranches(
       consequent: ESTNode;
       alternate: ESTNode;
     };
-    const newCondition = accumulatedCondition
-      !== null
-      ? andConditions(accumulatedCondition, condNode.test)
-      : cloneNode(condNode.test);
+    const newCondition =
+      accumulatedCondition !== null
+        ? andConditions(accumulatedCondition, condNode.test)
+        : cloneNode(condNode.test);
 
     const trueBranches = flattenBranches(
       unwrapParenthesizedExpression(condNode.consequent),
@@ -1569,9 +1577,10 @@ function flattenBranches(
       return null;
     }
 
-    const truthyCondition = accumulatedCondition !== null
-      ? andConditions(accumulatedCondition, logicalNode.left)
-      : cloneNode(logicalNode.left);
+    const truthyCondition =
+      accumulatedCondition !== null
+        ? andConditions(accumulatedCondition, logicalNode.left)
+        : cloneNode(logicalNode.left);
 
     return [
       {
@@ -1615,10 +1624,10 @@ function flattenBranches(
           left: cloneNode(discriminant),
           right: cloneNode(caseNode.test),
         } as ESTNode;
-        caseCondition = accumulatedCondition
-          !== null
-          ? andConditions(accumulatedCondition, testExpr)
-          : testExpr;
+        caseCondition =
+          accumulatedCondition !== null
+            ? andConditions(accumulatedCondition, testExpr)
+            : testExpr;
       }
 
       // Flatten all consequents of this case
@@ -1779,10 +1788,7 @@ function buildDispatchPlanMetadata(
     planFactoryStatements.push(
       nReturn(
         nObj([
-          nProp(
-            nId("namespace"),
-            nLit(getRootNamespace(branch.jsxRoot)),
-          ),
+          nProp(nId("namespace"), nLit(getRootNamespace(branch.jsxRoot))),
           nProp(nId("bindings"), nArr(planBindings)),
           nProp(nId("nestedBoundaries"), nArr(nestedBoundaries)),
         ]),
@@ -1809,10 +1815,7 @@ function buildDispatchPlanMetadata(
       );
     } else {
       branchProps.unshift(
-        nProp(
-          nId("condition"),
-          nArrowBlock([], nBlock([nReturn(nLit(true))])),
-        ),
+        nProp(nId("condition"), nArrowBlock([], nBlock([nReturn(nLit(true))]))),
       );
     }
 
@@ -2169,7 +2172,10 @@ function isSerializableBindingExpression(
             property.key as ESTNode,
             availableBindings,
           )) &&
-        isSerializableBindingExpression(property.value as ESTNode, availableBindings)
+        isSerializableBindingExpression(
+          property.value as ESTNode,
+          availableBindings,
+        )
       );
     });
   }
@@ -2212,7 +2218,9 @@ function collectSerializableBindingsFromStatements(
   return bindings;
 }
 
-function collectTopLevelSerializableBindings(program: Program): Map<string, ESTNode> {
+function collectTopLevelSerializableBindings(
+  program: Program,
+): Map<string, ESTNode> {
   return collectSerializableBindingsFromStatements(program.body, new Map());
 }
 
@@ -2311,10 +2319,11 @@ function buildComponentHydrationMetadata(
 
   const analysisState = createInitialState("csr");
   analysisState.moduleBindings = new Set(moduleBindings);
-  analysisState.currentSerializableBindings = collectSerializableBindingsFromStatements(
-    collisionSafeAnalysis.preludeStatements,
-    topLevelSerializableBindings,
-  );
+  analysisState.currentSerializableBindings =
+    collectSerializableBindingsFromStatements(
+      collisionSafeAnalysis.preludeStatements,
+      topLevelSerializableBindings,
+    );
   const { dynamicParts } = jsxToTree(
     collisionSafeAnalysis.jsxRoot,
     analysisState,
@@ -2373,7 +2382,8 @@ function collectComponentPlans(
 ): CollectedComponentPlan[] {
   const plans: CollectedComponentPlan[] = [];
   const helperLookup = collectTopLevelHelpers(program);
-  const topLevelSerializableBindings = collectTopLevelSerializableBindings(program);
+  const topLevelSerializableBindings =
+    collectTopLevelSerializableBindings(program);
   const importedTransparentThunkWrappers =
     collectImportedTransparentThunkWrappers(program);
 
@@ -2517,31 +2527,58 @@ function transform(
     {
       ArrowFunctionExpression(
         node: ESTNode,
-        { state: walkState, next }: { state: WalkTransformState; next: (s?: WalkTransformState) => void },
+        {
+          state: walkState,
+          next,
+        }: {
+          state: WalkTransformState;
+          next: (s?: WalkTransformState) => void;
+        },
       ) {
         const body = (node as FunctionLikeNode).body;
         const serializableBindings = isBlockStatement(body)
-          ? collectSerializableBindingsFromStatements(body.body, walkState.serializableBindings)
+          ? collectSerializableBindingsFromStatements(
+              body.body,
+              walkState.serializableBindings,
+            )
           : new Map(walkState.serializableBindings);
         next({ inJSX: false, serializableBindings });
       },
       FunctionExpression(
         node: ESTNode,
-        { state: walkState, next }: { state: WalkTransformState; next: (s?: WalkTransformState) => void },
+        {
+          state: walkState,
+          next,
+        }: {
+          state: WalkTransformState;
+          next: (s?: WalkTransformState) => void;
+        },
       ) {
         const body = (node as FunctionLikeNode).body;
         const serializableBindings = isBlockStatement(body)
-          ? collectSerializableBindingsFromStatements(body.body, walkState.serializableBindings)
+          ? collectSerializableBindingsFromStatements(
+              body.body,
+              walkState.serializableBindings,
+            )
           : new Map(walkState.serializableBindings);
         next({ inJSX: false, serializableBindings });
       },
       FunctionDeclaration(
         node: ESTNode,
-        { state: walkState, next }: { state: WalkTransformState; next: (s?: WalkTransformState) => void },
+        {
+          state: walkState,
+          next,
+        }: {
+          state: WalkTransformState;
+          next: (s?: WalkTransformState) => void;
+        },
       ) {
         const body = (node as unknown as { body: ESTNode }).body;
         const serializableBindings = isBlockStatement(body)
-          ? collectSerializableBindingsFromStatements(body.body, walkState.serializableBindings)
+          ? collectSerializableBindingsFromStatements(
+              body.body,
+              walkState.serializableBindings,
+            )
           : new Map(walkState.serializableBindings);
         next({ inJSX: false, serializableBindings });
       },
@@ -2557,7 +2594,10 @@ function transform(
       ) {
         /* c8 ignore next @preserve -- structurally unreachable: replacing a JSXElement prevents visiting nested original JSX nodes */
         if (walkState.inJSX) {
-          next({ inJSX: true, serializableBindings: walkState.serializableBindings });
+          next({
+            inJSX: true,
+            serializableBindings: walkState.serializableBindings,
+          });
           return;
         }
 
@@ -2592,7 +2632,10 @@ function transform(
       ) {
         /* c8 ignore next @preserve -- structurally unreachable: replacing a JSXFragment prevents visiting nested original JSX nodes */
         if (walkState.inJSX) {
-          next({ inJSX: true, serializableBindings: walkState.serializableBindings });
+          next({
+            inJSX: true,
+            serializableBindings: walkState.serializableBindings,
+          });
           return;
         }
 

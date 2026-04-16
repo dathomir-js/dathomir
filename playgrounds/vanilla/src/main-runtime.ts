@@ -78,10 +78,10 @@ createRoot(() => {
 
   // Event handlers
   event("click", decBtn as HTMLElement, () => {
-    count.update(v => v - 1);
+    count.update((v) => v - 1);
   });
   event("click", incBtn as HTMLElement, () => {
-    count.update(v => v + 1);
+    count.update((v) => v + 1);
   });
   event("click", addBtn as HTMLElement, () => {
     items.set([...items.value, `Item ${items.value.length + 1}`]);

@@ -133,12 +133,7 @@ describe("plugin", () => {
     it("should transform TSX files", () => {
       const plugin = dathomirVitePlugin();
       const result = requireTransformResult(
-        invokeViteTransform(
-          plugin,
-        "const x = <div />;",
-        "component.tsx",
-        {},
-        ),
+        invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {}),
       );
 
       expect(transform).toHaveBeenCalled();
@@ -191,9 +186,9 @@ describe("plugin", () => {
       const result = requireTransformResult(
         invokeViteTransform(
           plugin,
-        "const x = <div />;",
-        "src/component.tsx",
-        {},
+          "const x = <div />;",
+          "src/component.tsx",
+          {},
         ),
       );
 
@@ -307,12 +302,7 @@ describe("plugin", () => {
       const plugin = dathomirVitePlugin();
 
       expect(() => {
-        invokeViteTransform(
-          plugin,
-          "const x = <div />;",
-          "component.tsx",
-          {},
-        );
+        invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {});
       }).toThrow(nonErrorThrow);
     });
 
@@ -324,12 +314,7 @@ describe("plugin", () => {
 
       const plugin = dathomirVitePlugin();
       const result = requireTransformResult(
-        invokeViteTransform(
-          plugin,
-        "const x = <div />;",
-        "component.tsx",
-        {},
-        ),
+        invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {}),
       );
 
       expect(result.map).toBeUndefined();
@@ -342,9 +327,9 @@ describe("plugin", () => {
       const result = requireTransformResult(
         invokeViteTransform(
           plugin,
-        'const island = <Counter client:interaction="mouseenter" />; const button = <button visible:onClick={() => doThing()}>Run</button>;',
-        "component.tsx",
-        {},
+          'const island = <Counter client:interaction="mouseenter" />; const button = <button visible:onClick={() => doThing()}>Run</button>;',
+          "component.tsx",
+          {},
         ),
       );
 
@@ -363,7 +348,11 @@ describe("plugin", () => {
         "packages/components/src/css/implementation.ts",
       );
 
-      const resolved = await invokeResolveId(plugin, "@/css/implementation", importer);
+      const resolved = await invokeResolveId(
+        plugin,
+        "@/css/implementation",
+        importer,
+      );
 
       expect(resolved).toBe(expected);
     });
@@ -395,7 +384,13 @@ describe("plugin", () => {
         environment: { name: "edge" },
       };
 
-      invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {}, context);
+      invokeViteTransform(
+        plugin,
+        "const x = <div />;",
+        "component.tsx",
+        {},
+        context,
+      );
 
       expect(transform).toHaveBeenCalledWith(
         "const x = <div />;",
@@ -409,7 +404,13 @@ describe("plugin", () => {
         environment: { name: "client" },
       };
 
-      invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {}, context);
+      invokeViteTransform(
+        plugin,
+        "const x = <div />;",
+        "component.tsx",
+        {},
+        context,
+      );
 
       expect(transform).toHaveBeenCalledWith(
         "const x = <div />;",

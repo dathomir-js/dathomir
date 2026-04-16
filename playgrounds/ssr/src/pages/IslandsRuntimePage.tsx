@@ -12,7 +12,11 @@ const islandCardStyles = css`
     padding: 20px;
     border: 1px solid rgba(33, 71, 60, 0.14);
     border-radius: 20px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(239, 246, 241, 0.82));
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.92),
+      rgba(239, 246, 241, 0.82)
+    );
     box-shadow: 0 16px 36px rgba(23, 49, 39, 0.08);
   }
 
@@ -73,7 +77,10 @@ const PlaygroundHydrationIsland = defineComponent(
           Demo action
         </button>
         <p>
-          Click count after hydration: <span class="demo-count" data-role="count">0</span>
+          Click count after hydration:{" "}
+          <span class="demo-count" data-role="count">
+            0
+          </span>
         </p>
       </article>
     );
@@ -99,7 +106,10 @@ const PlaygroundHydrationIsland = defineComponent(
         status.className = "is-ready";
       }
 
-      if (!(button instanceof HTMLButtonElement) || !(countNode instanceof HTMLElement)) {
+      if (
+        !(button instanceof HTMLButtonElement) ||
+        !(countNode instanceof HTMLElement)
+      ) {
         return;
       }
 
@@ -143,7 +153,11 @@ const colocatedCardStyles = css`
     padding: 20px;
     border: 1px solid rgba(33, 71, 60, 0.14);
     border-radius: 20px;
-    background: linear-gradient(180deg, rgba(245, 251, 247, 0.96), rgba(233, 243, 236, 0.92));
+    background: linear-gradient(
+      180deg,
+      rgba(245, 251, 247, 0.96),
+      rgba(233, 243, 236, 0.92)
+    );
   }
 
   h3,
@@ -206,7 +220,13 @@ const PlaygroundComponentTargetButton = defineComponent(
 const PlaygroundComponentTargetInput = defineComponent(
   "playground-component-target-input",
   () => {
-    return <input class="demo-input" type="text" placeholder="Press Enter in child" />;
+    return (
+      <input
+        class="demo-input"
+        type="text"
+        placeholder="Press Enter in child"
+      />
+    );
   },
   {
     styles: [colocatedCardStyles],
@@ -225,8 +245,16 @@ const nestedIslandsStyles = css`
     border-radius: 24px;
     border: 1px solid rgba(27, 61, 88, 0.14);
     background:
-      radial-gradient(circle at top right, rgba(125, 173, 214, 0.24), transparent 38%),
-      linear-gradient(180deg, rgba(247, 250, 252, 0.96), rgba(231, 239, 245, 0.92));
+      radial-gradient(
+        circle at top right,
+        rgba(125, 173, 214, 0.24),
+        transparent 38%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(247, 250, 252, 0.96),
+        rgba(231, 239, 245, 0.92)
+      );
     box-shadow: 0 18px 44px rgba(20, 43, 62, 0.1);
   }
 
@@ -275,7 +303,11 @@ const nestedIslandsStyles = css`
     padding: 16px;
     border-radius: 18px;
     border: 1px solid rgba(19, 102, 75, 0.14);
-    background: linear-gradient(180deg, rgba(244, 251, 247, 0.96), rgba(229, 243, 235, 0.92));
+    background: linear-gradient(
+      180deg,
+      rgba(244, 251, 247, 0.96),
+      rgba(229, 243, 235, 0.92)
+    );
   }
 
   button {
@@ -293,8 +325,9 @@ const PlaygroundColocatedLoadCard = defineComponent(
         <p class="syntax-chip">load:onClick</p>
         <h3>Colocated load click</h3>
         <p>
-          The button keeps its click behavior next to the element markup. The host waits for
-          the load strategy, rerenders, and then the click handler increments the counter.
+          The button keeps its click behavior next to the element markup. The
+          host waits for the load strategy, rerenders, and then the click
+          handler increments the counter.
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <button
@@ -327,11 +360,12 @@ const PlaygroundColocatedInteractionCard = defineComponent(
         <p class="syntax-chip">interaction:onClick</p>
         <h3>Colocated interaction click</h3>
         <p>
-          The first click triggers hydration and is replayed onto the rerendered button, so the
-          counter should jump to <strong>1</strong> immediately.
+          The first click triggers hydration and is replayed onto the rerendered
+          button, so the counter should jump to <strong>1</strong> immediately.
         </p>
         <p>
-          This replay starts once the client boot script has wired <code>hydrateIslands()</code>.
+          This replay starts once the client boot script has wired{" "}
+          <code>hydrateIslands()</code>.
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <button
@@ -365,8 +399,9 @@ const PlaygroundColocatedInteractionKeydownCard = defineComponent(
         <p class="syntax-chip">interaction:onKeyDown</p>
         <h3>Colocated interaction keydown</h3>
         <p>
-          The first key press hydrates the host and is replayed onto the rerendered input. Press
-          Enter in the field and the counter should immediately become <strong>1</strong>.
+          The first key press hydrates the host and is replayed onto the
+          rerendered input. Press Enter in the field and the counter should
+          immediately become <strong>1</strong>.
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <input
@@ -403,8 +438,8 @@ const PlaygroundColocatedInteractionFocusCard = defineComponent(
         <p class="syntax-chip">interaction:onFocus</p>
         <h3>Colocated interaction focus</h3>
         <p>
-          Focusing the field should hydrate the host and replay the focus event onto the rerendered
-          input, incrementing the counter immediately.
+          Focusing the field should hydrate the host and replay the focus event
+          onto the rerendered input, incrementing the counter immediately.
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <input
@@ -441,8 +476,8 @@ const PlaygroundColocatedInteractionPointerCard = defineComponent(
         <p class="syntax-chip">interaction:onPointerDown</p>
         <h3>Colocated interaction pointerdown</h3>
         <p>
-          Pointer down on the button should hydrate the host and replay the pointer event onto the
-          rerendered button.
+          Pointer down on the button should hydrate the host and replay the
+          pointer event onto the rerendered button.
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <button
@@ -450,13 +485,16 @@ const PlaygroundColocatedInteractionPointerCard = defineComponent(
           type="button"
           interaction:onPointerDown={(event) => {
             pointerCount.set(pointerCount.value + 1);
-            lastPointerType.set((event as PointerEvent).pointerType || "unknown");
+            lastPointerType.set(
+              (event as PointerEvent).pointerType || "unknown",
+            );
           }}
         >
           Pointer down to hydrate
         </button>
         <p>
-          Replayed pointer count: <span class="count">{pointerCount.value}</span>
+          Replayed pointer count:{" "}
+          <span class="count">{pointerCount.value}</span>
         </p>
         <p>
           Last pointer type: <span class="count">{lastPointerType.value}</span>
@@ -479,15 +517,19 @@ const PlaygroundComponentTargetArtifactCard = defineComponent(
         <p class="syntax-chip">&lt;Child interaction:onClick /&gt;</p>
         <h3>Component target interaction click</h3>
         <p>
-          The handler is compiled into a client action artifact and rebound on the child host, so
-          clicking the button inside the child shadow root increments the shared count.
+          The handler is compiled into a client action artifact and rebound on
+          the child host, so clicking the button inside the child shadow root
+          increments the shared count.
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <PlaygroundComponentTargetButton
-          interaction:onClick={() => incrementComponentTargetArtifactCount(artifactLabel)}
+          interaction:onClick={() =>
+            incrementComponentTargetArtifactCount(artifactLabel)
+          }
         />
         <p>
-          Component target count: <span class="count">{componentTargetArtifactCount.value}</span>
+          Component target count:{" "}
+          <span class="count">{componentTargetArtifactCount.value}</span>
         </p>
       </article>
     );
@@ -507,8 +549,9 @@ const PlaygroundComponentTargetKeydownCard = defineComponent(
         <p class="syntax-chip">&lt;Child interaction:onKeyDown /&gt;</p>
         <h3>Component target interaction keydown</h3>
         <p>
-          The child input dispatches a host-visible keydown event. The inline handler captures a
-          local label, which is serialized into the client action payload and restored on hydrate.
+          The child input dispatches a host-visible keydown event. The inline
+          handler captures a local label, which is serialized into the client
+          action payload and restored on hydrate.
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <PlaygroundComponentTargetInput
@@ -517,7 +560,8 @@ const PlaygroundComponentTargetKeydownCard = defineComponent(
           }
         />
         <p>
-          Component target key count: <span class="count">{componentTargetKeyCount.value}</span>
+          Component target key count:{" "}
+          <span class="count">{componentTargetKeyCount.value}</span>
         </p>
         <p>
           Last key: <span class="count">{componentTargetLastKey.value}</span>
@@ -540,8 +584,9 @@ const PlaygroundColocatedIdleCard = defineComponent(
         <p class="syntax-chip">idle:onClick</p>
         <h3>Colocated idle click</h3>
         <p>
-          The host waits for idle time before rerendering setup. Once idle work completes, the
-          colocated click handler starts incrementing the counter.
+          The host waits for idle time before rerendering setup. Once idle work
+          completes, the colocated click handler starts incrementing the
+          counter.
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <button
@@ -574,8 +619,9 @@ const PlaygroundColocatedVisibleCard = defineComponent(
         <p class="syntax-chip">visible:onClick</p>
         <h3>Colocated visible click</h3>
         <p>
-          This card waits off-screen until it enters the viewport. After the host rerenders on
-          visibility, the colocated click handler becomes active.
+          This card waits off-screen until it enters the viewport. After the
+          host rerenders on visibility, the colocated click handler becomes
+          active.
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <button
@@ -611,11 +657,14 @@ const PlaygroundNestedInnerIsland = defineComponent(
         </div>
         <h4>Load-first nested child</h4>
         <p>
-          This child should hydrate on the load strategy before the outer visible host becomes
-          interactive.
+          This child should hydrate on the load strategy before the outer
+          visible host becomes interactive.
         </p>
         <p>
-          Child strategy in setup: <strong data-role="inner-strategy">{client.strategy ?? "none"}</strong>
+          Child strategy in setup:{" "}
+          <strong data-role="inner-strategy">
+            {client.strategy ?? "none"}
+          </strong>
         </p>
         <button
           type="button"
@@ -650,15 +699,20 @@ const PlaygroundNestedOuterIsland = defineComponent(
         </div>
         <h3>Visible outer host with load nested child</h3>
         <p>
-          The outer host stays inert until it becomes visible. The nested child can already be
-          interactive after page load and should survive the later outer hydration pass.
+          The outer host stays inert until it becomes visible. The nested child
+          can already be interactive after page load and should survive the
+          later outer hydration pass.
         </p>
         <div class="status-grid">
           <p>
-            Outer strategy in setup: <strong data-role="outer-strategy">{client.strategy ?? "none"}</strong>
+            Outer strategy in setup:{" "}
+            <strong data-role="outer-strategy">
+              {client.strategy ?? "none"}
+            </strong>
           </p>
           <p>
-            Outer note: <strong data-role="outer-label">{props.label.value}</strong>
+            Outer note:{" "}
+            <strong data-role="outer-label">{props.label.value}</strong>
           </p>
         </div>
         <PlaygroundNestedInnerIsland client:load label="Nested child ready" />
@@ -679,8 +733,9 @@ function IslandsRuntimePage() {
       <section>
         <h2>Colocated strategy demos</h2>
         <p>
-          These cards use the new HTML-element syntax directly inside the render function.
-          The strategy and event behavior stay in one place instead of splitting into manual
+          These cards use the new HTML-element syntax directly inside the render
+          function. The strategy and event behavior stay in one place instead of
+          splitting into manual
           <code>hydrate</code> code.
         </p>
         <div class="route-grid">
@@ -698,7 +753,8 @@ function IslandsRuntimePage() {
       <section>
         <h2>Viewport-driven colocated click</h2>
         <p>
-          Scroll past the spacer before clicking this card so that <code>visible:onClick</code>
+          Scroll past the spacer before clicking this card so that{" "}
+          <code>visible:onClick</code>
           has a chance to rerender the host setup first.
         </p>
         <div style="height: 60vh" aria-hidden="true" />
@@ -710,12 +766,15 @@ function IslandsRuntimePage() {
       <section>
         <h2>Deferred hydration strategies</h2>
         <p>
-          This page keeps the server-rendered DSD in place and lets <code>hydrateIslands()</code>
+          This page keeps the server-rendered DSD in place and lets{" "}
+          <code>hydrateIslands()</code>
           decide when each custom element should attach client behavior.
         </p>
         <p>
-          Each card starts as plain SSR markup. When its strategy fires, the host receives
-          <code>data-hydrated="true"</code> and the button inside the Shadow DOM becomes interactive.
+          Each card starts as plain SSR markup. When its strategy fires, the
+          host receives
+          <code>data-hydrated="true"</code> and the button inside the Shadow DOM
+          becomes interactive.
         </p>
       </section>
 
@@ -746,8 +805,9 @@ function IslandsRuntimePage() {
       <section>
         <h2>Viewport and media driven strategies</h2>
         <p>
-          Resize below <code>720px</code> to trigger the media-based island. Scroll near the
-          bottom spacer to let the visible island enter the viewport.
+          Resize below <code>720px</code> to trigger the media-based island.
+          Scroll near the bottom spacer to let the visible island enter the
+          viewport.
         </p>
         <div class="route-grid">
           <PlaygroundHydrationIsland
@@ -772,31 +832,38 @@ function IslandsRuntimePage() {
       <section>
         <h2>Nested island vertical slice</h2>
         <p>
-          This demo exercises the target flow: <code>Outer client:visible</code> keeps its SSR DSD
-          intact, while the nested <code>Inner client:load</code> hydrates first and keeps working
-          after the outer host later hydrates in place.
+          This demo exercises the target flow: <code>Outer client:visible</code>{" "}
+          keeps its SSR DSD intact, while the nested{" "}
+          <code>Inner client:load</code> hydrates first and keeps working after
+          the outer host later hydrates in place.
         </p>
         <p>
-          On initial load this outer host should stay off-screen. The nested child still hydrates on
-          <code>load</code>, so you can verify its button programmatically before scrolling this section
-          into view.
+          On initial load this outer host should stay off-screen. The nested
+          child still hydrates on
+          <code>load</code>, so you can verify its button programmatically
+          before scrolling this section into view.
         </p>
         <div style="height: 95vh" aria-hidden="true" />
         <div class="route-grid">
-          <PlaygroundNestedOuterIsland client:visible label="Outer hydrated in place" />
+          <PlaygroundNestedOuterIsland
+            client:visible
+            label="Outer hydrated in place"
+          />
         </div>
       </section>
 
       <section>
         <h2>What to verify</h2>
         <p>
-          On first paint, every card should render SSR markup first. The colocated cards stay in
-          plain SSR mode until their strategy rerenders the host setup.
+          On first paint, every card should render SSR markup first. The
+          colocated cards stay in plain SSR mode until their strategy rerenders
+          the host setup.
         </p>
         <p>
-          The legacy runtime islands expose <code>data-hydrated="true"</code> after their strategy
-           fires. The colocated cards instead reveal their active strategy in setup and start
-           responding to their colocated click or keydown handlers.
+          The legacy runtime islands expose <code>data-hydrated="true"</code>{" "}
+          after their strategy fires. The colocated cards instead reveal their
+          active strategy in setup and start responding to their colocated click
+          or keydown handlers.
         </p>
       </section>
     </>

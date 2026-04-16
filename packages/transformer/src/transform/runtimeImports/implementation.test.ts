@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { nId, nImport, nLit, type Program } from "@/transform/ast/implementation";
+import {
+  nId,
+  nImport,
+  nLit,
+  type Program,
+} from "@/transform/ast/implementation";
 
 import { addRuntimeImports } from "./implementation";
 

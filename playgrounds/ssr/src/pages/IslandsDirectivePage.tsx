@@ -6,7 +6,9 @@ type IslandsDirectivePreview = {
   error?: string;
 };
 
-function isPreviewMode(value: unknown): value is IslandsDirectivePreview["mode"] {
+function isPreviewMode(
+  value: unknown,
+): value is IslandsDirectivePreview["mode"] {
   return value === "csr" || value === "ssr";
 }
 
@@ -52,9 +54,9 @@ function IslandsDirectivePage(props: { pagePayloadJson: string }) {
       <section>
         <h2>Transformer contract before runtime strategy execution</h2>
         <p>
-          This route does not hydrate islands yet. It shows the Phase 0 transformer
-          contract that normalizes <code>client:*</code> directives into reserved
-          metadata for the next runtime pillar.
+          This route does not hydrate islands yet. It shows the Phase 0
+          transformer contract that normalizes <code>client:*</code> directives
+          into reserved metadata for the next runtime pillar.
         </p>
       </section>
 
@@ -62,7 +64,8 @@ function IslandsDirectivePage(props: { pagePayloadJson: string }) {
         <h2>Contract preview snapshots</h2>
         <p>
           This page currently renders server-provided preview snapshots for the
-          transformer contract. Runtime strategy execution is still the next pillar.
+          transformer contract. Runtime strategy execution is still the next
+          pillar.
         </p>
 
         <div class="route-grid">
@@ -78,7 +81,9 @@ function IslandsDirectivePage(props: { pagePayloadJson: string }) {
               {preview.output === undefined ? (
                 <>
                   <p>Expected failure:</p>
-                  <pre class="ssr-markup-code">{preview.error ?? "No error captured."}</pre>
+                  <pre class="ssr-markup-code">
+                    {preview.error ?? "No error captured."}
+                  </pre>
                 </>
               ) : (
                 <>
@@ -94,12 +99,13 @@ function IslandsDirectivePage(props: { pagePayloadJson: string }) {
       <section>
         <h2>What to verify</h2>
         <p>
-          Valid component directives should compile to <code>data-dh-island</code>
+          Valid component directives should compile to{" "}
+          <code>data-dh-island</code>
           and, when needed, <code>data-dh-island-value</code>.
         </p>
         <p>
-          Invalid forms such as bare <code>client:media</code> should fail during
-          transform instead of reaching runtime.
+          Invalid forms such as bare <code>client:media</code> should fail
+          during transform instead of reaching runtime.
         </p>
       </section>
     </>

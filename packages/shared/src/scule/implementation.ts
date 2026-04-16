@@ -275,11 +275,15 @@ export function splitByCase<
 }
 
 export function upperFirst<S extends string>(str: S): Capitalize<S> {
-  return (str.length > 0 ? str[0].toUpperCase() + str.slice(1) : "") as Capitalize<S>;
+  return (
+    str.length > 0 ? str[0].toUpperCase() + str.slice(1) : ""
+  ) as Capitalize<S>;
 }
 
 export function lowerFirst<S extends string>(str: S): Uncapitalize<S> {
-  return (str.length > 0 ? str[0].toLowerCase() + str.slice(1) : "") as Uncapitalize<S>;
+  return (
+    str.length > 0 ? str[0].toLowerCase() + str.slice(1) : ""
+  ) as Uncapitalize<S>;
 }
 
 export function pascalCase(): "";

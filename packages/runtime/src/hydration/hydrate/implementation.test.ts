@@ -398,7 +398,7 @@ describe("hydrateWithPlan", () => {
   it("resolves text markers outside nested boundaries when ids overlap", async () => {
     const value = signal("outer-ready");
     shadowRoot.innerHTML =
-      '<section><child-box><!--dh:t:1-->inner</child-box><!--dh:t:1-->outer</section>';
+      "<section><child-box><!--dh:t:1-->inner</child-box><!--dh:t:1-->outer</section>";
 
     const plan: GenericHydrationPlan = {
       namespace: "html",

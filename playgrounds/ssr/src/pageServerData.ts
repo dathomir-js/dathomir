@@ -17,7 +17,7 @@ function createIslandsDirectivePayload(): string {
     {
       title: "client:visible becomes reserved metadata",
       mode: "csr",
-      source: 'const island = <Counter client:visible initialCount={5} />;',
+      source: "const island = <Counter client:visible initialCount={5} />;",
       output:
         'const island = Counter({ initialCount: 5, "data-dh-island": "visible" });',
     },

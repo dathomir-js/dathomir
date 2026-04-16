@@ -18,7 +18,7 @@ import {
 import type { Signal } from "../types";
 
 function signalOper<T>(node: SignalNode<T>, ...value: [] | [T]): T | void {
-  if (value.length) {
+  if (value.length > 0) {
     const oldValue = node.value;
     node.value = value[0];
     if (!Object.is(oldValue, node.value)) {
@@ -26,14 +26,14 @@ function signalOper<T>(node: SignalNode<T>, ...value: [] | [T]): T | void {
       const subs = node.subs;
       if (subs !== undefined) {
         propagate(subs);
-        if (!getBatchDepth()) {
+        if (getBatchDepth() === 0) {
           flush();
         }
       }
     }
   } else {
     const current = node.value;
-    if (node.flags & ReactiveFlags.Dirty) {
+    if ((node.flags & ReactiveFlags.Dirty) !== 0) {
       if (updateSignal(node, current)) {
         const subs = node.subs;
         if (subs !== undefined) {
@@ -43,7 +43,7 @@ function signalOper<T>(node: SignalNode<T>, ...value: [] | [T]): T | void {
     }
     let sub = getActiveSub();
     while (sub !== undefined) {
-      if (sub.flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)) {
+      if ((sub.flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)) !== 0) {
         link(node, sub, 0);
         break;
       }

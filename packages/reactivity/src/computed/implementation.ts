@@ -12,17 +12,17 @@ import {
   link,
   setActiveSub,
   shallowPropagate,
+  type Link,
   unsetActiveSub,
   updateComputed,
 } from "../internal/system";
-import type { Link } from "../internal/system";
 import type { Computed } from "../types";
 
 function computedOper<T>(node: ComputedNode<T>): T {
   const flags = node.flags;
   if (
-    flags & ReactiveFlags.Dirty ||
-    (flags & ReactiveFlags.Pending &&
+    (flags & ReactiveFlags.Dirty) !== 0 ||
+    ((flags & ReactiveFlags.Pending) !== 0 &&
       (checkDirty(node.deps as Link, node) ||
         ((node.flags = flags & ~ReactiveFlags.Pending), false)))
   ) {
@@ -32,7 +32,7 @@ function computedOper<T>(node: ComputedNode<T>): T {
         shallowPropagate(subs);
       }
     }
-  } else if (!flags) {
+  } else if (flags === 0) {
     node.flags = ReactiveFlags.Mutable | ReactiveFlags.RecursedCheck;
     const prevSub = setActiveSub(node);
     let succeeded = false;

@@ -1,5 +1,10 @@
-import { computed, signal } from "@dathomir/reactivity";
-import type { Computed, Signal, SignalUpdate } from "@dathomir/reactivity";
+import {
+  computed,
+  signal,
+  type Computed,
+  type Signal,
+  type SignalUpdate,
+} from "@dathomir/reactivity";
 
 import type {
   DerivedAtom,
@@ -223,7 +228,17 @@ class AtomStoreImpl implements AtomStore {
         return effective.peek();
       },
       set: (update) => {
-        this.#applyPrimitiveUpdate(entry, update);
+        this.#assertActive();
+        const previousValue = effective.peek();
+        const nextValue =
+          typeof update === "function"
+            ? (update as (prev: T) => T)(previousValue)
+            : update;
+
+        local.set(nextValue);
+        if (!hasLocal.peek()) {
+          hasLocal.set(true);
+        }
       },
     };
 

@@ -1,4 +1,3 @@
-import type { ESTNode } from "@/transform/ast/implementation";
 import {
   nArr,
   nCall,
@@ -7,11 +6,11 @@ import {
   nMember,
   nNew,
   nObj,
+  type ESTNode,
 } from "@/transform/ast/implementation";
 import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
 import type { TransformState } from "@/transform/state/implementation";
-import type { NestedTransformers } from "@/transform/tree/implementation";
-import { jsxToTree } from "@/transform/tree/implementation";
+import { jsxToTree, type NestedTransformers } from "@/transform/tree/implementation";
 
 const HTML_VOID_ELEMENTS = new Set([
   "area",
@@ -50,10 +49,14 @@ type StaticTreeNode =
 
 function getLiteralValue(
   node: ESTNode,
-): string | number | boolean | null | null {
+): string | number | boolean | null {
   return node.type === "Literal"
     ? ((node.value as string | number | boolean | null | undefined) ?? null)
     : null;
+}
+
+function stringifyStaticAttrValue(value: StaticAttrValue): string {
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
 }
 
 function readStyleObject(
@@ -288,7 +291,7 @@ function serializeStaticAttrs(
       continue;
     }
 
-    parts.push(` ${key}="${escapeAttr(String(value))}"`);
+    parts.push(` ${key}="${escapeAttr(stringifyStaticAttrValue(value))}"`);
   }
 
   return parts.join("");

@@ -33,13 +33,61 @@ type RollupLikePlugin = {
     this: { environment?: { name: string } },
     code: string,
     id: string,
-  ) => unknown;
+  ) => PluginTransformOutput | null;
 };
+
+type PluginTransformOutput = {
+  code: string;
+  map?: unknown;
+};
+
+type ViteTransformHook = (
+  this: { environment?: { name: string } },
+  code: string,
+  id: string,
+  transformOptions?: { ssr?: boolean },
+) => PluginTransformOutput | null;
+
+type ViteResolveIdHook = (
+  this: unknown,
+  source: string,
+  importer?: string,
+) => string | null | Promise<string | null>;
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../..",
 );
+
+function requireTransformResult(
+  result: PluginTransformOutput | null,
+): PluginTransformOutput {
+  if (result === null) {
+    throw new Error("Expected plugin transform to return a result");
+  }
+
+  return result;
+}
+
+function invokeViteTransform(
+  plugin: ReturnType<typeof dathomirVitePlugin>,
+  code: string,
+  id: string,
+  transformOptions: { ssr?: boolean } = {},
+  context: { environment?: { name: string } } = {},
+): PluginTransformOutput | null {
+  const transformHook = plugin.transform as ViteTransformHook;
+  return transformHook.call(context, code, id, transformOptions);
+}
+
+async function invokeResolveId(
+  plugin: ReturnType<typeof dathomirVitePlugin>,
+  source: string,
+  importer?: string,
+): Promise<string | null> {
+  const resolveId = plugin.resolveId as ViteResolveIdHook;
+  return await resolveId.call({}, source, importer);
+}
 
 describe("plugin", () => {
   describe("exports", () => {
@@ -84,20 +132,23 @@ describe("plugin", () => {
 
     it("should transform TSX files", () => {
       const plugin = dathomirVitePlugin();
-      const result = (plugin.transform as Function)(
+      const result = requireTransformResult(
+        invokeViteTransform(
+          plugin,
         "const x = <div />;",
         "component.tsx",
         {},
+        ),
       );
 
       expect(transform).toHaveBeenCalled();
-      expect(result).toBeDefined();
       expect(result.code).toBe("transformed");
     });
 
     it("should transform JSX files", () => {
       const plugin = dathomirVitePlugin();
-      const result = (plugin.transform as Function)(
+      const result = invokeViteTransform(
+        plugin,
         "const x = <div />;",
         "component.jsx",
         {},
@@ -109,7 +160,8 @@ describe("plugin", () => {
 
     it("should skip non-JSX/TSX files", () => {
       const plugin = dathomirVitePlugin();
-      const result = (plugin.transform as Function)(
+      const result = invokeViteTransform(
+        plugin,
         "const x = 1;",
         "module.ts",
         {},
@@ -122,7 +174,8 @@ describe("plugin", () => {
       const plugin = dathomirVitePlugin({
         exclude: ["node_modules"],
       });
-      const result = (plugin.transform as Function)(
+      const result = invokeViteTransform(
+        plugin,
         "const x = <div />;",
         "node_modules/lib/component.tsx",
         {},
@@ -135,13 +188,15 @@ describe("plugin", () => {
       const plugin = dathomirVitePlugin({
         exclude: ["node_modules"],
       });
-      const result = (plugin.transform as Function)(
+      const result = requireTransformResult(
+        invokeViteTransform(
+          plugin,
         "const x = <div />;",
         "src/component.tsx",
         {},
+        ),
       );
 
-      expect(result).not.toBeNull();
       expect(result.code).toBe("transformed");
     });
 
@@ -150,7 +205,8 @@ describe("plugin", () => {
         include: [".tsx"],
       });
 
-      const tsxResult = (plugin.transform as Function)(
+      const tsxResult = invokeViteTransform(
+        plugin,
         "const x = <div />;",
         "component.tsx",
         {},
@@ -158,7 +214,8 @@ describe("plugin", () => {
       expect(tsxResult).toBeDefined();
       expect(tsxResult).not.toBeNull();
 
-      const jsxResult = (plugin.transform as Function)(
+      const jsxResult = invokeViteTransform(
+        plugin,
         "const x = <div />;",
         "component.jsx",
         {},
@@ -168,7 +225,7 @@ describe("plugin", () => {
 
     it("should pass SSR flag from Vite transform options", () => {
       const plugin = dathomirVitePlugin();
-      (plugin.transform as Function)("const x = <div />;", "component.tsx", {
+      invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {
         ssr: true,
       });
 
@@ -180,7 +237,7 @@ describe("plugin", () => {
 
     it("should default to CSR mode", () => {
       const plugin = dathomirVitePlugin();
-      (plugin.transform as Function)("const x = <div />;", "component.tsx", {});
+      invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {});
 
       expect(transform).toHaveBeenCalledWith(
         "const x = <div />;",
@@ -190,7 +247,7 @@ describe("plugin", () => {
 
     it("should use forced mode over SSR flag", () => {
       const plugin = dathomirVitePlugin({ mode: "ssr" });
-      (plugin.transform as Function)("const x = <div />;", "component.tsx", {});
+      invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {});
 
       expect(transform).toHaveBeenCalledWith(
         "const x = <div />;",
@@ -200,7 +257,7 @@ describe("plugin", () => {
 
     it("should pass custom runtimeModule to transformer", () => {
       const plugin = dathomirVitePlugin({ runtimeModule: "custom-runtime" });
-      (plugin.transform as Function)("const x = <div />;", "component.tsx", {});
+      invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {});
 
       expect(transform).toHaveBeenCalledWith(
         "const x = <div />;",
@@ -210,7 +267,8 @@ describe("plugin", () => {
 
     it("should pass filename to transformer", () => {
       const plugin = dathomirVitePlugin();
-      (plugin.transform as Function)(
+      invokeViteTransform(
+        plugin,
         "const x = <div />;",
         "/path/to/component.tsx",
         {},
@@ -230,7 +288,8 @@ describe("plugin", () => {
       const plugin = dathomirVitePlugin();
 
       expect(() => {
-        (plugin.transform as Function)(
+        invokeViteTransform(
+          plugin,
           "const x = <div />;",
           "/path/to/component.tsx",
           {},
@@ -239,15 +298,17 @@ describe("plugin", () => {
     });
 
     it("should rethrow non-Error objects as-is", () => {
-      const nonErrorThrow = "string error";
+      const nonErrorThrow = "string error" as unknown as Error;
       vi.mocked(transform).mockImplementationOnce(() => {
+        // eslint-disable-next-line no-throw-literal -- intentional coverage for passthrough behavior
         throw nonErrorThrow;
       });
 
       const plugin = dathomirVitePlugin();
 
       expect(() => {
-        (plugin.transform as Function)(
+        invokeViteTransform(
+          plugin,
           "const x = <div />;",
           "component.tsx",
           {},
@@ -262,13 +323,15 @@ describe("plugin", () => {
       }));
 
       const plugin = dathomirVitePlugin();
-      const result = (plugin.transform as Function)(
+      const result = requireTransformResult(
+        invokeViteTransform(
+          plugin,
         "const x = <div />;",
         "component.tsx",
         {},
+        ),
       );
 
-      expect(result).toBeDefined();
       expect(result.map).toBeUndefined();
     });
 
@@ -276,10 +339,13 @@ describe("plugin", () => {
       vi.mocked(transform).mockImplementation(actualTransformer.transform);
 
       const plugin = dathomirVitePlugin();
-      const result = (plugin.transform as Function)(
+      const result = requireTransformResult(
+        invokeViteTransform(
+          plugin,
         'const island = <Counter client:interaction="mouseenter" />; const button = <button visible:onClick={() => doThing()}>Run</button>;',
         "component.tsx",
         {},
+        ),
       );
 
       expect(result.code).toContain('"data-dh-island": "interaction"');
@@ -291,39 +357,32 @@ describe("plugin", () => {
 
     it("should resolve package-local @/ imports using the nearest tsconfig paths", async () => {
       const plugin = dathomirVitePlugin();
-      const resolveId = plugin.resolveId as Function;
       const importer = path.join(repoRoot, "packages/components/src/index.ts");
       const expected = path.join(
         repoRoot,
         "packages/components/src/css/implementation.ts",
       );
 
-      const resolved = await resolveId.call(
-        {},
-        "@/css/implementation",
-        importer,
-      );
+      const resolved = await invokeResolveId(plugin, "@/css/implementation", importer);
 
       expect(resolved).toBe(expected);
     });
 
     it("should resolve directory aliases to index.ts using tsconfig paths", async () => {
       const plugin = dathomirVitePlugin();
-      const resolveId = plugin.resolveId as Function;
       const importer = path.join(repoRoot, "packages/runtime/src/index.ts");
       const expected = path.join(repoRoot, "packages/runtime/src/ssr/index.ts");
 
-      const resolved = await resolveId.call({}, "@/ssr", importer);
+      const resolved = await invokeResolveId(plugin, "@/ssr", importer);
 
       expect(resolved).toBe(expected);
     });
 
     it("should ignore aliases when no matching tsconfig path mapping exists", async () => {
       const plugin = dathomirVitePlugin();
-      const resolveId = plugin.resolveId as Function;
       const importer = path.join(repoRoot, "packages/runtime/src/index.ts");
 
-      const resolved = await resolveId.call({}, "#internal/foo", importer);
+      const resolved = await invokeResolveId(plugin, "#internal/foo", importer);
 
       expect(resolved).toBeNull();
     });
@@ -336,12 +395,7 @@ describe("plugin", () => {
         environment: { name: "edge" },
       };
 
-      (plugin.transform as Function).call(
-        context,
-        "const x = <div />;",
-        "component.tsx",
-        {},
-      );
+      invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {}, context);
 
       expect(transform).toHaveBeenCalledWith(
         "const x = <div />;",
@@ -355,12 +409,7 @@ describe("plugin", () => {
         environment: { name: "client" },
       };
 
-      (plugin.transform as Function).call(
-        context,
-        "const x = <div />;",
-        "component.tsx",
-        {},
-      );
+      invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {}, context);
 
       expect(transform).toHaveBeenCalledWith(
         "const x = <div />;",

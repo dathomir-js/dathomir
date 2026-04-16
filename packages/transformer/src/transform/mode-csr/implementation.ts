@@ -1,4 +1,3 @@
-import type { ESTNode } from "@/transform/ast/implementation";
 import {
   nArrowBlock,
   nBlock,
@@ -11,16 +10,18 @@ import {
   nObj,
   nProp,
   nReturn,
+  type ESTNode,
 } from "@/transform/ast/implementation";
-import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
-import { getTagName } from "@/transform/jsx/implementation";
+import { getTagName, type JSXElement, type JSXFragment } from "@/transform/jsx/implementation";
 import { generateNavigation } from "@/transform/navigation/implementation";
-import type { TransformState } from "@/transform/state/implementation";
-import { createTemplateId } from "@/transform/state/implementation";
-import type { NestedTransformers } from "@/transform/tree/implementation";
+import {
+  createTemplateId,
+  type TransformState,
+} from "@/transform/state/implementation";
 import {
   containsReactiveAccess,
   jsxToTree,
+  type NestedTransformers,
 } from "@/transform/tree/implementation";
 
 /**
@@ -66,10 +67,14 @@ type StaticTreeNode =
 
 function getLiteralValue(
   node: ESTNode,
-): string | number | boolean | null | null {
+): string | number | boolean | null {
   return node.type === "Literal"
     ? ((node.value as string | number | boolean | null | undefined) ?? null)
     : null;
+}
+
+function stringifyStaticAttrValue(value: StaticAttrValue): string {
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
 }
 
 function readStyleObject(
@@ -294,7 +299,7 @@ function serializeAttrs(attrs: Record<string, StaticAttrValue> | null): string {
       continue;
     }
 
-    parts.push(` ${key}="${escapeAttr(String(value))}"`);
+    parts.push(` ${key}="${escapeAttr(stringifyStaticAttrValue(value))}"`);
   }
 
   return parts.join("");
@@ -497,7 +502,7 @@ function transformJSXNode(
       case "insert": {
         state.runtimeImports.add("insert");
 
-        if (part.isComponent) {
+        if (part.isComponent === true) {
           updateStatements.push(
             nExprStmt(
               nCall(nId("insert"), [

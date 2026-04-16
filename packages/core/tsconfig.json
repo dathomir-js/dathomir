@@ -2,12 +2,11 @@
   "extends": "@dathomir/config/templates/tsconfig.template.json",
   "compilerOptions": {
     "rootDir": ".",
-    "baseUrl": ".",
     "paths": {
-      "@dathomir/core": ["src/jsx-runtime/index.ts"],
-      "@dathomir/core/jsx-runtime": ["src/jsx-runtime/index.ts"],
-      "@dathomir/core/jsx-dev-runtime": ["src/jsx-runtime/index.ts"],
-      "@/*": ["src/*"]
+      "@dathomir/core": ["./src/jsx-runtime/index.ts"],
+      "@dathomir/core/jsx-runtime": ["./src/jsx-runtime/index.ts"],
+      "@dathomir/core/jsx-dev-runtime": ["./src/jsx-runtime/index.ts"],
+      "@/*": ["./src/*"]
     },
     "jsx": "react-jsx",
     "jsxImportSource": "@dathomir/core"

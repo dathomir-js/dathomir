@@ -118,7 +118,7 @@ function renderComponentContent(
             : propName;
       const rawValue =
         attrName !== null && attrs[attrName] != null
-          ? String(attrs[attrName])
+          ? stringifyAttrValue(attrs[attrName])
           : null;
       propSignals[propName] = signal(coerceForSSR(def, rawValue));
     }
@@ -193,6 +193,23 @@ function escapeAttr(value: string): string {
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function stringifyAttrValue(value: unknown): string {
+  switch (typeof value) {
+    case "string":
+      return value;
+    case "number":
+    case "boolean":
+    case "bigint":
+      return String(value);
+    case "object":
+      return JSON.stringify(value);
+    case "symbol":
+      return value.description ?? "";
+    default:
+      return String(value);
+  }
 }
 
 /**
@@ -274,7 +291,7 @@ function renderDSD(
       continue;
     }
 
-    attrStr += ` ${key}="${escapeAttr(String(value))}"`;
+    attrStr += ` ${key}="${escapeAttr(stringifyAttrValue(value))}"`;
   }
 
   return `<${tagName}${attrStr}>${dsdTemplate}</${tagName}>`;

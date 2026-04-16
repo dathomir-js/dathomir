@@ -23,7 +23,12 @@ import {
   ISLAND_VALUE_METADATA_ATTRIBUTE,
   isIslandStrategyName,
 } from "@dathomir/shared";
-import { withStore } from "@dathomir/store";
+import {
+  type AtomStore,
+  type AtomStoreSnapshot,
+  type PrimitiveAtom,
+  withStore,
+} from "@dathomir/store";
 
 import { setAttr } from "@/dom/attr/implementation";
 import { insert } from "@/dom/insertion/implementation";
@@ -42,12 +47,6 @@ import {
   type MarkerInfo,
   parseMarker,
 } from "@/hydration/walker/implementation";
-
-import type {
-  AtomStore,
-  AtomStoreSnapshot,
-  PrimitiveAtom,
-} from "@dathomir/store";
 
 /**
  * WeakMap to track hydrated ShadowRoots (idempotency).

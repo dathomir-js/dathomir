@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { PrimitiveAtom } from "../atom/implementation";
-import { atom } from "../atom/implementation";
+import { atom, type PrimitiveAtom } from "../atom/implementation";
 import { createAtomStore } from "../createAtomStore/implementation";
 import { getCurrentStore, withStore } from "./implementation";
 
@@ -140,8 +139,9 @@ describe("withStore", () => {
     const seenA: Array<string | undefined> = [];
     const seenB: Array<string | undefined> = [];
 
-    const delay = (ms: number) =>
-      new Promise<void>((resolve) => setTimeout(resolve, ms));
+    async function delay(ms: number): Promise<void> {
+      await new Promise<void>((resolve) => setTimeout(resolve, ms));
+    }
 
     const requestA = withStore(storeA, async () => {
       seenA.push(getCurrentStore()?.appId);

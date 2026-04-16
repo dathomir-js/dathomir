@@ -1,8 +1,10 @@
 import { effect } from "@dathomir/reactivity";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Getter as StoreGetter } from "../atom/implementation";
-import { atom as defineAtom } from "../atom/implementation";
+import {
+  atom as defineAtom,
+  type Getter as StoreGetter,
+} from "../atom/implementation";
 import * as storeModule from "./implementation";
 
 type AtomUpdate<T> = T | ((prev: T) => T);
@@ -326,7 +328,7 @@ describe("createAtomStore", () => {
 
       child.dispose();
 
-      expect(() => child.get(countAtom)).toThrow();
+      expect(() => child.get(countAtom)).toThrow("AtomStore has been disposed");
       expect(root.get(countAtom)).toBe(0);
     });
 
@@ -337,8 +339,8 @@ describe("createAtomStore", () => {
 
       root.dispose();
 
-      expect(() => root.get(countAtom)).toThrow();
-      expect(() => child.get(countAtom)).toThrow();
+      expect(() => root.get(countAtom)).toThrow("AtomStore has been disposed");
+      expect(() => child.get(countAtom)).toThrow("AtomStore has been disposed");
     });
 
     it("fails fast for read and write APIs after disposal, including existing refs", () => {
@@ -350,13 +352,13 @@ describe("createAtomStore", () => {
 
       store.dispose();
 
-      expect(() => store.ref(countAtom)).toThrow();
-      expect(() => store.set(countAtom, 2)).toThrow();
-      expect(() => store.peek(countAtom)).toThrow();
-      expect(() => count.value).toThrow();
-      expect(() => count.peek()).toThrow();
-      expect(() => doubled.value).toThrow();
-      expect(() => doubled.peek()).toThrow();
+      expect(() => store.ref(countAtom)).toThrow("AtomStore has been disposed");
+      expect(() => store.set(countAtom, 2)).toThrow("AtomStore has been disposed");
+      expect(() => store.peek(countAtom)).toThrow("AtomStore has been disposed");
+      expect(() => count.value).toThrow("AtomStore has been disposed");
+      expect(() => count.peek()).toThrow("AtomStore has been disposed");
+      expect(() => doubled.value).toThrow("AtomStore has been disposed");
+      expect(() => doubled.peek()).toThrow("AtomStore has been disposed");
     });
   });
 

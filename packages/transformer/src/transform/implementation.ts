@@ -20,22 +20,25 @@ import {
   nObj,
   nProp,
   nReturn,
+  type ESTNode,
+  type Program,
 } from "@/transform/ast/implementation";
-import type { ESTNode, Program } from "@/transform/ast/implementation";
 import {
   getColocatedClientDirective,
   getTagName,
   isComponentTag,
+  type JSXElement,
+  type JSXFragment,
 } from "@/transform/jsx/implementation";
-import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
 import { transformJSXNode } from "@/transform/mode-csr/implementation";
 import { transformJSXForSSRNode } from "@/transform/mode-ssr/implementation";
 import { addRuntimeImports } from "@/transform/runtimeImports/implementation";
 import { createInitialState } from "@/transform/state/implementation";
-import { buildComponentCall, jsxToTree } from "@/transform/tree/implementation";
-import type {
-  DynamicPart,
-  NestedTransformers,
+import {
+  buildComponentCall,
+  jsxToTree,
+  type DynamicPart,
+  type NestedTransformers,
 } from "@/transform/tree/implementation";
 
 import type { TransformOptions, TransformResult } from "../types";
@@ -130,12 +133,12 @@ function adaptParsedProgram(
     throw new TypeError("Expected an ESTree-compatible Program node");
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- boundary between oxc-parser types and internal ESTNode
-  return program as any;
+  return program as unknown as ESTNode;
 }
 
 function toPrintableProgram(program: Program): Parameters<typeof print>[0] {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- internal ESTree-like program is structurally compatible with esrap's expected node type
-  return program as any;
+  return program as unknown as Parameters<typeof print>[0];
 }
 
 function isJSXElement(node: ESTNode): node is JSXElement {
@@ -246,6 +249,20 @@ function isImportDeclaration(
   return node?.type === "ImportDeclaration";
 }
 
+function isESTNode(value: unknown): value is ESTNode {
+  return typeof value === "object" && value !== null && "type" in value;
+}
+
+function isComputedProperty(value: unknown): value is true {
+  return value === true;
+}
+
+function isParenthesizedExpression(node: ESTNode): node is ESTNode & {
+  expression: ESTNode;
+} {
+  return node.type === "ParenthesizedExpression" && isESTNode(node.expression);
+}
+
 function collectBindingNames(
   pattern: ESTNode,
   names: Set<string> = new Set(),
@@ -311,14 +328,14 @@ function replaceIdentifierName(node: ESTNode, from: string, to: string): void {
   for (const value of Object.values(node)) {
     if (Array.isArray(value)) {
       for (const item of value) {
-        if (item && typeof item === "object" && "type" in item) {
+        if (isESTNode(item)) {
           replaceIdentifierName(item as ESTNode, from, to);
         }
       }
       continue;
     }
 
-    if (value && typeof value === "object" && "type" in value) {
+    if (isESTNode(value)) {
       replaceIdentifierName(value as ESTNode, from, to);
     }
   }
@@ -381,7 +398,8 @@ function renameStatementWithCollisions(
 ): ESTNode {
   if (
     isFunctionDeclarationStatement(statement) &&
-    statement.id &&
+    statement.id !== null &&
+    statement.id !== undefined &&
     isIdentifier(statement.id)
   ) {
     const renameMap = new Map<string, string>();
@@ -489,12 +507,14 @@ function buildCollisionSafePlanAnalysis(
     );
     if (
       isFunctionDeclarationStatement(renamedStatement) &&
-      renamedStatement.id &&
+      renamedStatement.id !== null &&
+      renamedStatement.id !== undefined &&
       isIdentifier(renamedStatement.id)
     ) {
       const originalName =
         isFunctionDeclarationStatement(statement) &&
-        statement.id &&
+        statement.id !== null &&
+        statement.id !== undefined &&
         isIdentifier(statement.id)
           ? statement.id.name
           : renamedStatement.id.name;
@@ -574,7 +594,7 @@ function containsIdentifierNamed(
 
     if (Array.isArray(value)) {
       for (const item of value) {
-        if (item && typeof item === "object" && "type" in item) {
+        if (isESTNode(item)) {
           if (containsIdentifierNamed(item as ESTNode, names)) {
             return true;
           }
@@ -583,7 +603,7 @@ function containsIdentifierNamed(
       continue;
     }
 
-    if (value && typeof value === "object" && "type" in value) {
+    if (isESTNode(value)) {
       if (containsIdentifierNamed(value as ESTNode, names)) {
         return true;
       }
@@ -625,7 +645,7 @@ function isNewExpression(node: ESTNode | null | undefined): node is ESTNode & {
 
 function unwrapParenthesizedExpression(node: ESTNode): ESTNode {
   let current = node;
-  while (current.type === "ParenthesizedExpression" && current.expression) {
+  while (isParenthesizedExpression(current)) {
     current = current.expression as ESTNode;
   }
   return current;
@@ -700,7 +720,7 @@ function collectImportedTransparentThunkWrappers(
     }
 
     const source =
-      statement.source && isStringLiteral(statement.source)
+      statement.source !== undefined && isStringLiteral(statement.source)
         ? String(statement.source.value)
         : null;
     /* c8 ignore next @preserve -- defensive guard: ImportDeclaration always has a valid string source */
@@ -713,11 +733,11 @@ function collectImportedTransparentThunkWrappers(
       continue;
     }
 
-    for (const specifier of statement.specifiers ?? []) {
-      /* c8 ignore next @preserve -- defensive guard: import specifiers always have proper structure */
-      if (!(specifier && typeof specifier === "object" && "type" in specifier)) {
-        continue;
-      }
+      for (const specifier of statement.specifiers ?? []) {
+        /* c8 ignore next @preserve -- defensive guard: import specifiers always have proper structure */
+        if (!isESTNode(specifier)) {
+          continue;
+        }
 
       const importSpecifier = specifier as ESTNode & {
         local?: ESTNode;
@@ -1382,24 +1402,6 @@ function extractJSXFromExpression(
   return null;
 }
 
-function extractJSXFromReturnStatement(
-  statement: ESTNode,
-): JSXElement | JSXFragment | null {
-  if (isReturnStatement(statement)) {
-    if (statement.argument === null) {
-      return null;
-    }
-    return extractJSXFromExpression(statement.argument);
-  }
-
-  // Handle BlockStatement with single return statement
-  if (isBlockStatement(statement) && statement.body.length === 1) {
-    return extractJSXFromReturnStatement(statement.body[0]);
-  }
-
-  return null;
-}
-
 function andConditions(
   a: ESTNode,
   b: ESTNode,
@@ -1489,6 +1491,7 @@ function flattenBranches(
     }
 
     const newCondition = accumulatedCondition
+      !== null
       ? andConditions(accumulatedCondition, node.test)
       : cloneNode(node.test);
 
@@ -1526,6 +1529,7 @@ function flattenBranches(
       alternate: ESTNode;
     };
     const newCondition = accumulatedCondition
+      !== null
       ? andConditions(accumulatedCondition, condNode.test)
       : cloneNode(condNode.test);
 
@@ -1612,6 +1616,7 @@ function flattenBranches(
           right: cloneNode(caseNode.test),
         } as ESTNode;
         caseCondition = accumulatedCondition
+          !== null
           ? andConditions(accumulatedCondition, testExpr)
           : testExpr;
       }
@@ -2038,13 +2043,16 @@ function collectTopLevelHelpers(program: Program): HelperLookup {
 
   for (const statement of program.body) {
     const declaration =
-      isExportNamedDeclaration(statement) && statement.declaration
+      isExportNamedDeclaration(statement) &&
+      statement.declaration !== null &&
+      statement.declaration !== undefined
         ? statement.declaration
         : statement;
 
     if (
       isFunctionDeclaration(declaration) &&
-      declaration.id &&
+      declaration.id !== null &&
+      declaration.id !== undefined &&
       isIdentifier(declaration.id)
     ) {
       helpers.set(declaration.id.name, declaration);
@@ -2078,7 +2086,7 @@ function collectTopLevelBindings(program: Program): Set<string> {
     if (isImportDeclaration(statement)) {
       for (const specifier of (statement.specifiers ?? []) as ESTNode[]) {
         const local = specifier.local as ESTNode | undefined;
-        if (local && isIdentifier(local)) {
+        if (local !== undefined && isIdentifier(local)) {
           bindings.add(local.name);
         }
       }
@@ -2086,13 +2094,16 @@ function collectTopLevelBindings(program: Program): Set<string> {
     }
 
     const declaration =
-      isExportNamedDeclaration(statement) && statement.declaration
+      isExportNamedDeclaration(statement) &&
+      statement.declaration !== null &&
+      statement.declaration !== undefined
         ? statement.declaration
         : statement;
 
     if (
       isFunctionDeclaration(declaration) &&
-      declaration.id &&
+      declaration.id !== null &&
+      declaration.id !== undefined &&
       isIdentifier(declaration.id)
     ) {
       bindings.add(declaration.id.name);
@@ -2153,7 +2164,7 @@ function isSerializableBindingExpression(
       }
 
       return (
-        (!property.computed ||
+        (!isComputedProperty(property.computed) ||
           isSerializableBindingExpression(
             property.key as ESTNode,
             availableBindings,
@@ -2177,7 +2188,8 @@ function collectSerializableBindingsFromStatements(
       isVariableDeclaration(statement) && statement.kind === "const"
         ? statement
         : isExportNamedDeclaration(statement) &&
-            statement.declaration &&
+            statement.declaration !== null &&
+            statement.declaration !== undefined &&
             isVariableDeclaration(statement.declaration) &&
             statement.declaration.kind === "const"
           ? statement.declaration
@@ -2252,7 +2264,7 @@ function buildComponentHydrationMetadata(
   if (dispatchAnalysis !== null) {
     // Extract shared prelude from component setup
     const frame = extractFunctionRenderFrame(componentArg);
-    const sharedPrelude = frame ? frame.preludeStatements : [];
+    const sharedPrelude = frame !== null ? frame.preludeStatements : [];
     return {
       metadata: buildDispatchPlanMetadata(
         dispatchAnalysis,
@@ -2375,7 +2387,8 @@ function collectComponentPlans(
     const declaration = isVariableDeclaration(statement)
       ? statement
       : isExportNamedDeclaration(statement) &&
-          statement.declaration &&
+          statement.declaration !== null &&
+          statement.declaration !== undefined &&
           isVariableDeclaration(statement.declaration)
         ? statement.declaration
         : null;
@@ -2437,7 +2450,8 @@ function applyComponentPlans(
     const declaration = isVariableDeclaration(statement)
       ? statement
       : isExportNamedDeclaration(statement) &&
-          statement.declaration &&
+          statement.declaration !== null &&
+          statement.declaration !== undefined &&
           isVariableDeclaration(statement.declaration)
         ? statement.declaration
         : null;
@@ -2642,17 +2656,23 @@ function transform(
 
   const printableProgram = toPrintableProgram(transformedProgram);
 
-  const { code: outputCode, map: outputMap } = print(
+  const printed = print(
     printableProgram as never,
     ts(),
     sourceMap
       ? { sourceMapSource: filename, sourceMapContent: code }
       : undefined,
-  );
+  ) as unknown as {
+    code: string;
+    map?: unknown;
+  };
 
   return {
-    code: outputCode,
-    map: sourceMap && outputMap ? JSON.stringify(outputMap) : undefined,
+    code: printed.code,
+    map:
+      sourceMap === true && printed.map !== undefined
+        ? JSON.stringify(printed.map)
+        : undefined,
   };
 }
 

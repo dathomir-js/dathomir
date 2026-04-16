@@ -5,7 +5,6 @@
  * This enables JSX syntax in components.
  */
 import { templateEffect } from "@dathomir/reactivity";
-import type { RuntimeJSX } from "@dathomir/runtime";
 import { bindCurrentStoreToSubtree } from "@dathomir/components/internal";
 import {
   event,
@@ -13,6 +12,7 @@ import {
   fromTree,
   nextSibling,
   setText,
+  type RuntimeJSX,
   type Tree,
 } from "@dathomir/runtime";
 
@@ -115,10 +115,10 @@ function createElement(
 ): Node {
   // Handle function components
   if (typeof tag === "function") {
-    return tag(props || {});
+    return tag(props ?? {});
   }
 
-  const { children, ...attrs } = props || {};
+  const { children, ...attrs } = props ?? {};
 
   // Build tree structure
   const tree: Tree[] = [[tag, Object.keys(attrs).length > 0 ? {} : null]];
@@ -190,8 +190,8 @@ function createElement(
   const factory = fromTree(tree, 0);
   const fragment = factory();
   bindCurrentStoreToSubtree(fragment);
-  const firstEl = firstChild(fragment);
-  if (!firstEl) {
+  const firstEl = firstChild(fragment) as Node | null;
+  if (firstEl === null) {
     // A non-void element must always produce at least one child node
     throw new Error(`createElement: no child element found for tag "${tag}"`);
   }
@@ -216,17 +216,17 @@ function createElement(
 
   // Bind dynamic text nodes
   if (dynamicTexts.length > 0) {
-    let textNode = firstChild(element, true);
+    let textNode = firstChild(element, true) as Node | null;
     let textIndex = 0;
 
     for (const { index, getter } of dynamicTexts) {
       // Navigate to the correct text node
-      while (textIndex < index && textNode) {
+      while (textIndex < index && textNode !== null) {
         textNode = nextSibling(textNode);
         textIndex++;
       }
 
-      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+      if (textNode !== null && textNode.nodeType === Node.TEXT_NODE) {
         const tn = textNode as Text;
         templateEffect(() => {
           setText(tn, String(getter()));

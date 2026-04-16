@@ -5,8 +5,8 @@ import { atom, createAtomStore, defineComponent, withStore } from "../index";
 import { Fragment } from "./Fragment";
 import { jsx, jsxs } from "./index";
 
-function waitForMicrotask(): Promise<void> {
-  return new Promise((resolve) => queueMicrotask(resolve));
+async function waitForMicrotask(): Promise<void> {
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
 }
 
 let tagCounter = 0;

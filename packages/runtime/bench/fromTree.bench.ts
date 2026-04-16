@@ -4,8 +4,7 @@
 import { bench, describe } from "vitest";
 
 import { fromTree } from "@/dom/fromTree/implementation";
-import type { Tree } from "@/types/tree";
-import { Namespace } from "@/types/tree";
+import { Namespace, type Tree } from "@/types/tree";
 
 // --- Tree definitions ---
 

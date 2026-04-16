@@ -1,8 +1,8 @@
-import { nId } from "@/transform/ast/implementation";
-import type {
-  ESTNode,
-  Identifier,
-  VariableDeclaration,
+import {
+  nId,
+  type ESTNode,
+  type Identifier,
+  type VariableDeclaration,
 } from "@/transform/ast/implementation";
 import type { RuntimeImportName } from "@/transform/runtimeImports/implementation";
 

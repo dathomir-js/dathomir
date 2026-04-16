@@ -1262,7 +1262,7 @@ describe("transform", () => {
       // Both branches should have shapeHash entries
       const shapeHashMatches = result.code.match(/shapeHash/g);
       expect(shapeHashMatches).not.toBeNull();
-      expect(shapeHashMatches!.length).toBeGreaterThanOrEqual(2);
+      expect((shapeHashMatches ?? []).length).toBeGreaterThanOrEqual(2);
     });
 
     it("should generate same shapeHash for branches with same element types", () => {
@@ -2219,7 +2219,7 @@ describe("transform", () => {
       expect(result.code).toContain("unsupportedReason");
     });
 
-    it("should cover createPlanBinding spread type (line 1158)", () => {
+    it("should cover createPlanBinding spread type in direct plan extraction", () => {
       const code = `
         const SpreadCard = defineComponent(
           "spread-card",
@@ -2234,7 +2234,7 @@ describe("transform", () => {
       expect(result.code).toContain('"spread"');
     });
 
-    it("should cover resolveComponentRenderAnalysis null finalFrame.returnExpression (line 1331)", () => {
+    it("should cover resolveComponentRenderAnalysis null finalFrame from branching helper", () => {
       const code = `
         const innerHelper = (x) => { x.toString(); };
         const outerHelper = (val) => innerHelper(val);
@@ -2264,7 +2264,7 @@ describe("transform", () => {
       expect(result.code).toContain("unsupportedReason");
     });
 
-    it("should cover createPlanBinding spread type (line 1158)", () => {
+    it("should cover createPlanBinding spread type through helper extraction", () => {
       const code = `
         const SpreadCard = defineComponent(
           "spread-card",
@@ -2279,7 +2279,7 @@ describe("transform", () => {
       expect(result.code).toContain('"spread"');
     });
 
-    it("should cover resolveComponentRenderAnalysis null finalFrame.returnExpression (line 1331)", () => {
+    it("should cover resolveComponentRenderAnalysis null finalFrame from object spread helper", () => {
       const code = `
         const innerHelper = (x) => { x.toString(); };
         const outerHelper = (val) => innerHelper(val);
@@ -2320,7 +2320,7 @@ describe("transform", () => {
       expect(result.code).not.toContain("unsupportedReason");
     });
 
-    it("should cover resolveComponentRenderAnalysis null finalFrame.returnExpression (line 1331)", () => {
+    it("should cover resolveComponentRenderAnalysis null finalFrame from helper chain without return", () => {
       // A helper chain where the final helper has no return expression
       const code = `
         const innerHelper = (x) => { x.toString(); };
@@ -3748,13 +3748,10 @@ describe("transform", () => {
       expect(result.code).toContain("card-a");
       expect(result.code).toContain("card-b");
       // Both should have metadata
-      const metadataCount = (
-        result.code.match(/__hydrationMetadata__/g) || []
-      ).length;
+      const metadataCount = (result.code.match(/__hydrationMetadata__/g) ?? [])
+        .length;
       expect(metadataCount).toBe(2);
-      const planFactoryCount = (
-        result.code.match(/planFactory/g) || []
-      ).length;
+      const planFactoryCount = (result.code.match(/planFactory/g) ?? []).length;
       expect(planFactoryCount).toBeGreaterThanOrEqual(2);
     });
 
@@ -5791,7 +5788,7 @@ describe("transform", () => {
       // Both should get metadata
       expect(result.code).toContain("__hydrationMetadata__");
       // Count occurrences of planFactory
-      const planFactoryCount = (result.code.match(/planFactory/g) || []).length;
+      const planFactoryCount = (result.code.match(/planFactory/g) ?? []).length;
       expect(planFactoryCount).toBeGreaterThanOrEqual(2);
     });
 
@@ -6351,7 +6348,7 @@ describe("transform", () => {
         export const B = defineComponent("b-card", () => <span>b</span>);
       `;
       const result = transform(code, { mode: "csr" });
-      const planCount = (result.code.match(/planFactory/g) || []).length;
+      const planCount = (result.code.match(/planFactory/g) ?? []).length;
       expect(planCount).toBeGreaterThanOrEqual(2);
     });
 

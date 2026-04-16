@@ -11,6 +11,13 @@ import type { AtomStore } from "../createAtomStore/implementation";
  */
 const storeStack: AtomStore[] = [];
 
+function popStoreBoundary(store: AtomStore): void {
+  const popped = storeStack.pop();
+  if (popped !== store) {
+    throw new Error("Store boundary stack is corrupted");
+  }
+}
+
 /**
  * Returns the currently active store in the nearest `withStore` boundary,
  * or `undefined` if called outside any boundary.
@@ -28,21 +35,15 @@ function getCurrentStore(): AtomStore | undefined {
  */
 function runWithStoreContext<T>(store: AtomStore, fn: () => T): T {
   storeStack.push(store);
-  let fnError: unknown;
-  let result: T | undefined;
+
   try {
-    result = fn();
-  } catch (e: unknown) {
-    fnError = e;
+    const result = fn();
+    popStoreBoundary(store);
+    return result;
+  } catch (error: unknown) {
+    popStoreBoundary(store);
+    throw error instanceof Error ? error : new Error(String(error));
   }
-  const popped = storeStack.pop();
-  if (popped !== store) {
-    throw new Error("Store boundary stack is corrupted");
-  }
-  if (fnError !== undefined) {
-    throw fnError;
-  }
-  return result as T;
 }
 
 export { getCurrentStore, runWithStoreContext };

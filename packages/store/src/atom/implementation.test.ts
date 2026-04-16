@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { DerivedAtom, Getter } from "./implementation";
-import { atom } from "./implementation";
+import { atom, type DerivedAtom, type Getter } from "./implementation";
 
 describe("atom", () => {
   describe("Basic behavior", () => {

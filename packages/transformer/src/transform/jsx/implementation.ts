@@ -1,11 +1,10 @@
-import { nId, nLit, nMember } from "@/transform/ast/implementation";
-import type { ESTNode } from "@/transform/ast/implementation";
 import {
   COLOCATED_CLIENT_STRATEGIES,
   DEFAULT_INTERACTION_EVENT_TYPE,
   ISLAND_STRATEGIES,
   isColocatedClientStrategyName,
 } from "@dathomir/shared";
+import { nId, nLit, nMember, type ESTNode } from "@/transform/ast/implementation";
 
 interface JSXIdentifier {
   type: "JSXIdentifier";
@@ -186,7 +185,12 @@ function getColocatedClientDirective(name: JSXAttribute["name"]): {
 function getIslandsDirectiveName(
   name: JSXAttribute["name"],
 ): IslandsDirectiveName | null {
-  switch (getRawAttributeName(name)) {
+  const rawAttributeName = getRawAttributeName(name);
+  if (rawAttributeName === null) {
+    return null;
+  }
+
+  switch (rawAttributeName) {
     case "client:load":
       return "load";
     case "client:visible":

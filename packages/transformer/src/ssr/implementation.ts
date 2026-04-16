@@ -20,8 +20,8 @@ import {
   nNew,
   nObj,
   nProp,
+  type ESTNode,
 } from "@/transform/ast/implementation";
-import type { ESTNode } from "@/transform/ast/implementation";
 
 // ---------------------------------------------------------------------------
 // SSR utilities

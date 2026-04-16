@@ -867,7 +867,7 @@ describe("transform", () => {
       expect(result.code).toContain("format_1(label_2)");
     });
 
-    it("should classify non-normalizable spread props as unsupported", () => {
+    it("should support normalizable spread merges from top-level serializable bindings", () => {
       const code = `
         const extraProps = { role: "status" };
         const SpreadCard = defineComponent(
@@ -879,10 +879,9 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain(
-        'unsupportedReason: "non-normalizable-spread"',
-      );
-      expect(result.code).not.toContain("planFactory");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).toContain('kind: "spread"');
+      expect(result.code).not.toContain("unsupportedReason");
     });
 
     it("should classify node identity creation outside JSX tree as unsupported", () => {
@@ -1181,7 +1180,7 @@ describe("transform", () => {
       expect(result.code).toContain("planFactory");
     });
 
-    it("should classify setup body with return LogicalExpression in block as unsupported-component-body", () => {
+    it("should classify setup body with return LogicalExpression in block as dispatch plan", () => {
       const code = `
         const RetLogCard = defineComponent(
           "ret-log-card",
@@ -1195,7 +1194,9 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain("unsupportedReason");
+      expect(result.code).toContain("dispatch");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain("unsupportedReason");
     });
 
     it("should generate dispatch plan for guard-return pattern with static JSX branches", () => {
@@ -1453,7 +1454,7 @@ describe("transform", () => {
       expect(result.code).not.toContain('unsupportedReason: "runtime-branching"');
     });
 
-    it("should classify return of logical expression as unsupported", () => {
+    it("should classify return of logical expression as dispatch plan", () => {
       const code = `
         const LogicalReturn = defineComponent(
           "logical-return",
@@ -1466,8 +1467,9 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain("unsupportedReason");
-      expect(result.code).not.toContain("dispatch");
+      expect(result.code).toContain("dispatch");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain("unsupportedReason");
     });
 
     it("should generate svg namespace when root element is svg", () => {
@@ -1556,7 +1558,7 @@ describe("transform", () => {
       expect(result.code).not.toContain("unsupportedReason");
     });
 
-    it("should handle non-normalizable spread in nested child elements", () => {
+    it("should support normalizable spread merges in nested child elements", () => {
       const code = `
         const extras = { role: "alert" };
         const NestedSpreadCard = defineComponent(
@@ -1572,13 +1574,12 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain(
-        'unsupportedReason: "non-normalizable-spread"',
-      );
-      expect(result.code).not.toContain("planFactory");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).toContain('kind: "spread"');
+      expect(result.code).not.toContain("unsupportedReason");
     });
 
-    it("should handle non-normalizable spread inside fragment children", () => {
+    it("should support normalizable spread merges inside fragment children", () => {
       const code = `
         const extras = { role: "alert" };
         const FragSpreadCard = defineComponent(
@@ -1594,10 +1595,9 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain(
-        'unsupportedReason: "non-normalizable-spread"',
-      );
-      expect(result.code).not.toContain("planFactory");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).toContain('kind: "spread"');
+      expect(result.code).not.toContain("unsupportedReason");
     });
 
     it("should classify setup with void body (no return) as unsupported-component-body", () => {
@@ -3084,7 +3084,7 @@ describe("transform", () => {
       expect(result.code).not.toContain("planFactory");
     });
 
-    it("should classify method-like helper (object property) as opaque-helper-call", () => {
+    it("should support method-like helper (object property) when the object literal is static", () => {
       const code = `
         const helpers = { render: (label) => <div>{label}</div> };
         const MethodCard = defineComponent(
@@ -3096,8 +3096,9 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain('unsupportedReason: "opaque-helper-call"');
-      expect(result.code).not.toContain("planFactory");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain("unsupportedReason");
+      expect(result.code).toContain('kind: "text"');
     });
 
     it("should classify closure-captured helper as opaque-helper-call", () => {
@@ -3261,7 +3262,7 @@ describe("transform", () => {
 
     // --- Batch 2: spread merges, nested islands, TS syntax, exotic edge cases ---
 
-    it("should classify deeply nested non-normalizable spread in multiply-nested JSX as unsupported", () => {
+    it("should support deeply nested spread merges when the merged binding is serializable", () => {
       const code = `
         const extras = { role: "alert" };
         const DeepSpreadCard = defineComponent(
@@ -3279,10 +3280,9 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain(
-        'unsupportedReason: "non-normalizable-spread"',
-      );
-      expect(result.code).not.toContain("planFactory");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).toContain('kind: "spread"');
+      expect(result.code).not.toContain("unsupportedReason");
     });
 
     it("should allow normalizable spread (no SpreadElement inside ObjectExpression) to produce planFactory", () => {
@@ -4470,7 +4470,7 @@ describe("transform", () => {
       expect(result.code).toContain("planFactory");
     });
 
-    it("should classify return of logical expression in block body as unsupported-component-body", () => {
+    it("should classify return of logical expression in block body as dispatch plan", () => {
       const code = `
         const RetLogicalCard = defineComponent(
           "ret-logical-card",
@@ -4481,7 +4481,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      expect(result.code).toContain("unsupportedReason");
+      expect(result.code).toContain("dispatch");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain("unsupportedReason");
     });
 
     it("should classify early return (not last statement) as unsupported-component-body", () => {

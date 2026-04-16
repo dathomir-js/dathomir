@@ -119,12 +119,11 @@ function insert(parent: Node, child: unknown, anchor: Node | null): void {
         }
 
         const insertEndMarker =
-          ssrNode?.nodeType === Node.COMMENT_NODE &&
-          ssrNode.nodeValue === INSERT_END_MARKER
+          ssrNode instanceof Comment && ssrNode.nodeValue === INSERT_END_MARKER
             ? ssrNode
             : null;
 
-        if (insertEndMarker?.parentNode !== null) {
+        if (insertEndMarker !== null && insertEndMarker.parentNode !== null) {
           insertEndMarker.parentNode.removeChild(insertEndMarker);
         }
       }

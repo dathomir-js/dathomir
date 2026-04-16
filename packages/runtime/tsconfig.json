@@ -1,3 +1,6 @@
 {
   "extends": "@dathomir/config/templates/tsconfig.template.json",
+  "compilerOptions": {
+    "rootDir": ".",
+  },
 }

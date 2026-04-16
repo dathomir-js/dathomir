@@ -25,7 +25,11 @@ function parseStateScript(container: Element | ShadowRoot): StateObject | null {
     'script[type="application/json"][data-dh-state]',
   );
 
-  const content = script?.textContent;
+  if (script === null) {
+    return null;
+  }
+
+  const content = script.textContent;
 
   if (content === undefined || content === null || content === "") {
     return null;
@@ -56,7 +60,11 @@ function parseStoreScript(container: Element | ShadowRoot): StateObject | null {
     'script[type="application/json"][data-dh-store]',
   );
 
-  const content = script?.textContent;
+  if (script === null) {
+    return null;
+  }
+
+  const content = script.textContent;
 
   if (content === undefined || content === null || content === "") {
     return null;

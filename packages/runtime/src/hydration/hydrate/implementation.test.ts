@@ -11,21 +11,22 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  type GenericHydrationPlan,
+  HYDRATE_ISLANDS_HOOK,
+  type HydrateIslandHook,
+  HydrationMarkerType,
+  HydrationMismatchError,
+  type IslandHydrationTrigger,
+  cancelScheduledIslandHydration,
   clearClientActions,
   createHydrationContext,
   getClientAction,
-  type GenericHydrationPlan,
-  HydrationMismatchError,
-  HydrationMarkerType,
-  cancelScheduledIslandHydration,
-  HYDRATE_ISLANDS_HOOK,
-  type IslandHydrationTrigger,
   handleMismatch,
   hydrate,
   hydrateIslands,
   hydrateRoot,
-  hydrateWithPlan,
   hydrateTextMarker,
+  hydrateWithPlan,
   isHydrated,
   markHydrated,
   registerClientAction,
@@ -547,7 +548,7 @@ describe("hydrateIslands", () => {
 
   function setHydrateHook(
     island: HTMLElement,
-    hydrateHook: () => boolean,
+    hydrateHook: HydrateIslandHook,
   ): void {
     (island as unknown as Record<PropertyKey, unknown>)[HYDRATE_ISLANDS_HOOK] =
       hydrateHook;
@@ -735,7 +736,7 @@ describe("hydrateIslands", () => {
   it("hydrates interaction islands from colocated target markers for non-bubbling events", () => {
     const island = document.createElement("test-island");
     const shadowRoot = island.attachShadow({ mode: "open" });
-    const hydrateHook = vi.fn(() => true);
+    const hydrateHook = vi.fn<HydrateIslandHook>(() => true);
     island.setAttribute("data-dh-island", "interaction");
     island.setAttribute("data-dh-island-value", "focus");
     setHydrateHook(island, hydrateHook);

@@ -15,6 +15,31 @@ function append(parent: Node, child: Node): void {
 const insertedContent = new WeakMap<Node, Node[]>();
 const INSERT_END_MARKER = "/dh:i";
 
+function stringifyInsertedValue(value: unknown): string {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+
+  if (typeof value === "symbol") {
+    return value.description ?? "";
+  }
+
+  if (typeof value === "function") {
+    return value.toString();
+  }
+
+  if (JSON.stringify(value) === "{}") {
+    return String(value);
+  }
+
+  return JSON.stringify(value) ?? "";
+}
+
 /**
  * Insert a child node before an anchor node.
  * If anchor is null, appends to the end.
@@ -33,7 +58,7 @@ const INSERT_END_MARKER = "/dh:i";
  */
 function insert(
   parent: Node,
-  child: Node | (() => DocumentFragment) | unknown,
+  child: unknown,
   anchor: Node | null,
 ): void {
   // Warn on null/undefined parent and bail out early to avoid crash
@@ -48,12 +73,12 @@ function insert(
   }
 
   // Clean up previously inserted content OR SSR content
-  if (anchor) {
+  if (anchor !== null) {
     if (insertedContent.has(anchor)) {
       // Remove previously inserted dynamic content
       const previousNodes = insertedContent.get(anchor) as Node[];
       for (const node of previousNodes) {
-        if (node.parentNode) {
+        if (node.parentNode !== null) {
           node.parentNode.removeChild(node);
         }
       }
@@ -67,14 +92,14 @@ function insert(
         anchor.nodeType === Node.COMMENT_NODE &&
         (anchor as Comment).nodeValue?.startsWith("dh:");
 
-      if (isSSRAnchor) {
+      if (isSSRAnchor === true) {
         // SSR hydration: remove server-rendered content after the marker
         // SSR renders: <!--dh:i:0-->content<!--dh:...-->, so remove content
         let ssrNode = anchor.nextSibling;
         const ssrNodesToRemove: Node[] = [];
 
         // Collect SSR nodes until we hit another marker or end
-        while (ssrNode) {
+        while (ssrNode !== null) {
           // Stop if we hit another hydration marker (comment starting with "dh:")
           if (
             ssrNode.nodeType === Node.COMMENT_NODE &&
@@ -92,7 +117,7 @@ function insert(
 
         // Remove collected SSR nodes
         for (const node of ssrNodesToRemove) {
-          if (node.parentNode) {
+          if (node.parentNode !== null) {
             node.parentNode.removeChild(node);
           }
         }
@@ -103,7 +128,7 @@ function insert(
             ? ssrNode
             : null;
 
-        if (insertEndMarker?.parentNode) {
+        if (insertEndMarker?.parentNode !== null) {
           insertEndMarker.parentNode.removeChild(insertEndMarker);
         }
       }
@@ -147,7 +172,7 @@ function insert(
       return;
     }
 
-    const textNode = document.createTextNode(String(value));
+    const textNode = document.createTextNode(stringifyInsertedValue(value));
     newNodes.push(textNode);
     fragment.appendChild(textNode);
   }
@@ -189,13 +214,13 @@ function insert(
       console.error("[insert] Unexpected child type:", typeof child, child);
     }
     // Try to convert to text node as fallback
-    const textNode = document.createTextNode(String(child));
+    const textNode = document.createTextNode(stringifyInsertedValue(child));
     newNodes.push(textNode);
     parent.insertBefore(textNode, anchor);
   }
 
   // Track inserted nodes for this anchor (marker)
-  if (anchor && newNodes.length > 0) {
+  if (anchor !== null && newNodes.length > 0) {
     insertedContent.set(anchor, newNodes);
   }
 }

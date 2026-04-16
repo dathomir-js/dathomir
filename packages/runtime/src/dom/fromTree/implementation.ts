@@ -4,6 +4,31 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 const MATHML_NS = "http://www.w3.org/1998/Math/MathML";
 const COMPILED_TEXT_MARKER_PREFIX = "dh-csr:text:";
 
+function stringifyAttrValue(value: unknown): string {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+
+  if (typeof value === "symbol") {
+    return value.description ?? "";
+  }
+
+  if (typeof value === "function") {
+    return value.toString();
+  }
+
+  if (JSON.stringify(value) === "{}") {
+    return String(value);
+  }
+
+  return JSON.stringify(value) ?? "";
+}
+
 interface CompiledTemplateDescriptor {
   readonly kind: "compiled";
   readonly markup: string;
@@ -203,14 +228,14 @@ function createNode(tree: Tree, ns: Namespace): Node {
             .map(([k, v]) => {
               // Convert camelCase to kebab-case
               const kebab = k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-              return `${kebab}: ${v}`;
+              return `${kebab}: ${stringifyAttrValue(v)}`;
             })
             .join("; ");
-          if (cssText) {
+          if (cssText !== "") {
             element.setAttribute("style", cssText);
           }
         } else {
-          element.setAttribute(key, String(value));
+          element.setAttribute(key, stringifyAttrValue(value));
         }
       }
     }

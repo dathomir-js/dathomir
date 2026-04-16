@@ -1066,7 +1066,7 @@ function isNormalizableSpreadArgument(
     }
 
     return (
-      (!property.computed ||
+      (!isComputedProperty(property.computed) ||
         isSerializableBindingExpression(property.key as ESTNode, availableBindings)) &&
       isSerializableBindingExpression(property.value as ESTNode, availableBindings)
     );
@@ -1569,7 +1569,7 @@ function flattenBranches(
       return null;
     }
 
-    const truthyCondition = accumulatedCondition
+    const truthyCondition = accumulatedCondition !== null
       ? andConditions(accumulatedCondition, logicalNode.left)
       : cloneNode(logicalNode.left);
 

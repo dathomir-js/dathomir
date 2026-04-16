@@ -1,3 +1,28 @@
+function stringifyAttrValue(value: unknown): string {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+
+  if (typeof value === "symbol") {
+    return value.description ?? "";
+  }
+
+  if (typeof value === "function") {
+    return value.toString();
+  }
+
+  if (JSON.stringify(value) === "{}") {
+    return String(value);
+  }
+
+  return JSON.stringify(value) ?? "";
+}
+
 /**
  * Set an attribute on an element.
  * Handles boolean attributes and null/undefined removal.
@@ -15,20 +40,20 @@ function setAttr(element: Element, name: string, value: unknown): void {
     // Serialize style object to cssText
     const styleObj = value as Record<string, unknown>;
     const cssText = Object.entries(styleObj)
-      .filter(([, v]) => v != null && v !== "")
-      .map(([k, v]) => {
-        // Convert camelCase to kebab-case
-        const kebab = k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-        return `${kebab}: ${v}`;
-      })
-      .join("; ");
-    if (cssText) {
+        .filter(([, v]) => v != null && v !== "")
+        .map(([k, v]) => {
+          // Convert camelCase to kebab-case
+          const kebab = k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+          return `${kebab}: ${stringifyAttrValue(v)}`;
+        })
+        .join("; ");
+    if (cssText !== "") {
       element.setAttribute("style", cssText);
     } else {
       element.removeAttribute("style");
     }
   } else {
-    element.setAttribute(name, String(value));
+    element.setAttribute(name, stringifyAttrValue(value));
   }
 }
 

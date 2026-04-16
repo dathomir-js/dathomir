@@ -89,9 +89,9 @@ function findMarkers(container: Node): MarkerInfo[] {
   const walker = createWalker(container);
 
   let node = walker.nextNode();
-  while (node) {
+  while (node !== null) {
     const marker = parseMarker(node as Comment);
-    if (marker) {
+    if (marker !== null) {
       markers.push(marker);
     }
     node = walker.nextNode();
@@ -105,9 +105,9 @@ function findMarkers(container: Node): MarkerInfo[] {
  */
 function findMarker(walker: TreeWalker): MarkerInfo | null {
   let node = walker.nextNode();
-  while (node) {
+  while (node !== null) {
     const marker = parseMarker(node as Comment);
-    if (marker) {
+    if (marker !== null) {
       return marker;
     }
     node = walker.nextNode();
@@ -120,7 +120,7 @@ function findMarker(walker: TreeWalker): MarkerInfo | null {
  */
 function getTextNodeAfterMarker(marker: Comment): Text | null {
   const next = marker.nextSibling;
-  if (next && next.nodeType === Node.TEXT_NODE) {
+  if (next !== null && next.nodeType === Node.TEXT_NODE) {
     return next as Text;
   }
   // Create empty text node if not present

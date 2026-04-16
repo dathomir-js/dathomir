@@ -11,7 +11,7 @@
  */
 function firstChild(node: Node, isText?: boolean): Node {
   let child = node.firstChild;
-  if (isText) {
+  if (isText === true) {
     while (child !== null && child.nodeType !== Node.TEXT_NODE) {
       child = child.nextSibling;
     }

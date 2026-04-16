@@ -25,12 +25,14 @@ function parseStateScript(container: Element | ShadowRoot): StateObject | null {
     'script[type="application/json"][data-dh-state]',
   );
 
-  if (!script?.textContent) {
+  const content = script?.textContent;
+
+  if (content === undefined || content === null || content === "") {
     return null;
   }
 
   try {
-    const state = deserializeState(script.textContent);
+    const state = deserializeState(content);
     // Remove the script after parsing
     script.remove();
     return state;
@@ -54,12 +56,14 @@ function parseStoreScript(container: Element | ShadowRoot): StateObject | null {
     'script[type="application/json"][data-dh-store]',
   );
 
-  if (!script?.textContent) {
+  const content = script?.textContent;
+
+  if (content === undefined || content === null || content === "") {
     return null;
   }
 
   try {
-    const state = deserializeState(script.textContent);
+    const state = deserializeState(content);
     script.remove();
     return state;
   } catch (err) {

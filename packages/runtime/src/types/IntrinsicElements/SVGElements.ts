@@ -19,7 +19,7 @@ type SvgAccumulate = "none" | "sum" | (string & {});
 type SvgCalcMode = "discrete" | "linear" | "paced" | "spline" | (string & {});
 type SvgSpreadMethod = "pad" | "reflect" | "repeat" | (string & {});
 type SvgMarkerUnits = "strokeWidth" | "userSpaceOnUse" | (string & {});
-type SvgOrient = "auto" | "auto-start-reverse" | SvgNumberish;
+type SvgOrient = SvgNumberish;
 type SvgChannelSelector = "R" | "G" | "B" | "A" | (string & {});
 type SvgEdgeMode = "duplicate" | "wrap" | "none" | (string & {});
 type SvgCompositeOperator =
@@ -162,13 +162,13 @@ interface SvgXLinkAttributes extends SvgHrefAttributes {
 
 interface SvgAnimationTimingAttributes {
   begin?: string;
-  dur?: SvgNumberish | "indefinite";
+  dur?: SvgNumberish;
   end?: string;
   fill?: string;
-  max?: SvgNumberish | "media";
-  min?: SvgNumberish | "media";
-  repeatCount?: SvgNumberish | "indefinite";
-  repeatDur?: SvgNumberish | "indefinite";
+  max?: SvgNumberish;
+  min?: SvgNumberish;
+  repeatCount?: SvgNumberish;
+  repeatDur?: SvgNumberish;
   restart?: SvgRestart;
 }
 
@@ -252,7 +252,7 @@ interface AnimateMotionIntrinsicElements
   keyPoints?: string;
   origin?: string;
   path?: string;
-  rotate?: SvgNumberish | "auto" | "auto-reverse" | (string & {});
+  rotate?: SvgNumberish | (string & {});
 }
 
 interface AnimateTransformIntrinsicElements
@@ -496,8 +496,8 @@ interface MarkerIntrinsicElements
   markerUnits?: SvgMarkerUnits;
   markerWidth?: SvgNumberish;
   orient?: SvgOrient;
-  refX?: SvgNumberish | "left" | "center" | "right" | (string & {});
-  refY?: SvgNumberish | "top" | "center" | "bottom" | (string & {});
+  refX?: SvgNumberish | (string & {});
+  refY?: SvgNumberish | (string & {});
 }
 
 interface MaskIntrinsicElements extends SvgGraphicsIntrinsicElements {
@@ -583,8 +583,8 @@ interface SwitchIntrinsicElements extends SvgGraphicsIntrinsicElements {}
 interface SymbolIntrinsicElements
   extends SvgGraphicsIntrinsicElements, SvgFitToViewBoxAttributes {
   height?: SvgNumberish;
-  refX?: SvgNumberish | "left" | "center" | "right" | (string & {});
-  refY?: SvgNumberish | "top" | "center" | "bottom" | (string & {});
+  refX?: SvgNumberish | (string & {});
+  refY?: SvgNumberish | (string & {});
   width?: SvgNumberish;
   x?: SvgNumberish;
   y?: SvgNumberish;

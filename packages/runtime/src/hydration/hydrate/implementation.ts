@@ -196,6 +196,35 @@ interface GenericHydrationPlan {
   readonly nestedBoundaries: readonly NestedBoundaryRef[];
 }
 
+function stringifyEventField(value: unknown): string {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (typeof value === "symbol") {
+    return value.description ?? "";
+  }
+
+  if (typeof value === "function") {
+    return value.toString();
+  }
+
+  if (JSON.stringify(value) === "{}") {
+    return "[object Object]";
+  }
+
+  return JSON.stringify(value) ?? "";
+}
+
 /**
  * Hydration mismatch error.
  */
@@ -306,7 +335,7 @@ function collectMarkers(root: Node): MarkerInfo[] {
   const markers: MarkerInfo[] = [];
 
   let marker = findMarker(walker);
-  while (marker) {
+  while (marker !== null) {
     markers.push(marker);
     marker = findMarker(walker);
   }
@@ -400,13 +429,14 @@ function nextMarker(ctx: HydrationContext): MarkerInfo | null {
  */
 function hydrateTextMarker(marker: MarkerInfo, getValue: () => unknown): void {
   const textNode = getTextNodeAfterMarker(marker.node);
-  if (!textNode) {
+  if (textNode === null) {
+    const nextSibling = marker.node.nextSibling;
     handleMismatch(`Text node not found after marker ${marker.id}`, {
       markerId: marker.id,
       markerType: marker.type,
       expected: "Text node after comment marker",
-      actual: marker.node.nextSibling
-        ? `${marker.node.nextSibling.nodeName} (nodeType: ${marker.node.nextSibling.nodeType})`
+      actual: nextSibling !== null
+        ? `${nextSibling.nodeName} (nodeType: ${nextSibling.nodeType})`
         : "no sibling node",
     });
     return;
@@ -548,7 +578,7 @@ function createReplayEventSnapshot(event: Event): ReplayEventSnapshot {
         altKey: Boolean(eventRecord.altKey),
         metaKey: Boolean(eventRecord.metaKey),
         pointerId: Number(eventRecord.pointerId ?? 0),
-        pointerType: String(eventRecord.pointerType ?? ""),
+        pointerType: stringifyEventField(eventRecord.pointerType),
         pressure: Number(eventRecord.pressure ?? 0),
         tangentialPressure: Number(eventRecord.tangentialPressure ?? 0),
         tiltX: Number(eventRecord.tiltX ?? 0),
@@ -595,8 +625,8 @@ function createReplayEventSnapshot(event: Event): ReplayEventSnapshot {
       kind: "keyboard",
       init: {
         ...baseInit,
-        key: String(eventRecord.key ?? ""),
-        code: String(eventRecord.code ?? ""),
+        key: stringifyEventField(eventRecord.key),
+        code: stringifyEventField(eventRecord.code),
         location: Number(eventRecord.location ?? 0),
         repeat: Boolean(eventRecord.repeat),
         ctrlKey: Boolean(eventRecord.ctrlKey),
@@ -636,7 +666,7 @@ function createReplayEventSnapshot(event: Event): ReplayEventSnapshot {
         ...baseInit,
         data:
           typeof eventRecord.data === "string" ? eventRecord.data : null,
-        inputType: String(eventRecord.inputType ?? ""),
+        inputType: stringifyEventField(eventRecord.inputType),
         isComposing: Boolean(eventRecord.isComposing),
       },
     };
@@ -676,7 +706,7 @@ function collectIslandHosts(
   if (
     root instanceof Element &&
     isIslandHost(root) &&
-    getIslandStrategy(root)
+    getIslandStrategy(root) !== null
   ) {
     hosts.push(root);
   }
@@ -1015,12 +1045,12 @@ function hydrate(
     root,
     (ctx) => {
       // Process text bindings
-      if (bindings.texts) {
+      if (bindings.texts !== undefined) {
         let marker = nextMarker(ctx);
         while (marker !== null) {
           if (marker.type === HydrationMarkerType.Text) {
             const getValue = bindings.texts.get(marker.id);
-            if (getValue) {
+            if (getValue !== undefined) {
               hydrateTextMarker(marker, getValue);
             }
           }
@@ -1030,7 +1060,7 @@ function hydrate(
       }
 
       // Process event bindings
-      if (bindings.events) {
+      if (bindings.events !== undefined) {
         for (const [element, handlers] of bindings.events) {
           for (const [eventType, handler] of handlers) {
             event(eventType, element, handler);

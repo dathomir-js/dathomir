@@ -43,7 +43,7 @@ interface IframeIntrinsicElements extends CommonIntrinsicElements {
   /** Referrer policy for fetches initiated by the iframe */
   referrerPolicy?: IframeReferrerPolicy;
   /** Security restrictions for the iframe content */
-  sandbox?: IframeSandbox | string;
+  sandbox?: IframeSandbox;
   /** URL of the page to embed */
   src?: string;
   /** Inline HTML to embed */

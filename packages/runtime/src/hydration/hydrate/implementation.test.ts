@@ -19,6 +19,7 @@ import {
   HydrationMarkerType,
   cancelScheduledIslandHydration,
   HYDRATE_ISLANDS_HOOK,
+  type IslandHydrationTrigger,
   handleMismatch,
   hydrate,
   hydrateIslands,
@@ -35,6 +36,9 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
+
+type HydrateRootSetup = Parameters<typeof hydrateRoot>[1];
+type HydrationContextArg = Parameters<HydrateRootSetup>[0];
 
 describe("HydrationMismatchError", () => {
   it("is an instance of Error", () => {
@@ -153,7 +157,7 @@ describe("hydrateRoot", () => {
     shadowRoot.innerHTML = "<div>Hello</div>";
     const countAtom = atom("count", 5);
     const store = createAtomStore({ appId: "hydrate-root-store" });
-    const setup = vi.fn((ctx) => {
+    const setup = vi.fn((ctx: HydrationContextArg) => {
       expect(ctx.store).toBe(store);
       expect(ctx.store?.ref(countAtom).value).toBe(5);
     });
@@ -171,7 +175,7 @@ describe("hydrateRoot", () => {
     shadowRoot.innerHTML =
       '<script type="application/json" data-dh-store>[{"theme":1},"dark"]</script><div>Hello</div>';
 
-    const setup = vi.fn((ctx) => {
+    const setup = vi.fn((ctx: HydrationContextArg) => {
       expect(ctx.store).toBe(store);
       expect(store.ref(themeAtom).value).toBe("dark");
       expect(shadowRoot.querySelector("script[data-dh-store]")).toBeNull();
@@ -565,7 +569,7 @@ describe("hydrateIslands", () => {
     });
 
     const island = document.createElement("test-island");
-    const hydrateHook = vi.fn(() => true);
+    const hydrateHook = vi.fn((_: IslandHydrationTrigger | undefined) => true);
     island.setAttribute("data-dh-island", "load");
     setHydrateHook(island, hydrateHook);
     host.appendChild(island);
@@ -746,14 +750,16 @@ describe("hydrateIslands", () => {
     hydrateIslands(document);
     input.dispatchEvent(new FocusEvent("focus"));
 
-    expect(hydrateHook).toHaveBeenCalledWith(
-      expect.objectContaining({
-        strategy: "interaction",
-        eventType: "focus",
-        replayTargetId: "field",
-        replayEvent: expect.objectContaining({ kind: "focus" }),
-      }),
-    );
+    const trigger = hydrateHook.mock.calls[0]?.[0] as
+      | IslandHydrationTrigger
+      | undefined;
+
+    expect(trigger).toMatchObject({
+      strategy: "interaction",
+      eventType: "focus",
+      replayTargetId: "field",
+    });
+    expect(trigger?.replayEvent).toMatchObject({ kind: "focus" });
   });
 
   it("hydrates media islands after the media query matches", () => {

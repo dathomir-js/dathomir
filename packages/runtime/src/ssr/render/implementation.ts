@@ -100,6 +100,31 @@ interface RenderContext {
 
 type SerializableStoreSnapshot = Record<string, SerializableValue>;
 
+function stringifyRenderableValue(value: unknown): string {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+
+  if (typeof value === "symbol") {
+    return value.description ?? "";
+  }
+
+  if (typeof value === "function") {
+    return value.toString();
+  }
+
+  if (JSON.stringify(value) === "{}") {
+    return String(value);
+  }
+
+  return JSON.stringify(value) ?? "";
+}
+
 /**
  * Renders DSD content for a custom element.
  * Returns DSD HTML string (excluding outer tag), or null if not registered.
@@ -143,7 +168,7 @@ function createContext(options: RenderOptions = {}): RenderContext {
   return {
     markerId: 0,
     state: options.state ?? {},
-    dynamicValues: options.dynamicValues ?? new Map(),
+    dynamicValues: options.dynamicValues ?? new Map<number, unknown>(),
     componentRenderer: options.componentRenderer ?? globalComponentRenderer,
     store: options.store,
     storeSnapshotSchema: options.storeSnapshotSchema,
@@ -195,7 +220,7 @@ function serializeStyleObject(obj: Record<string, unknown>): string {
   for (const [key, value] of Object.entries(obj)) {
     if (value == null || value === "") continue;
     const cssKey = camelToKebab(key);
-    parts.push(`${cssKey}: ${String(value)}`);
+    parts.push(`${cssKey}: ${stringifyRenderableValue(value)}`);
   }
   return parts.join("; ");
 }
@@ -211,17 +236,17 @@ function renderAttrs(attrs: Record<string, unknown>): string {
     if (key.startsWith("on") && key.length > 2) continue;
 
     if (BOOLEAN_ATTRS.has(key.toLowerCase())) {
-      if (value) {
+      if (value === true) {
         parts.push(key);
       }
     } else if (key === "style" && typeof value === "object" && value !== null) {
       // Serialize style object to CSS string
       const css = serializeStyleObject(value as Record<string, unknown>);
-      if (css) {
+      if (css !== "") {
         parts.push(`style="${escapeAttr(css)}"`);
       }
     } else if (value != null && value !== false) {
-      parts.push(`${key}="${escapeAttr(String(value))}"`);
+      parts.push(`${key}="${escapeAttr(stringifyRenderableValue(value))}"`);
     }
   }
 
@@ -229,7 +254,7 @@ function renderAttrs(attrs: Record<string, unknown>): string {
 }
 
 function renderDynamicText(value: unknown): string {
-  return value == null ? "" : escapeHtml(String(value));
+  return value == null ? "" : escapeHtml(stringifyRenderableValue(value));
 }
 
 function renderDynamicInsert(value: unknown): string {
@@ -293,7 +318,8 @@ function renderNode(node: Tree, ctx: RenderContext): string {
 
     if (type === "{text}") {
       const value = ctx.dynamicValues.get(id);
-      const textContent = value != null ? escapeHtml(String(value)) : "";
+      const textContent =
+        value != null ? escapeHtml(stringifyRenderableValue(value)) : "";
       return createMarker(MarkerType.Text, id) + textContent;
     }
 
@@ -308,7 +334,7 @@ function renderNode(node: Tree, ctx: RenderContext): string {
 
     if (type === "{each}") {
       const items = ctx.dynamicValues.get(id) as string[] | undefined;
-      const content = items ? items.join("") : "";
+      const content = items !== undefined ? items.join("") : "";
       return (
         createMarker(MarkerType.Block, id) + content + createBlockEndMarker()
       );
@@ -322,7 +348,7 @@ function renderNode(node: Tree, ctx: RenderContext): string {
     const [tag, attrs, ...children] = node;
 
     // Check for custom elements with DSD support
-    if (tag.includes("-") && ctx.componentRenderer) {
+    if (tag.includes("-") && ctx.componentRenderer !== undefined) {
       const attrObj = (attrs ?? {}) as Record<string, unknown>;
       const activeStore = getCurrentStore() ?? ctx.store;
       const dsdContent = ctx.componentRenderer(tag, attrObj, {
@@ -330,13 +356,13 @@ function renderNode(node: Tree, ctx: RenderContext): string {
       });
       if (dsdContent !== null) {
         // Render as custom element with Declarative Shadow DOM
-        const attrStr = attrs ? renderAttrs(attrs) : "";
+        const attrStr = attrs !== null ? renderAttrs(attrs) : "";
         return `<${tag}${attrStr}><template shadowrootmode="open">${dsdContent}</template></${tag}>`;
       }
     }
 
     // Build opening tag
-    const attrStr = attrs ? renderAttrs(attrs) : "";
+    const attrStr = attrs !== null ? renderAttrs(attrs) : "";
     let html = `<${tag}${attrStr}`;
 
     // Void elements
@@ -390,7 +416,7 @@ function renderTree(tree: Tree[], options: RenderOptions = {}): string {
       html += renderNode(node, ctx);
     }
 
-    if (options.includeState && Object.keys(ctx.state).length > 0) {
+    if (options.includeState === true && Object.keys(ctx.state).length > 0) {
       html = createStateScript(serializeState(ctx.state)) + html;
     }
 

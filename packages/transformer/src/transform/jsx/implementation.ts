@@ -1,7 +1,7 @@
 import {
-  COLOCATED_CLIENT_STRATEGIES,
+  type COLOCATED_CLIENT_STRATEGIES,
   DEFAULT_INTERACTION_EVENT_TYPE,
-  ISLAND_STRATEGIES,
+  type ISLAND_STRATEGIES,
   isColocatedClientStrategyName,
 } from "@dathomir/shared";
 import {

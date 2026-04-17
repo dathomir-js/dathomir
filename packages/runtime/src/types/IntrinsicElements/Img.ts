@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import type { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 type ImgDecoding = "sync" | "async" | "auto";
 type ImgLoading = "eager" | "lazy";

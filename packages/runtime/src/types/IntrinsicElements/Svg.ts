@@ -1,4 +1,4 @@
-import { SvgSvgAttributes } from "@/types/IntrinsicElements/SVGElements";
+import type { SvgSvgAttributes } from "@/types/IntrinsicElements/SVGElements";
 
 /**
  * Attributes for the `<svg>` element, which defines an SVG document fragment.

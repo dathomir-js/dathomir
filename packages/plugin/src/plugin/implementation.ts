@@ -164,7 +164,7 @@ function findNearestTsconfigPath(importer: string): string | null {
     path.normalize(stripQueryAndHash(importer)),
   );
 
-  while (true) {
+  for (;;) {
     const tsconfigPath = path.join(currentDirectory, "tsconfig.json");
     if (fs.existsSync(tsconfigPath)) {
       return tsconfigPath;
@@ -371,7 +371,7 @@ function createVitePlugin(options: PluginOptions = {}): VitePlugin {
 
     transform(code: string, id: string, transformOptions?: { ssr?: boolean }) {
       const isSsr = transformOptions?.ssr ?? false;
-      const environmentName = this?.environment?.name;
+      const environmentName = this.environment.name;
       return doTransform(code, id, isSsr, environmentName, options);
     },
   };

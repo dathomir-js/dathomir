@@ -35,6 +35,7 @@ export const config = defineConfig({
     "typescript/no-floating-promises": "error",
     "typescript/no-misused-promises": "error",
     "typescript/consistent-type-imports": "warn",
+    "typescript/no-unnecessary-condition": "warn",
     "typescript/no-unnecessary-type-assertion": "warn",
     "typescript/no-unsafe-argument": "error",
     "typescript/no-unsafe-assignment": "error",

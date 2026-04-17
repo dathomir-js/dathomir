@@ -20,12 +20,15 @@ import type { Computed } from "../types";
 
 function computedOper<T>(node: ComputedNode<T>): T {
   const flags = node.flags;
-  if (
-    (flags & ReactiveFlags.Dirty) !== 0 ||
-    ((flags & ReactiveFlags.Pending) !== 0 &&
-      (checkDirty(node.deps as Link, node) ||
-        ((node.flags = flags & ~ReactiveFlags.Pending), false)))
-  ) {
+  let shouldUpdate = (flags & ReactiveFlags.Dirty) !== 0;
+  if (!shouldUpdate && (flags & ReactiveFlags.Pending) !== 0) {
+    shouldUpdate = checkDirty(node.deps as Link, node);
+    if (!shouldUpdate) {
+      node.flags = flags & ~ReactiveFlags.Pending;
+    }
+  }
+
+  if (shouldUpdate) {
     if (updateComputed(node)) {
       const subs = node.subs;
       if (subs !== undefined) {

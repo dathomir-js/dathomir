@@ -26,7 +26,7 @@ function stringifyAttrValue(value: unknown): string {
     return String(value);
   }
 
-  return JSON.stringify(value) ?? "";
+  return JSON.stringify(value);
 }
 
 interface CompiledTemplateDescriptor {
@@ -53,7 +53,7 @@ const compiledTemplateCache = new WeakMap<
 function isCompiledTemplateDescriptor(
   value: readonly Tree[] | CompiledTemplateDescriptor,
 ): value is CompiledTemplateDescriptor {
-  return "kind" in value && value.kind === "compiled";
+  return "kind" in value;
 }
 
 function parseCompiledMarkup(

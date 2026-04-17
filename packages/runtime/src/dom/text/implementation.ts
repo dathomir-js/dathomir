@@ -31,7 +31,7 @@ function stringifyTextValue(value: unknown): string {
     return "[object Object]";
   }
 
-  return JSON.stringify(value) ?? "";
+  return JSON.stringify(value);
 }
 
 /**

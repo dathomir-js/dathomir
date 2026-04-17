@@ -122,7 +122,7 @@ function stringifyRenderableValue(value: unknown): string {
     return String(value);
   }
 
-  return JSON.stringify(value) ?? "";
+  return JSON.stringify(value);
 }
 
 /**
@@ -332,15 +332,9 @@ function renderNode(node: Tree, ctx: RenderContext): string {
       );
     }
 
-    if (type === "{each}") {
-      const items = ctx.dynamicValues.get(id) as string[] | undefined;
-      const content = items !== undefined ? items.join("") : "";
-      return (
-        createMarker(MarkerType.Block, id) + content + createBlockEndMarker()
-      );
-    }
-
-    return "";
+    const items = ctx.dynamicValues.get(id) as string[] | undefined;
+    const content = items !== undefined ? items.join("") : "";
+    return createMarker(MarkerType.Block, id) + content + createBlockEndMarker();
   }
 
   // Element node

@@ -121,12 +121,15 @@ function purgeDeps(sub: BaseNode): void {
 }
 
 function runWatcher(node: WatcherNode, flags: number): void {
-  if (
-    (flags & ReactiveFlags.Dirty) !== 0 ||
-    ((flags & ReactiveFlags.Pending) !== 0 &&
-      (checkDirty(node.deps as Link, node) ||
-        ((node.flags = flags & ~ReactiveFlags.Pending), false)))
-  ) {
+  let shouldRun = (flags & ReactiveFlags.Dirty) !== 0;
+  if (!shouldRun && (flags & ReactiveFlags.Pending) !== 0) {
+    shouldRun = checkDirty(node.deps as Link, node);
+    if (!shouldRun) {
+      node.flags = flags & ~ReactiveFlags.Pending;
+    }
+  }
+
+  if (shouldRun) {
     incrementCycle();
     node.depsTail = undefined;
     node.flags =

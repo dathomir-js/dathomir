@@ -20,8 +20,6 @@ function generateNavigation(
 
   for (let i = 0; i < path.length; i++) {
     const index = path[i];
-    /* c8 ignore next @preserve -- defensive guard: array index always exists within for-loop bounds */
-    if (index === undefined) continue;
 
     if (i === 0 && index === 0) {
       continue;

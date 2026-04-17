@@ -129,7 +129,7 @@ function adaptParsedProgram(
   program: ReturnType<typeof parseSync>["program"],
 ): ESTNode {
   /* c8 ignore next @preserve -- defensive guard: oxc-parser always returns a valid Program node */
-  if (typeof program !== "object" || program === null || !("type" in program)) {
+  if (!("type" in program)) {
     throw new TypeError("Expected an ESTree-compatible Program node");
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- boundary between oxc-parser types and internal ESTNode
@@ -711,10 +711,9 @@ function collectImportedTransparentThunkWrappers(
       continue;
     }
 
-    const source =
-      statement.source !== undefined && isStringLiteral(statement.source)
-        ? String(statement.source.value)
-        : null;
+    const source = isStringLiteral(statement.source)
+      ? String(statement.source.value)
+      : null;
     /* c8 ignore next @preserve -- defensive guard: ImportDeclaration always has a valid string source */
     if (source === null) {
       continue;
@@ -1192,11 +1191,6 @@ function extractFunctionRenderFrame(
 
   for (let index = 0; index < statements.length; index += 1) {
     const statement = statements[index];
-    /* c8 ignore next @preserve -- defensive guard: array index always valid within for-loop bounds */
-    if (statement === undefined) {
-      return null;
-    }
-
     if (isReturnStatement(statement)) {
       if (statement.argument === null) {
         return null;
@@ -1296,7 +1290,7 @@ function getExplicitNestedBoundary(part: DynamicPart): ESTNode | null {
 
   const props = part.expression.arguments[0];
   /* c8 ignore next @preserve -- defensive guard: buildComponentCall always produces ObjectExpression as first arg */
-  if (props?.type !== "ObjectExpression") {
+  if (props.type !== "ObjectExpression") {
     return null;
   }
 
@@ -1352,7 +1346,7 @@ function createPlanBinding(
     case "attr":
       return nObj([
         ...sharedProperties,
-        nProp(nId("key"), nLit(part.key ?? "")),
+        nProp(nId("key"), nLit(part.key)),
         nProp(
           nId("expression"),
           createArrowExpression([], cloneNode(part.expression)),
@@ -1361,7 +1355,7 @@ function createPlanBinding(
     case "event":
       return nObj([
         ...sharedProperties,
-        nProp(nId("eventType"), nLit(part.key ?? "")),
+        nProp(nId("eventType"), nLit(part.key)),
         nProp(nId("expression"), cloneNode(part.expression)),
       ]);
     case "insert":
@@ -2383,11 +2377,6 @@ function collectComponentPlans(
 
   for (let bodyIndex = 0; bodyIndex < program.body.length; bodyIndex += 1) {
     const statement = program.body[bodyIndex];
-    /* c8 ignore next @preserve -- defensive guard: array index always valid within for-loop bounds */
-    if (statement === undefined) {
-      continue;
-    }
-
     const declaration = isVariableDeclaration(statement)
       ? statement
       : isExportNamedDeclaration(statement) &&
@@ -2407,16 +2396,12 @@ function collectComponentPlans(
       declarationIndex += 1
     ) {
       const declarator = declaration.declarations[declarationIndex];
-      const init = declarator?.init;
+      const init = declarator.init;
       if (!isDefineComponentCall(init)) {
         continue;
       }
 
       const componentArg = init.arguments[1];
-      if (componentArg === undefined) {
-        continue;
-      }
-
       const buildResult = buildComponentHydrationMetadata(
         componentArg,
         nested,
@@ -2446,11 +2431,6 @@ function applyComponentPlans(
 ): void {
   for (const plan of plans) {
     const statement = program.body[plan.bodyIndex];
-    /* c8 ignore next @preserve -- defensive guard: collected plan indices always point at an existing top-level statement */
-    if (statement === undefined) {
-      continue;
-    }
-
     const declaration = isVariableDeclaration(statement)
       ? statement
       : isExportNamedDeclaration(statement) &&
@@ -2468,10 +2448,6 @@ function applyComponentPlans(
     }
 
     const componentArg = init.arguments[1];
-    /* c8 ignore next @preserve -- defensive guard: collected plans only target calls with a second component argument */
-    if (componentArg === undefined) {
-      continue;
-    }
 
     init.arguments[1] = nCall(nMember(nId("Object"), nId("assign")), [
       componentArg,
@@ -2657,7 +2633,7 @@ function transform(
     let insertIndex = 0;
     for (let i = 0; i < transformedProgram.body.length; i++) {
       const statement = transformedProgram.body[i];
-      if (statement?.type === "ImportDeclaration") {
+      if (statement.type === "ImportDeclaration") {
         insertIndex = i + 1;
       } else {
         break;
@@ -2679,7 +2655,7 @@ function transform(
     let insertIndex = 0;
     for (let i = 0; i < transformedProgram.body.length; i++) {
       const statement = transformedProgram.body[i];
-      if (statement?.type === "ImportDeclaration") {
+      if (statement.type === "ImportDeclaration") {
         insertIndex = i + 1;
       } else {
         break;

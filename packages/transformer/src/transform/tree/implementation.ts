@@ -157,29 +157,18 @@ function throwUnknownClientDirective(name: JSXAttribute["name"]): never {
   );
 }
 
-function getRawAttributeNameForDiagnostics(
-  name: JSXAttribute["name"],
-): string | null {
+function getRawAttributeNameForDiagnostics(name: JSXAttribute["name"]): string {
   if (name.type === "JSXIdentifier") {
     return name.name;
   }
 
-  if (name.type === "JSXNamespacedName") {
-    return `${name.namespace.name}:${name.name.name}`;
-  }
-
-  /* c8 ignore next @preserve -- defensive guard: JSXAttribute names are always identifiers or namespaces */
-  return null;
+  return `${name.namespace.name}:${name.name.name}`;
 }
 
 function getUnsupportedColocatedDirectiveError(
   name: JSXAttribute["name"],
 ): string | null {
   const rawName = getRawAttributeNameForDiagnostics(name);
-  /* c8 ignore next @preserve -- defensive guard: parser-produced JSXAttribute names always normalize to a string */
-  if (rawName === null) {
-    return null;
-  }
 
   if (
     Array.from(colocatedDirectivePrefixes).some((prefix) =>
@@ -644,9 +633,7 @@ function buildComponentCall(
 
     const colocatedDirective = getColocatedClientDirective(attr.name);
     if (colocatedDirective !== null) {
-      const rawName =
-        getRawAttributeNameForDiagnostics(attr.name) ??
-        `${colocatedDirective.strategy}:onClick`;
+      const rawName = getRawAttributeNameForDiagnostics(attr.name);
       const value = attr.value;
       if (
         value === null ||
@@ -755,8 +742,6 @@ function buildComponentCall(
     }
 
     const key = getAttributeName(attr.name);
-    /* c8 ignore next @preserve -- defensive guard: parser-produced JSXAttribute names always normalize to a string */
-    if (key === null) continue;
 
     if (RESERVED_ISLAND_METADATA_KEYS.has(key as never)) {
       hasExplicitReservedIslandMetadata = true;
@@ -957,7 +942,7 @@ function buildComponentCall(
       }
 
       const onlyChild = childExprs[0];
-      if (childExprs.length === 1 && onlyChild !== undefined) {
+      if (childExprs.length === 1) {
         propsProperties.push(nProp(nId("children"), onlyChild));
       } else if (childExprs.length > 1) {
         propsProperties.push(nProp(nId("children"), nArr(childExprs)));
@@ -1051,9 +1036,7 @@ function processAttributes(
     const colocatedClientDirective = getColocatedClientDirective(attr.name);
     if (colocatedClientDirective !== null) {
       const value = attr.value;
-      const rawName =
-        getRawAttributeNameForDiagnostics(attr.name) ??
-        `${colocatedClientDirective.strategy}:onClick`;
+      const rawName = getRawAttributeNameForDiagnostics(attr.name);
       if (
         shouldRejectColocatedDirectiveInNamespace(state.currentElementNamespace)
       ) {
@@ -1139,8 +1122,6 @@ function processAttributes(
     }
 
     const key = getAttributeName(attr.name);
-    /* c8 ignore next @preserve -- defensive guard: parser-produced JSXAttribute names always normalize to a string */
-    if (key === null) continue;
 
     const reservedClientMetadataError = getReservedClientMetadataError(key);
     if (reservedClientMetadataError !== null) {
@@ -1453,17 +1434,12 @@ function containsJSXNode(expr: ESTNode): boolean {
   return found;
 }
 
-function getAttributeName(name: JSXAttribute["name"]): string | null {
+function getAttributeName(name: JSXAttribute["name"]): string {
   if (name.type === "JSXIdentifier") {
     return name.name;
   }
 
-  if (name.type === "JSXNamespacedName") {
-    return `${name.namespace.name}:${name.name.name}`;
-  }
-
-  /* c8 ignore next @preserve -- defensive guard: JSXAttribute names are always identifiers or namespaces */
-  return null;
+  return `${name.namespace.name}:${name.name.name}`;
 }
 
 function isJSXElement(node: ESTNode): node is JSXElement {

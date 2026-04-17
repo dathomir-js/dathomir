@@ -31,7 +31,7 @@ function parseStateScript(container: Element | ShadowRoot): StateObject | null {
 
   const content = script.textContent;
 
-  if (content === undefined || content === null || content === "") {
+  if (content === "") {
     return null;
   }
 
@@ -66,7 +66,7 @@ function parseStoreScript(container: Element | ShadowRoot): StateObject | null {
 
   const content = script.textContent;
 
-  if (content === undefined || content === null || content === "") {
+  if (content === "") {
     return null;
   }
 

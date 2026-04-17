@@ -19,7 +19,7 @@ interface AtomStoreSnapshot<S extends AtomStoreSnapshotSchema> {
 }
 
 function assertPrimitiveAtomSchema(
-  schema: Record<string, PrimitiveAtom<unknown>>,
+  schema: Record<string, { kind: string }>,
 ): void {
   for (const [stableId, atom] of Object.entries(schema)) {
     if (atom.kind !== "primitive") {

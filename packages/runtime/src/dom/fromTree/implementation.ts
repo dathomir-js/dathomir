@@ -243,7 +243,7 @@ function createNode(tree: Tree, ns: Namespace): Node {
 
   // Append children
   for (const child of children) {
-    element.appendChild(createNode(child as Tree, elementNs));
+    element.appendChild(createNode(child, elementNs));
   }
 
   return element;

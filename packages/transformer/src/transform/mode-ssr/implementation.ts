@@ -173,7 +173,7 @@ function readStaticTreeNode(node: ESTNode): StaticTreeNode | null {
     return null;
   }
 
-  const attrs = readAttrs(attrsNode as ESTNode);
+  const attrs = readAttrs(attrsNode);
   if (
     attrsNode !== undefined &&
     attrs === null &&
@@ -303,7 +303,7 @@ function mergeStaticPart(parts: ESTNode[], value: string): void {
     return;
   }
 
-  const previous = parts.at(-1) as ESTNode | undefined;
+  const previous = parts.at(-1);
   if (
     previous?.type === "Literal" &&
     typeof previous.value === "string" &&
@@ -323,7 +323,7 @@ function buildJoinedExpression(parts: ESTNode[]): ESTNode {
   }
 
   if (parts.length === 1) {
-    return parts[0] as ESTNode;
+    return parts[0];
   }
 
   return nCall(nMember(nArr(parts), nId("join")), [nLit("")]);

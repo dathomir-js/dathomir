@@ -327,14 +327,14 @@ function replaceIdentifierName(node: ESTNode, from: string, to: string): void {
     if (Array.isArray(value)) {
       for (const item of value) {
         if (isESTNode(item)) {
-          replaceIdentifierName(item as ESTNode, from, to);
+          replaceIdentifierName(item, from, to);
         }
       }
       continue;
     }
 
     if (isESTNode(value)) {
-      replaceIdentifierName(value as ESTNode, from, to);
+      replaceIdentifierName(value, from, to);
     }
   }
 }
@@ -426,10 +426,7 @@ function applyRenameMapToStatementReferences(
     const cloned = cloneNode(statement);
     for (const declarator of cloned.declarations) {
       if (declarator.init !== null && declarator.init !== undefined) {
-        declarator.init = cloneWithRenames(
-          declarator.init as ESTNode,
-          renameMap,
-        );
+          declarator.init = cloneWithRenames(declarator.init, renameMap);
       }
     }
     return cloned;
@@ -437,9 +434,9 @@ function applyRenameMapToStatementReferences(
 
   if (isFunctionDeclarationStatement(statement)) {
     const cloned = cloneNode(statement);
-    cloned.body = cloneWithRenames(cloned.body as ESTNode, renameMap);
+    cloned.body = cloneWithRenames(cloned.body, renameMap);
     if (Array.isArray(cloned.params)) {
-      cloned.params = cloned.params.map((param) => cloneNode(param as ESTNode));
+      cloned.params = cloned.params.map((param) => cloneNode(param));
     }
     return cloned;
   }
@@ -478,14 +475,11 @@ function buildCollisionSafePlanAnalysis(
       const localRenameMap = new Map<string, string>();
       for (const declarator of withPriorRefs.declarations) {
         if (declarator.init !== null && declarator.init !== undefined) {
-          declarator.init = cloneWithRenames(
-            declarator.init as ESTNode,
-            localRenameMap,
-          );
+          declarator.init = cloneWithRenames(declarator.init, localRenameMap);
         }
 
         const { pattern, renameMap } = renamePatternWithCollisions(
-          declarator.id as ESTNode,
+          declarator.id,
           state,
         );
         declarator.id = pattern;
@@ -593,7 +587,7 @@ function containsIdentifierNamed(
     if (Array.isArray(value)) {
       for (const item of value) {
         if (isESTNode(item)) {
-          if (containsIdentifierNamed(item as ESTNode, names)) {
+          if (containsIdentifierNamed(item, names)) {
             return true;
           }
         }
@@ -602,7 +596,7 @@ function containsIdentifierNamed(
     }
 
     if (isESTNode(value)) {
-      if (containsIdentifierNamed(value as ESTNode, names)) {
+      if (containsIdentifierNamed(value, names)) {
         return true;
       }
     }
@@ -644,7 +638,7 @@ function isNewExpression(node: ESTNode | null | undefined): node is ESTNode & {
 function unwrapParenthesizedExpression(node: ESTNode): ESTNode {
   let current = node;
   while (isParenthesizedExpression(current)) {
-    current = current.expression as ESTNode;
+    current = current.expression;
   }
   return current;
 }
@@ -826,7 +820,7 @@ function resolveObjectLiteralHelperMethod(
     return null;
   }
 
-  for (const property of helperObject.properties as ESTNode[]) {
+  for (const property of helperObject.properties) {
     if (property.type !== "Property") {
       continue;
     }
@@ -888,7 +882,7 @@ function resolveTopLevelHelperNode(
   }
 
   const objectLiteralHelper = resolveObjectLiteralHelperMethod(
-    callExpression.callee as ESTNode,
+    callExpression.callee,
     helperLookup,
   );
   if (objectLiteralHelper !== null) {
@@ -1064,7 +1058,7 @@ function isNormalizableSpreadArgument(
     return false;
   }
 
-  return (unwrapped.properties as ESTNode[]).every((property) => {
+  return unwrapped.properties.every((property) => {
     if (property.type === "SpreadElement") {
       return isNormalizableSpreadArgument(
         property.argument as ESTNode,
@@ -2087,8 +2081,8 @@ function collectTopLevelBindings(program: Program): Set<string> {
 
   for (const statement of program.body) {
     if (isImportDeclaration(statement)) {
-      for (const specifier of (statement.specifiers ?? []) as ESTNode[]) {
-        const local = specifier.local as ESTNode | undefined;
+      for (const specifier of statement.specifiers ?? []) {
+        const local = specifier.local;
         if (local !== undefined && isIdentifier(local)) {
           bindings.add(local.name);
         }

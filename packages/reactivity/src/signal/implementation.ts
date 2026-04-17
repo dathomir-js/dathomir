@@ -71,7 +71,7 @@ function createSignalApi<T>(node: SignalNode<T>): Signal<T> {
         typeof update === "function"
           ? (update as (prev: T) => T)(readUntracked())
           : update;
-      write(nextValue as T);
+      write(nextValue);
     },
     peek() {
       return readUntracked();

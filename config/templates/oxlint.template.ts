@@ -34,6 +34,7 @@ export const config = defineConfig({
     "require-await": "error",
     "typescript/no-floating-promises": "error",
     "typescript/no-misused-promises": "error",
+    "typescript/no-unnecessary-type-assertion": "warn",
     "typescript/no-unsafe-argument": "error",
     "typescript/no-unsafe-assignment": "error",
     "typescript/no-unsafe-call": "error",

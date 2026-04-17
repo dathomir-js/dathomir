@@ -35,7 +35,7 @@ function defineAtomStoreSnapshot<const S extends AtomStoreSnapshotSchema>(
 ): AtomStoreSnapshot<S> {
   assertPrimitiveAtomSchema(schema);
 
-  const frozenSchema = Object.freeze({ ...schema }) as Readonly<S>;
+  const frozenSchema: Readonly<S> = Object.freeze({ ...schema });
   const entries = Object.entries(frozenSchema) as Array<[keyof S, S[keyof S]]>;
 
   return {

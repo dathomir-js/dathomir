@@ -231,7 +231,7 @@ function collectBlockBindingNames(body: ESTNode[], names: Set<string>): void {
     }
 
     if (statement.type === "FunctionDeclaration" && isESTNode(statement.id)) {
-      collectBindingNames(statement.id as ESTNode, names);
+      collectBindingNames(statement.id, names);
     }
   }
 }
@@ -271,7 +271,7 @@ function collectFreeIdentifiers(
     case "FunctionExpression": {
       const nextAvailable = new Set(available);
       if (node.type === "FunctionExpression" && isESTNode(node.id)) {
-        collectBindingNames(node.id as ESTNode, nextAvailable);
+        collectBindingNames(node.id, nextAvailable);
       }
       for (const param of (node.params ?? []) as ESTNode[]) {
         collectBindingNames(param, nextAvailable);
@@ -497,7 +497,7 @@ function buildComponentActionPayloadExpression(
   const properties = captureNames.map((name) =>
     nProp(
       isValidIdentifier(name) ? nId(name) : nLit(name),
-      (serializableBindings?.get(name) ?? nId(name)) as ESTNode,
+      serializableBindings?.get(name) ?? nId(name),
       !isValidIdentifier(name),
     ),
   );

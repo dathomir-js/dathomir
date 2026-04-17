@@ -74,7 +74,7 @@ describe("jsx / createElement", () => {
   describe("function components", () => {
     it("should call function components with props", () => {
       const MyComponent = (props: { message: string }) => {
-        return jsx("div", { children: props.message }) as Node;
+        return jsx("div", { children: props.message });
       };
       const el = jsx(MyComponent as (props: Record<string, unknown>) => Node, {
         message: "hello",
@@ -86,7 +86,7 @@ describe("jsx / createElement", () => {
       const MyComponent = (props: Record<string, unknown>) => {
         return jsx("div", {
           children: String(Object.keys(props).length),
-        }) as Node;
+        });
       };
       const el = jsx(MyComponent, null) as HTMLElement;
       expect(el.textContent).toContain("0");
@@ -97,7 +97,7 @@ describe("jsx / createElement", () => {
       const store = createAtomStore({ appId: "core-function-store" });
 
       const MyComponent = () => {
-        return jsx("div", { children: store.ref(countAtom).value }) as Node;
+        return jsx("div", { children: store.ref(countAtom).value });
       };
 
       const el = withStore(store, () => jsx(MyComponent, null)) as HTMLElement;
@@ -141,7 +141,7 @@ describe("jsx / createElement", () => {
       document.body.appendChild(root);
       await waitForMicrotask();
 
-      const nested = root.querySelector(tag) as HTMLElement | null;
+      const nested = root.querySelector(tag);
       expect(nested?.shadowRoot?.textContent).toBe("dark");
 
       root.remove();

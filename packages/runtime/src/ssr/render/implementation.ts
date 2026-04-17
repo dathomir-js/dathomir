@@ -349,7 +349,7 @@ function renderNode(node: Tree, ctx: RenderContext): string {
 
     // Check for custom elements with DSD support
     if (tag.includes("-") && ctx.componentRenderer !== undefined) {
-      const attrObj = (attrs ?? {}) as Record<string, unknown>;
+      const attrObj = attrs ?? {};
       const activeStore = getCurrentStore() ?? ctx.store;
       const dsdContent = ctx.componentRenderer(tag, attrObj, {
         store: activeStore,
@@ -373,9 +373,9 @@ function renderNode(node: Tree, ctx: RenderContext): string {
     html += ">";
 
     // Render children
-    for (const child of children) {
-      html += renderNode(child as Tree, ctx);
-    }
+      for (const child of children) {
+        html += renderNode(child, ctx);
+      }
 
     // Closing tag
     html += `</${tag}>`;

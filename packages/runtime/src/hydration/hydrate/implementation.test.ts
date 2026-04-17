@@ -751,9 +751,7 @@ describe("hydrateIslands", () => {
     hydrateIslands(document);
     input.dispatchEvent(new FocusEvent("focus"));
 
-    const trigger = hydrateHook.mock.calls[0]?.[0] as
-      | IslandHydrationTrigger
-      | undefined;
+    const trigger = hydrateHook.mock.calls[0]?.[0];
 
     expect(trigger).toMatchObject({
       strategy: "interaction",

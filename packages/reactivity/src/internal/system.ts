@@ -113,7 +113,7 @@ function notifyWatcher(node: WatcherNode): void {
 }
 
 function purgeDeps(sub: BaseNode): void {
-  const depsTail = sub.depsTail as Link | undefined;
+  const depsTail = sub.depsTail;
   let toRemove = depsTail !== undefined ? depsTail.nextDep : sub.deps;
   while (toRemove !== undefined) {
     toRemove = unlink(toRemove, sub);

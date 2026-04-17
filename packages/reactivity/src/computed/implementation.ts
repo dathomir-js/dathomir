@@ -55,8 +55,8 @@ function computedOper<T>(node: ComputedNode<T>): T {
 }
 
 function createComputedApi<T>(node: ComputedNode<T>): Computed<T> {
-  const readTracked = () => computedOper(node) as T;
-  const readUntracked = () => withNoTracking(() => computedOper(node) as T);
+  const readTracked = () => computedOper(node);
+  const readUntracked = () => withNoTracking(() => computedOper(node));
   return {
     get value() {
       return readTracked();

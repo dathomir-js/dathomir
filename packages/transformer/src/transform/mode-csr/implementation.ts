@@ -196,7 +196,7 @@ function readStaticTreeNode(node: ESTNode): StaticTreeNode | null {
     return null;
   }
 
-  const attrs = readAttrs(attrsNode as ESTNode);
+  const attrs = readAttrs(attrsNode);
   if (
     attrsNode !== undefined &&
     attrs === null &&

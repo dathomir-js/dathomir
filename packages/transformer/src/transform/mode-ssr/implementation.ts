@@ -144,7 +144,7 @@ function readStaticTreeNode(node: ESTNode): StaticTreeNode | null {
     return null;
   }
 
-  const elements = node.elements as ESTNode[];
+  const elements = node.elements as Array<ESTNode | null | undefined>;
   const [tagNode, attrsNode, ...childNodes] = elements;
   if (
     tagNode?.type === "Literal" &&
@@ -173,9 +173,9 @@ function readStaticTreeNode(node: ESTNode): StaticTreeNode | null {
     return null;
   }
 
-  const attrs = readAttrs(attrsNode as ESTNode);
+  const attrs = readAttrs(attrsNode);
   if (
-    attrsNode !== undefined &&
+    attrsNode != null &&
     attrs === null &&
     !(attrsNode.type === "Literal" && attrsNode.value === null)
   ) {
@@ -184,7 +184,7 @@ function readStaticTreeNode(node: ESTNode): StaticTreeNode | null {
 
   const children: StaticTreeNode[] = [];
   for (const childNode of childNodes) {
-    if (childNode === null || childNode === undefined) {
+    if (childNode == null) {
       return null;
     }
 
@@ -209,8 +209,8 @@ function readStaticTreeRoots(tree: ESTNode): StaticTreeNode[] | null {
   }
 
   const roots: StaticTreeNode[] = [];
-  for (const element of tree.elements as ESTNode[]) {
-    if (element === null || element === undefined) {
+  for (const element of tree.elements as Array<ESTNode | null | undefined>) {
+    if (element == null) {
       return null;
     }
 
@@ -303,7 +303,7 @@ function mergeStaticPart(parts: ESTNode[], value: string): void {
     return;
   }
 
-  const previous = parts.at(-1) as ESTNode | undefined;
+  const previous = parts.at(-1);
   if (
     previous?.type === "Literal" &&
     typeof previous.value === "string" &&
@@ -323,7 +323,7 @@ function buildJoinedExpression(parts: ESTNode[]): ESTNode {
   }
 
   if (parts.length === 1) {
-    return parts[0] as ESTNode;
+    return parts[0];
   }
 
   return nCall(nMember(nArr(parts), nId("join")), [nLit("")]);
@@ -399,7 +399,7 @@ function transformJSXForSSRNode(
       markerIndex += 1;
 
       if (currentNode.kind === "text") {
-        if (binding?.type !== "text") {
+        if (binding.type !== "text") {
           return;
         }
 
@@ -409,7 +409,7 @@ function transformJSXForSSRNode(
         return;
       }
 
-      if (binding?.type !== "insert") {
+      if (binding.type !== "insert") {
         return;
       }
 
@@ -449,7 +449,7 @@ function transformJSXForSSRNode(
         state.runtimeImports.add("renderDynamicAttr");
         parts.push(
           nCall(nId("renderDynamicAttr"), [
-            nLit(dynamicPart.key ?? ""),
+            nLit(dynamicPart.key),
             dynamicPart.expression,
           ]),
         );

@@ -1,4 +1,4 @@
-import { SvgAAttributes } from "@/types/IntrinsicElements/SVGElements";
+import type { SvgAAttributes } from "@/types/IntrinsicElements/SVGElements";
 
 type ATarget = "_self" | "_blank" | "_parent" | "_top" | (string & {});
 

@@ -1,4 +1,4 @@
-import { SharedIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import type { SharedIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 /**
  * Attributes for the `<math>` element, which defines a MathML fragment.

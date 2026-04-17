@@ -129,7 +129,7 @@ function adaptParsedProgram(
   program: ReturnType<typeof parseSync>["program"],
 ): ESTNode {
   /* c8 ignore next @preserve -- defensive guard: oxc-parser always returns a valid Program node */
-  if (typeof program !== "object" || program === null || !("type" in program)) {
+  if (!("type" in program)) {
     throw new TypeError("Expected an ESTree-compatible Program node");
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- boundary between oxc-parser types and internal ESTNode
@@ -327,14 +327,14 @@ function replaceIdentifierName(node: ESTNode, from: string, to: string): void {
     if (Array.isArray(value)) {
       for (const item of value) {
         if (isESTNode(item)) {
-          replaceIdentifierName(item as ESTNode, from, to);
+          replaceIdentifierName(item, from, to);
         }
       }
       continue;
     }
 
     if (isESTNode(value)) {
-      replaceIdentifierName(value as ESTNode, from, to);
+      replaceIdentifierName(value, from, to);
     }
   }
 }
@@ -426,10 +426,7 @@ function applyRenameMapToStatementReferences(
     const cloned = cloneNode(statement);
     for (const declarator of cloned.declarations) {
       if (declarator.init !== null && declarator.init !== undefined) {
-        declarator.init = cloneWithRenames(
-          declarator.init as ESTNode,
-          renameMap,
-        );
+          declarator.init = cloneWithRenames(declarator.init, renameMap);
       }
     }
     return cloned;
@@ -437,9 +434,9 @@ function applyRenameMapToStatementReferences(
 
   if (isFunctionDeclarationStatement(statement)) {
     const cloned = cloneNode(statement);
-    cloned.body = cloneWithRenames(cloned.body as ESTNode, renameMap);
+    cloned.body = cloneWithRenames(cloned.body, renameMap);
     if (Array.isArray(cloned.params)) {
-      cloned.params = cloned.params.map((param) => cloneNode(param as ESTNode));
+      cloned.params = cloned.params.map((param) => cloneNode(param));
     }
     return cloned;
   }
@@ -478,14 +475,11 @@ function buildCollisionSafePlanAnalysis(
       const localRenameMap = new Map<string, string>();
       for (const declarator of withPriorRefs.declarations) {
         if (declarator.init !== null && declarator.init !== undefined) {
-          declarator.init = cloneWithRenames(
-            declarator.init as ESTNode,
-            localRenameMap,
-          );
+          declarator.init = cloneWithRenames(declarator.init, localRenameMap);
         }
 
         const { pattern, renameMap } = renamePatternWithCollisions(
-          declarator.id as ESTNode,
+          declarator.id,
           state,
         );
         declarator.id = pattern;
@@ -593,7 +587,7 @@ function containsIdentifierNamed(
     if (Array.isArray(value)) {
       for (const item of value) {
         if (isESTNode(item)) {
-          if (containsIdentifierNamed(item as ESTNode, names)) {
+          if (containsIdentifierNamed(item, names)) {
             return true;
           }
         }
@@ -602,7 +596,7 @@ function containsIdentifierNamed(
     }
 
     if (isESTNode(value)) {
-      if (containsIdentifierNamed(value as ESTNode, names)) {
+      if (containsIdentifierNamed(value, names)) {
         return true;
       }
     }
@@ -644,7 +638,7 @@ function isNewExpression(node: ESTNode | null | undefined): node is ESTNode & {
 function unwrapParenthesizedExpression(node: ESTNode): ESTNode {
   let current = node;
   while (isParenthesizedExpression(current)) {
-    current = current.expression as ESTNode;
+    current = current.expression;
   }
   return current;
 }
@@ -717,10 +711,9 @@ function collectImportedTransparentThunkWrappers(
       continue;
     }
 
-    const source =
-      statement.source !== undefined && isStringLiteral(statement.source)
-        ? String(statement.source.value)
-        : null;
+    const source = isStringLiteral(statement.source)
+      ? String(statement.source.value)
+      : null;
     /* c8 ignore next @preserve -- defensive guard: ImportDeclaration always has a valid string source */
     if (source === null) {
       continue;
@@ -826,7 +819,7 @@ function resolveObjectLiteralHelperMethod(
     return null;
   }
 
-  for (const property of helperObject.properties as ESTNode[]) {
+  for (const property of helperObject.properties) {
     if (property.type !== "Property") {
       continue;
     }
@@ -888,7 +881,7 @@ function resolveTopLevelHelperNode(
   }
 
   const objectLiteralHelper = resolveObjectLiteralHelperMethod(
-    callExpression.callee as ESTNode,
+    callExpression.callee,
     helperLookup,
   );
   if (objectLiteralHelper !== null) {
@@ -1064,7 +1057,7 @@ function isNormalizableSpreadArgument(
     return false;
   }
 
-  return (unwrapped.properties as ESTNode[]).every((property) => {
+  return unwrapped.properties.every((property) => {
     if (property.type === "SpreadElement") {
       return isNormalizableSpreadArgument(
         property.argument as ESTNode,
@@ -1198,11 +1191,6 @@ function extractFunctionRenderFrame(
 
   for (let index = 0; index < statements.length; index += 1) {
     const statement = statements[index];
-    /* c8 ignore next @preserve -- defensive guard: array index always valid within for-loop bounds */
-    if (statement === undefined) {
-      return null;
-    }
-
     if (isReturnStatement(statement)) {
       if (statement.argument === null) {
         return null;
@@ -1302,7 +1290,7 @@ function getExplicitNestedBoundary(part: DynamicPart): ESTNode | null {
 
   const props = part.expression.arguments[0];
   /* c8 ignore next @preserve -- defensive guard: buildComponentCall always produces ObjectExpression as first arg */
-  if (props?.type !== "ObjectExpression") {
+  if (props.type !== "ObjectExpression") {
     return null;
   }
 
@@ -1358,7 +1346,7 @@ function createPlanBinding(
     case "attr":
       return nObj([
         ...sharedProperties,
-        nProp(nId("key"), nLit(part.key ?? "")),
+        nProp(nId("key"), nLit(part.key)),
         nProp(
           nId("expression"),
           createArrowExpression([], cloneNode(part.expression)),
@@ -1367,7 +1355,7 @@ function createPlanBinding(
     case "event":
       return nObj([
         ...sharedProperties,
-        nProp(nId("eventType"), nLit(part.key ?? "")),
+        nProp(nId("eventType"), nLit(part.key)),
         nProp(nId("expression"), cloneNode(part.expression)),
       ]);
     case "insert":
@@ -2087,8 +2075,8 @@ function collectTopLevelBindings(program: Program): Set<string> {
 
   for (const statement of program.body) {
     if (isImportDeclaration(statement)) {
-      for (const specifier of (statement.specifiers ?? []) as ESTNode[]) {
-        const local = specifier.local as ESTNode | undefined;
+      for (const specifier of statement.specifiers ?? []) {
+        const local = specifier.local;
         if (local !== undefined && isIdentifier(local)) {
           bindings.add(local.name);
         }
@@ -2389,11 +2377,6 @@ function collectComponentPlans(
 
   for (let bodyIndex = 0; bodyIndex < program.body.length; bodyIndex += 1) {
     const statement = program.body[bodyIndex];
-    /* c8 ignore next @preserve -- defensive guard: array index always valid within for-loop bounds */
-    if (statement === undefined) {
-      continue;
-    }
-
     const declaration = isVariableDeclaration(statement)
       ? statement
       : isExportNamedDeclaration(statement) &&
@@ -2413,16 +2396,12 @@ function collectComponentPlans(
       declarationIndex += 1
     ) {
       const declarator = declaration.declarations[declarationIndex];
-      const init = declarator?.init;
+      const init = declarator.init;
       if (!isDefineComponentCall(init)) {
         continue;
       }
 
       const componentArg = init.arguments[1];
-      if (componentArg === undefined) {
-        continue;
-      }
-
       const buildResult = buildComponentHydrationMetadata(
         componentArg,
         nested,
@@ -2452,11 +2431,6 @@ function applyComponentPlans(
 ): void {
   for (const plan of plans) {
     const statement = program.body[plan.bodyIndex];
-    /* c8 ignore next @preserve -- defensive guard: collected plan indices always point at an existing top-level statement */
-    if (statement === undefined) {
-      continue;
-    }
-
     const declaration = isVariableDeclaration(statement)
       ? statement
       : isExportNamedDeclaration(statement) &&
@@ -2474,10 +2448,6 @@ function applyComponentPlans(
     }
 
     const componentArg = init.arguments[1];
-    /* c8 ignore next @preserve -- defensive guard: collected plans only target calls with a second component argument */
-    if (componentArg === undefined) {
-      continue;
-    }
 
     init.arguments[1] = nCall(nMember(nId("Object"), nId("assign")), [
       componentArg,
@@ -2663,7 +2633,7 @@ function transform(
     let insertIndex = 0;
     for (let i = 0; i < transformedProgram.body.length; i++) {
       const statement = transformedProgram.body[i];
-      if (statement?.type === "ImportDeclaration") {
+      if (statement.type === "ImportDeclaration") {
         insertIndex = i + 1;
       } else {
         break;
@@ -2685,7 +2655,7 @@ function transform(
     let insertIndex = 0;
     for (let i = 0; i < transformedProgram.body.length; i++) {
       const statement = transformedProgram.body[i];
-      if (statement?.type === "ImportDeclaration") {
+      if (statement.type === "ImportDeclaration") {
         insertIndex = i + 1;
       } else {
         break;

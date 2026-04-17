@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import type { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 /**
  * Attributes for the `<small>` element, which represents side comments and small print.

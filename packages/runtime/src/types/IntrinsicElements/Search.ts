@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import type { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 /**
  * Attributes for the `<search>` element, which represents a part that contains search functionality.

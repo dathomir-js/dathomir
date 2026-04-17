@@ -1,4 +1,4 @@
-import { dathomirNode } from "@//types/JSX";
+import type { dathomirNode } from "@//types/JSX";
 
 /**
  * Common event handler attributes (onXXX) for all HTML elements.

@@ -1,4 +1,4 @@
-import { SvgScriptAttributes } from "@/types/IntrinsicElements/SVGElements";
+import type { SvgScriptAttributes } from "@/types/IntrinsicElements/SVGElements";
 
 type ScriptReferrerPolicy =
   | "no-referrer"

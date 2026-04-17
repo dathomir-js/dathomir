@@ -45,7 +45,7 @@ function addRuntimeImports(
   let insertIndex = 0;
   for (let i = 0; i < program.body.length; i++) {
     const statement = program.body[i];
-    if (statement?.type === "ImportDeclaration") {
+    if (statement.type === "ImportDeclaration") {
       insertIndex = i + 1;
     } else {
       break;

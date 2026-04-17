@@ -23,9 +23,9 @@ import {
   dathomirWebpackPlugin,
 } from "./implementation";
 
-const actualTransformer = await vi.importActual<
-  typeof import("@dathomir/transformer")
->("@dathomir/transformer");
+const actualTransformer = await vi.importActual<TransformerModule>(
+  "@dathomir/transformer",
+);
 
 type RollupLikePlugin = {
   transformInclude: (id: string) => boolean;
@@ -481,3 +481,6 @@ describe("plugin", () => {
     });
   });
 });
+type TransformerModule = {
+  transform: typeof transform;
+};

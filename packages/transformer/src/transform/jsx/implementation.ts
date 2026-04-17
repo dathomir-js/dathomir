@@ -1,7 +1,7 @@
 import {
-  COLOCATED_CLIENT_STRATEGIES,
+  type COLOCATED_CLIENT_STRATEGIES,
   DEFAULT_INTERACTION_EVENT_TYPE,
-  ISLAND_STRATEGIES,
+  type ISLAND_STRATEGIES,
   isColocatedClientStrategyName,
 } from "@dathomir/shared";
 import {
@@ -142,17 +142,12 @@ function isClientDirectiveNamespace(name: JSXAttribute["name"]): boolean {
   );
 }
 
-function getRawAttributeName(name: JSXAttribute["name"]): string | null {
+function getRawAttributeName(name: JSXAttribute["name"]): string {
   if (name.type === "JSXNamespacedName") {
     return `${name.namespace.name}:${name.name.name}`;
   }
 
-  if (name.type === "JSXIdentifier") {
-    return name.name;
-  }
-
-  /* c8 ignore next @preserve -- defensive guard: JSXAttribute names are always identifiers or namespaces */
-  return null;
+  return name.name;
 }
 
 function isEventHandlerName(name: string): boolean {
@@ -172,21 +167,13 @@ function getColocatedClientDirective(name: JSXAttribute["name"]): {
   event: string;
 } | null {
   const rawName = getRawAttributeName(name);
-  /* c8 ignore next @preserve -- defensive guard: parser-produced JSXAttribute names always normalize to a string */
-  if (rawName === null) {
-    return null;
-  }
-
   const [strategy, event] = rawName.split(":");
-  if (
-    !isColocatedClientStrategyName(strategy ?? null) ||
-    !isEventHandlerName(event ?? "")
-  ) {
+  if (!isColocatedClientStrategyName(strategy) || !isEventHandlerName(event)) {
     return null;
   }
 
   return {
-    strategy: strategy as ColocatedClientStrategyName,
+    strategy,
     event: getEventTypeFromHandlerName(event),
   };
 }
@@ -194,12 +181,7 @@ function getColocatedClientDirective(name: JSXAttribute["name"]): {
 function getIslandsDirectiveName(
   name: JSXAttribute["name"],
 ): IslandsDirectiveName | null {
-  const rawAttributeName = getRawAttributeName(name);
-  if (rawAttributeName === null) {
-    return null;
-  }
-
-  switch (rawAttributeName) {
+  switch (getRawAttributeName(name)) {
     case "client:load":
       return "load";
     case "client:visible":

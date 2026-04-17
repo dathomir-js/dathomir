@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import type { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 type FormEnctype =
   | "application/x-www-form-urlencoded"

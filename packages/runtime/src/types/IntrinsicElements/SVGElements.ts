@@ -1,4 +1,4 @@
-import { SharedIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import type { SharedIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 /**
  * Shared SVG attribute definitions derived from the SVG 2 element index and

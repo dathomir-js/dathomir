@@ -1,4 +1,4 @@
-import { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
+import type { CommonIntrinsicElements } from "@/types/IntrinsicElements/Common";
 
 type BodyEventHandler<E extends Event = Event> = (event: E) => void;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { atom, type DerivedAtom, type Getter } from "./implementation";
+import { atom, type Getter } from "./implementation";
 
 describe("atom", () => {
   describe("Basic behavior", () => {
@@ -17,7 +17,7 @@ describe("atom", () => {
     it("creates a derived atom from a getter", () => {
       const countAtom = atom("count", 1);
       const doubledAtom = atom("doubled", (get: Getter) => get(countAtom) * 2);
-      const derivedAtom = doubledAtom as DerivedAtom<number>;
+      const derivedAtom = doubledAtom;
 
       expect(derivedAtom.key).toBe("doubled");
       expect(derivedAtom.kind).toBe("derived");
@@ -69,7 +69,7 @@ describe("atom", () => {
         "label",
         (get: Getter) => `count:${get(countAtom)}`,
       );
-      const derivedAtom = labelAtom as DerivedAtom<string>;
+      const derivedAtom = labelAtom;
       const primitiveGetter: Getter = <T>(target: Parameters<Getter>[0]) => {
         if (target.kind === "primitive") {
           return target.init as T;
@@ -92,7 +92,7 @@ describe("atom", () => {
     it("treats a function second argument as a derived getter", () => {
       const handler = () => 123;
       const handlerAtom = atom("handler", handler);
-      const derivedAtom = handlerAtom as DerivedAtom<number>;
+      const derivedAtom = handlerAtom;
       const getter: Getter = () => {
         throw new Error("No dependencies expected");
       };

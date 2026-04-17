@@ -19,8 +19,8 @@ import {
   CLIENT_TARGET_METADATA_ATTRIBUTE,
   DEFAULT_INTERACTION_EVENT_TYPE,
   ISLAND_METADATA_ATTRIBUTE,
-  ISLAND_STRATEGIES,
   ISLAND_VALUE_METADATA_ATTRIBUTE,
+  type ISLAND_STRATEGIES,
   isIslandStrategyName,
 } from "@dathomir/shared";
 import {
@@ -216,7 +216,7 @@ function stringifyEventField(value: unknown): string {
     return "[object Object]";
   }
 
-  return JSON.stringify(value) ?? "";
+  return JSON.stringify(value);
 }
 
 /**
@@ -461,9 +461,6 @@ function resolveNodeAtPath(
 
   for (let depth = 0; depth < path.length; depth += 1) {
     const index = path[depth];
-    if (index === undefined) {
-      return null;
-    }
 
     let child = current.firstChild;
     for (let i = 0; i < index; i += 1) {

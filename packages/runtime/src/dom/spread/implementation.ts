@@ -76,17 +76,6 @@ function spread(
   prev: SpreadProps | null,
   next: SpreadProps,
 ): SpreadProps {
-  // Warn on null/undefined element and bail out early to avoid crash
-  if (element == null) {
-    if (typeof __DEV__ !== "undefined" && __DEV__) {
-      console.warn(
-        `[spread] element is ${element === null ? "null" : "undefined"}. ` +
-          `Cannot spread props onto a non-existent element.`,
-      );
-    }
-    return next;
-  }
-
   const prevProps = prev ?? {};
 
   // Apply new/changed props

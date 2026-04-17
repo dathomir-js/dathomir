@@ -19,7 +19,7 @@ interface AtomStoreSnapshot<S extends AtomStoreSnapshotSchema> {
 }
 
 function assertPrimitiveAtomSchema(
-  schema: Record<string, PrimitiveAtom<unknown>>,
+  schema: Record<string, { kind: string }>,
 ): void {
   for (const [stableId, atom] of Object.entries(schema)) {
     if (atom.kind !== "primitive") {
@@ -35,7 +35,7 @@ function defineAtomStoreSnapshot<const S extends AtomStoreSnapshotSchema>(
 ): AtomStoreSnapshot<S> {
   assertPrimitiveAtomSchema(schema);
 
-  const frozenSchema = Object.freeze({ ...schema }) as Readonly<S>;
+  const frozenSchema: Readonly<S> = Object.freeze({ ...schema });
   const entries = Object.entries(frozenSchema) as Array<[keyof S, S[keyof S]]>;
 
   return {

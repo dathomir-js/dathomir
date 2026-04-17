@@ -37,7 +37,7 @@ function stringifyInsertedValue(value: unknown): string {
     return String(value);
   }
 
-  return JSON.stringify(value) ?? "";
+  return JSON.stringify(value);
 }
 
 /**
@@ -57,17 +57,6 @@ function stringifyInsertedValue(value: unknown): string {
  * @param anchor The anchor node (marker for insert position).
  */
 function insert(parent: Node, child: unknown, anchor: Node | null): void {
-  // Warn on null/undefined parent and bail out early to avoid crash
-  if (parent == null) {
-    if (typeof __DEV__ !== "undefined" && __DEV__) {
-      console.warn(
-        `[insert] parent is ${parent === null ? "null" : "undefined"}. ` +
-          `Cannot insert child into a non-existent parent node.`,
-      );
-    }
-    return;
-  }
-
   // Clean up previously inserted content OR SSR content
   if (anchor !== null) {
     if (insertedContent.has(anchor)) {

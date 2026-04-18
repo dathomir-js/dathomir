@@ -18,6 +18,8 @@ type Harness = {
 type HarnessState = {
   refs: number;
   promise: Promise<Harness>;
+  cleanupPromise?: Promise<void>;
+  cleanupRegistered: boolean;
 };
 
 declare global {
@@ -169,14 +171,52 @@ async function startHarness(): Promise<Harness> {
   };
 }
 
+async function disposeHarness(): Promise<void> {
+  const state = globalThis.__dathomirPlaygroundE2EHarness;
+  if (state === undefined) {
+    return;
+  }
+
+  if (state.cleanupPromise !== undefined) {
+    await state.cleanupPromise;
+    return;
+  }
+
+  state.cleanupPromise = (async () => {
+    try {
+      const harness = await state.promise;
+      await harness.browser.close();
+      await stopPreviewServer(harness.previewProcess);
+    } finally {
+      globalThis.__dathomirPlaygroundE2EHarness = undefined;
+    }
+  })();
+
+  await state.cleanupPromise;
+}
+
+function registerHarnessCleanup(): void {
+  const state = globalThis.__dathomirPlaygroundE2EHarness;
+  if (state === undefined || state.cleanupRegistered) {
+    return;
+  }
+
+  state.cleanupRegistered = true;
+  process.once("beforeExit", () => {
+    void disposeHarness();
+  });
+}
+
 async function acquireHarness(): Promise<void> {
   if (globalThis.__dathomirPlaygroundE2EHarness === undefined) {
     globalThis.__dathomirPlaygroundE2EHarness = {
       refs: 0,
       promise: startHarness(),
+      cleanupRegistered: false,
     };
   }
 
+  registerHarnessCleanup();
   globalThis.__dathomirPlaygroundE2EHarness.refs += 1;
   await globalThis.__dathomirPlaygroundE2EHarness.promise;
 }
@@ -192,10 +232,7 @@ async function releaseHarness(): Promise<void> {
     return;
   }
 
-  globalThis.__dathomirPlaygroundE2EHarness = undefined;
-  const harness = await state.promise;
-  await harness.browser.close();
-  await stopPreviewServer(harness.previewProcess);
+  state.refs = 0;
 }
 
 async function getHarness(): Promise<Harness> {

@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fmt:
+    uses: ./.github/workflows/ci-fmt.yaml
+
+  lint:
+    uses: ./.github/workflows/ci-lint.yaml
+
+  typecheck:
+    uses: ./.github/workflows/ci-typecheck.yaml
+
+  test:
+    uses: ./.github/workflows/ci-test.yaml
+
+  e2e:
+    uses: ./.github/workflows/ci-e2e.yaml

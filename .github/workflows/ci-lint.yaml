@@ -1,0 +1,41 @@
+name: CI / Lint
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: jdx/mise-action@v3
+        with:
+          github_token: ${{ github.token }}
+          install_args: "node pnpm"
+          cache: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run workspace lint
+        run: pnpm lint
+
+      - name: Run config lint
+        run: pnpm --filter @dathomir/config lint
+
+      - name: Run workspace type-aware lint
+        run: pnpm lint:type-aware
+
+      - name: Run config type-aware lint
+        run: pnpm --filter @dathomir/config lint:type-aware

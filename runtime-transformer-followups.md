@@ -73,13 +73,47 @@ Third concrete expansion completed:
 - Re-confirm which cases are fundamentally runtime-only.
 - Only move anything if it is truly deterministic and side-effect free.
 
+Current findings:
+- Still runtime-only by design:
+  - global `document.*` queries/mutations
+  - global `window.*` reads that are not simple `typeof` environment probes
+  - component-context `host` / `shadowRoot` access
+- Concrete refinement completed:
+  - shadowed local `document` / `window` bindings no longer trigger `imperative-dom-query`
+- Current conclusion:
+  - no meaningful compile-time lowering candidate was found here beyond removing false positives.
+
 5. `node-identity-reuse`
 - Re-confirm whether any subset can be lowered safely.
 - Preserve runtime handling for identity-sensitive DOM creation patterns.
 
+Current findings:
+- Still runtime-only by design:
+  - `document.createElement(...)`
+  - `document.createTextNode(...)`
+  - `document.createComment(...)`
+  - `document.createDocumentFragment(...)`
+  - `new Text(...)`, `new Comment(...)`, `new DocumentFragment()`
+- Concrete refinement completed:
+  - shadowed local `document` and DOM-constructor names no longer trigger `node-identity-reuse`
+- Current conclusion:
+  - no safe compile-time lowering candidate was found beyond removing false positives, because node identity itself remains observable runtime state.
+
 6. `runtime-branching`
 - Review current dispatch support.
 - Tighten contract/tests for branch classification where the compiler already supports the pattern.
+
+Current findings:
+- Supported as dispatch now:
+  - top-level `if / else`
+  - top-level `switch`
+  - direct-body and block-body `return cond ? <A /> : <B />`
+  - direct-body and block-body `return cond && <A />`
+- Tightened classification:
+  - deeply nested `if/switch` hidden inside unrelated IIFEs or other non-extractable expressions no longer get the special `runtime-branching` reason
+  - those cases now fall back to the more accurate `unsupported-component-body`
+- Current conclusion:
+  - `runtime-branching` should be reserved for top-level branch shapes the compiler recognizes as branch-like but cannot yet lower, not for arbitrary nested control flow found during a deep scan.
 
 ## Cross-Cutting
 

@@ -936,6 +936,13 @@ function resolveTopLevelHelperNode(
 }
 
 function containsNodeIdentityCreation(node: ESTNode): boolean {
+  return containsNodeIdentityCreationWithBindings(node, new Set());
+}
+
+function containsNodeIdentityCreationWithBindings(
+  node: ESTNode,
+  blockedBindings: ReadonlySet<string>,
+): boolean {
   let found = false;
   const documentFactoryNames = [
     "createElement",
@@ -952,6 +959,7 @@ function containsNodeIdentityCreation(node: ESTNode): boolean {
         isMemberExpression(candidate.callee) &&
         isIdentifier(candidate.callee.object) &&
         candidate.callee.object.name === "document" &&
+        !blockedBindings.has("document") &&
         isIdentifier(candidate.callee.property) &&
         documentFactoryNames.includes(candidate.callee.property.name)
       ) {
@@ -962,6 +970,7 @@ function containsNodeIdentityCreation(node: ESTNode): boolean {
       if (
         isNewExpression(candidate) &&
         isIdentifier(candidate.callee) &&
+        !blockedBindings.has(candidate.callee.name) &&
         domConstructors.includes(candidate.callee.name)
       ) {
         found = true;
@@ -970,6 +979,56 @@ function containsNodeIdentityCreation(node: ESTNode): boolean {
   });
 
   return found;
+}
+
+function collectFunctionParameterBindings(componentArg: ESTNode): Set<string> {
+  const names = new Set<string>();
+
+  if (!isFunctionLikeNode(componentArg) && !isFunctionDeclaration(componentArg)) {
+    return names;
+  }
+
+  for (const param of componentArg.params ?? []) {
+    collectBindingNames(param, names);
+  }
+
+  return names;
+}
+
+function collectImmediateBodyBindings(componentArg: ESTNode): Set<string> {
+  const names = new Set<string>();
+
+  if (!isFunctionLikeNode(componentArg) && !isFunctionDeclaration(componentArg)) {
+    return names;
+  }
+
+  for (const param of componentArg.params ?? []) {
+    collectBindingNames(param, names);
+  }
+
+  if (!isBlockStatement(componentArg.body)) {
+    return names;
+  }
+
+  for (const statement of componentArg.body.body as ESTNode[]) {
+    if (statement.type === "VariableDeclaration") {
+      for (const declarator of statement.declarations as ESTNode[]) {
+        collectBindingNames((declarator as ESTNode & { id: ESTNode }).id, names);
+      }
+      continue;
+    }
+
+    if (statement.type === "FunctionDeclaration" && statement.id) {
+      collectBindingNames(statement.id as ESTNode, names);
+      continue;
+    }
+
+    if (statement.type === "ClassDeclaration" && statement.id) {
+      collectBindingNames(statement.id as ESTNode, names);
+    }
+  }
+
+  return names;
 }
 
 function hasNonNormalizableSpread(
@@ -1839,8 +1898,10 @@ function getSpecificUnsupportedHydrationReason(
   }
 
   const bodyToInspect = componentArg.body;
+  const parameterBindings = collectFunctionParameterBindings(componentArg);
+  const immediateBindings = collectImmediateBodyBindings(componentArg);
 
-  if (containsNodeIdentityCreation(bodyToInspect)) {
+  if (containsNodeIdentityCreationWithBindings(bodyToInspect, immediateBindings)) {
     return "node-identity-reuse";
   }
 
@@ -1848,8 +1909,19 @@ function getSpecificUnsupportedHydrationReason(
     return "non-normalizable-spread";
   }
 
-  const imperativeIdentifiers = ["document", "window", "host", "shadowRoot"];
-  if (containsIdentifierNamed(bodyToInspect, imperativeIdentifiers)) {
+  const imperativeIdentifiers = ["document", "window"].filter(
+    (name) => !immediateBindings.has(name),
+  );
+  if (parameterBindings.has("host")) {
+    imperativeIdentifiers.push("host");
+  }
+  if (parameterBindings.has("shadowRoot")) {
+    imperativeIdentifiers.push("shadowRoot");
+  }
+  if (
+    imperativeIdentifiers.length > 0 &&
+    containsIdentifierNamed(bodyToInspect, imperativeIdentifiers)
+  ) {
     return "imperative-dom-query";
   }
 
@@ -1900,10 +1972,6 @@ function getUnsupportedHydrationReason(
     !isFunctionDeclaration(componentArg)
   ) {
     return null;
-  }
-
-  if (containsNodeType(componentArg.body, ["IfStatement", "SwitchStatement"])) {
-    return "runtime-branching";
   }
 
   return "unsupported-component-body";

@@ -166,7 +166,10 @@ describe("transform/tree", () => {
       dynamicParts,
       [0],
       createInitialState("csr"),
-      { strategy: null, interactionEventType: null },
+      {
+        strategy: null,
+        interactionEventType: null,
+      },
     );
 
     expect(result.attrs).toEqual(nLit(null));
@@ -236,7 +239,10 @@ describe("transform/tree", () => {
       dynamicParts,
       [0],
       createInitialState("csr"),
-      { strategy: null, interactionEventType: null },
+      {
+        strategy: null,
+        interactionEventType: null,
+      },
     );
 
     expect(result.attrs.type).toBe("ObjectExpression");
@@ -489,14 +495,15 @@ describe("transform/tree", () => {
     const props = result.arguments[0];
     const interactionValue = requireDefined(
       props.properties.find(
-      (property) =>
-        property.key.type === "Literal" &&
-        property.key.value === ISLAND_VALUE_METADATA_ATTRIBUTE,
+        (property) =>
+          property.key.type === "Literal" &&
+          property.key.value === ISLAND_VALUE_METADATA_ATTRIBUTE,
       ),
     );
+    const interactionNodeValue = requireDefined(interactionValue.value);
 
-    expect(interactionValue.value.type).toBe("Literal");
-    expect(interactionValue.value.value).toBe(DEFAULT_INTERACTION_EVENT_TYPE);
+    expect(interactionNodeValue.type).toBe("Literal");
+    expect(interactionNodeValue.value).toBe(DEFAULT_INTERACTION_EVENT_TYPE);
   });
 
   it("buildComponentCall turns component load:onClick into host island metadata plus client action metadata", () => {
@@ -872,8 +879,9 @@ describe("transform/tree", () => {
     const childrenProp = requireDefined(
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
-    expect(childrenProp.value.type).toBe("Literal");
-    expect(childrenProp.value.value).toBe("Hello World");
+    const childrenValue = requireDefined(childrenProp.value);
+    expect(childrenValue.type).toBe("Literal");
+    expect(childrenValue.value).toBe("Hello World");
   });
 
   it("buildComponentCall passes multiple children as array", () => {
@@ -897,7 +905,8 @@ describe("transform/tree", () => {
     const childrenProp = requireDefined(
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
-    expect(childrenProp.value.type).toBe("ArrayExpression");
+    const childrenValue = requireDefined(childrenProp.value);
+    expect(childrenValue.type).toBe("ArrayExpression");
   });
 
   it("buildComponentCall handles expression container children", () => {
@@ -951,8 +960,9 @@ describe("transform/tree", () => {
     const childrenProp = requireDefined(
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
-    expect(childrenProp.value.type).toBe("Literal");
-    expect(childrenProp.value.value).toBe("content");
+    const childrenValue = requireDefined(childrenProp.value);
+    expect(childrenValue.type).toBe("Literal");
+    expect(childrenValue.value).toBe("content");
   });
 
   it("buildComponentCall skips whitespace-only JSXText children", () => {
@@ -976,7 +986,8 @@ describe("transform/tree", () => {
     const childrenProp = requireDefined(
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
-    expect(childrenProp.value.value).toBe("actual content");
+    const childrenValue = requireDefined(childrenProp.value);
+    expect(childrenValue.value).toBe("actual content");
   });
 
   it("buildComponentCall handles JSXSpreadChild as child", () => {
@@ -1042,7 +1053,8 @@ describe("transform/tree", () => {
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
     // Inner component should be a CallExpression (buildComponentCall result)
-    expect(childrenProp.value.type).toBe("CallExpression");
+    const childrenValue = requireDefined(childrenProp.value);
+    expect(childrenValue.type).toBe("CallExpression");
   });
 
   it("buildComponentCall handles nested HTML element children", () => {
@@ -1079,7 +1091,10 @@ describe("transform/tree", () => {
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
     // HTML child should be transformed by transformJSXNode (returns nId("CSR_NODE"))
-    expect((childrenProp.value as { name?: string }).name).toBe("CSR_NODE");
+    const childrenValue = requireDefined(childrenProp.value) as {
+      name?: string;
+    };
+    expect(childrenValue.name).toBe("CSR_NODE");
   });
 
   it("buildComponentCall handles SSR mode for HTML element children", () => {
@@ -1116,7 +1131,10 @@ describe("transform/tree", () => {
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
     // SSR mode should use transformJSXForSSRNode (returns nId("SSR_NODE"))
-    expect((childrenProp.value as { name?: string }).name).toBe("SSR_NODE");
+    const childrenValue = requireDefined(childrenProp.value) as {
+      name?: string;
+    };
+    expect(childrenValue.name).toBe("SSR_NODE");
   });
 
   it("buildComponentCall handles JSXFragment children", () => {
@@ -1146,7 +1164,8 @@ describe("transform/tree", () => {
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
     // Fragment flattens its children, so we should get an array of two text nodes
-    expect(childrenProp.value.type).toBe("ArrayExpression");
+    const childrenValue = requireDefined(childrenProp.value);
+    expect(childrenValue.type).toBe("ArrayExpression");
   });
 
   it("buildComponentCall handles fragment with expression container child", () => {
@@ -1250,7 +1269,8 @@ describe("transform/tree", () => {
     const childrenProp = requireDefined(
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
-    expect(childrenProp.value.type).toBe("CallExpression");
+    const childrenValue = requireDefined(childrenProp.value);
+    expect(childrenValue.type).toBe("CallExpression");
   });
 
   it("buildComponentCall handles fragment with nested HTML element", () => {
@@ -1291,7 +1311,10 @@ describe("transform/tree", () => {
     const childrenProp = requireDefined(
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
-    expect((childrenProp.value as { name?: string }).name).toBe("CSR_NODE");
+    const childrenValue = requireDefined(childrenProp.value) as {
+      name?: string;
+    };
+    expect(childrenValue.name).toBe("CSR_NODE");
   });
 
   it("buildComponentCall handles fragment with HTML element in SSR mode", () => {
@@ -1332,7 +1355,10 @@ describe("transform/tree", () => {
     const childrenProp = requireDefined(
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
-    expect((childrenProp.value as { name?: string }).name).toBe("SSR_NODE");
+    const childrenValue = requireDefined(childrenProp.value) as {
+      name?: string;
+    };
+    expect(childrenValue.name).toBe("SSR_NODE");
   });
 
   it("buildComponentCall handles expression container with nested JSX as child", () => {
@@ -1408,7 +1434,8 @@ describe("transform/tree", () => {
     const childrenProp = requireDefined(
       props.properties.find((p) => hasIdentifierKey(p, "children")),
     );
-    expect(childrenProp.value.value).toBe("after");
+    const childrenValue = requireDefined(childrenProp.value);
+    expect(childrenValue.value).toBe("after");
   });
 
   it("buildComponentCall handles fragment with expression containing nested JSX", () => {

@@ -56,7 +56,21 @@ function stringifyInsertedValue(value: unknown): string {
  * @param child The child node to insert.
  * @param anchor The anchor node (marker for insert position).
  */
-function insert(parent: Node, child: unknown, anchor: Node | null): void {
+function insert(
+  parent: Node | null | undefined,
+  child: unknown,
+  anchor: Node | null,
+): void {
+  if (parent == null) {
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
+      console.warn(
+        `[insert] parent is ${parent === null ? "null" : "undefined"}. ` +
+          "Cannot insert child into a non-existent parent node.",
+      );
+    }
+    return;
+  }
+
   // Clean up previously inserted content OR SSR content
   if (anchor !== null) {
     if (insertedContent.has(anchor)) {

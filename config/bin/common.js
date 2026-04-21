@@ -24,7 +24,7 @@ export function executeBin(modulePath, useNode = true) {
     });
 
   child.on('exit', (code) => {
-    process.exit(code || 0);
+    process.exit(code ?? 0);
   });
 }
 
@@ -45,6 +45,6 @@ export function executeBinFromPackage(packageName, relativeBinPath) {
 
 
   child.on('exit', (code) => {
-    process.exit(code || 0);
+    process.exit(code ?? 0);
   });
 }

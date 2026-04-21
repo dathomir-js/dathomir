@@ -426,7 +426,7 @@ function applyRenameMapToStatementReferences(
     const cloned = cloneNode(statement);
     for (const declarator of cloned.declarations) {
       if (declarator.init !== null && declarator.init !== undefined) {
-          declarator.init = cloneWithRenames(declarator.init, renameMap);
+        declarator.init = cloneWithRenames(declarator.init, renameMap);
       }
     }
     return cloned;
@@ -2077,7 +2077,7 @@ function collectTopLevelBindings(program: Program): Set<string> {
     if (isImportDeclaration(statement)) {
       for (const specifier of statement.specifiers ?? []) {
         const local = specifier.local;
-        if (local !== undefined && isIdentifier(local)) {
+        if (isESTNode(local) && isIdentifier(local)) {
           bindings.add(local.name);
         }
       }

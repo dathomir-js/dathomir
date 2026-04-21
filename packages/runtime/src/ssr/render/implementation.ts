@@ -334,7 +334,9 @@ function renderNode(node: Tree, ctx: RenderContext): string {
 
     const items = ctx.dynamicValues.get(id) as string[] | undefined;
     const content = items !== undefined ? items.join("") : "";
-    return createMarker(MarkerType.Block, id) + content + createBlockEndMarker();
+    return (
+      createMarker(MarkerType.Block, id) + content + createBlockEndMarker()
+    );
   }
 
   // Element node
@@ -367,9 +369,9 @@ function renderNode(node: Tree, ctx: RenderContext): string {
     html += ">";
 
     // Render children
-      for (const child of children) {
-        html += renderNode(child, ctx);
-      }
+    for (const child of children) {
+      html += renderNode(child, ctx);
+    }
 
     // Closing tag
     html += `</${tag}>`;

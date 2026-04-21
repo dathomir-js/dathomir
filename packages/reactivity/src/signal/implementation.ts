@@ -20,7 +20,8 @@ import type { Signal } from "../types";
 function signalOper<T>(node: SignalNode<T>, ...value: [] | [T]): T | void {
   if (value.length > 0) {
     const oldValue = node.value;
-    node.value = value[0];
+    const nextValue = value[0] as T;
+    node.value = nextValue;
     if (!Object.is(oldValue, node.value)) {
       node.flags = ReactiveFlags.Mutable | ReactiveFlags.Dirty;
       const subs = node.subs;

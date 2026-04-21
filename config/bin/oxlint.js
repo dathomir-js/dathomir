@@ -37,5 +37,5 @@ const child = spawn(process.execPath, [binPath, ...args], {
 });
 
 child.on('exit', (code) => {
-	process.exit(code || 0);
+	process.exit(code ?? 0);
 });

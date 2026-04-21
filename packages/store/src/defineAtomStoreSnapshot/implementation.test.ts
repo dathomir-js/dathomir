@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { deserializeState } from "../../../runtime/src/hydration/deserialize/implementation";
-import { serializeState } from "../../../runtime/src/ssr/serialize/implementation";
+import { deserializeState } from "../../../runtime/dist/hydration/index.mjs";
+import { serializeState } from "../../../runtime/dist/ssr/index.mjs";
 import { atom, type Getter } from "../atom/implementation";
 import { createAtomStore } from "../createAtomStore/implementation";
 import { defineAtomStoreSnapshot } from "./implementation";

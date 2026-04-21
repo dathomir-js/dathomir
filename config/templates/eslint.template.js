@@ -4,7 +4,18 @@ import noRelativeImportPaths from 'eslint-plugin-no-relative-import-paths';
 import oxlint from 'eslint-plugin-oxlint';
 import globals from 'globals';
 
+/**
+ * @typedef {{ configs?: Record<string, import('eslint').Linter.Config[]> }} OxlintPlugin
+ */
+
+const oxlintPlugin = /** @type {OxlintPlugin} */ (oxlint);
+
 export const eslint = () => {
+  /**
+   * @type {import('eslint').Linter.Config[]}
+   */
+  const recommendedConfigs = oxlintPlugin.configs?.['flat/recommended'] ?? [];
+
   /**
    * @type {import("eslint").Linter.Config[]}
    */
@@ -70,7 +81,7 @@ export const eslint = () => {
       },
     },
     // ...oxlint.buildFromOxlintConfigFile(`${cwd()}/oxlint.config.ts`),
-    ...oxlint.configs['flat/recommended'],
+    ...recommendedConfigs,
   ]
 
   return configs;

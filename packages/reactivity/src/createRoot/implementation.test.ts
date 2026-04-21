@@ -108,7 +108,8 @@ describe("createRoot", () => {
     expect(innerSpy).toHaveBeenLastCalledWith(1);
 
     // Dispose inner only
-    innerDispose();
+    expect(innerDispose).toBeDefined();
+    innerDispose?.();
     count.set(2);
     expect(outerSpy).toHaveBeenLastCalledWith(2);
     expect(innerSpy).toHaveBeenLastCalledWith(1); // Should not update

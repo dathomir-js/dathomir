@@ -72,10 +72,20 @@ function removeEventHandler(element: Element, eventType: string): void {
  * @returns The next props object (for use as prev in next call).
  */
 function spread(
-  element: Element,
+  element: Element | null | undefined,
   prev: SpreadProps | null,
   next: SpreadProps,
 ): SpreadProps {
+  if (element == null) {
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
+      console.warn(
+        `[spread] element is ${element === null ? "null" : "undefined"}. ` +
+          "Cannot spread props onto a non-existent element.",
+      );
+    }
+    return next;
+  }
+
   const prevProps = prev ?? {};
 
   // Apply new/changed props

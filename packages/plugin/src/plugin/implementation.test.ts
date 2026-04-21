@@ -335,9 +335,9 @@ describe("plugin", () => {
 
       expect(result.code).toContain('"data-dh-island": "interaction"');
       expect(result.code).toContain('"data-dh-island-value": "mouseenter"');
-      expect(result.code).toContain('"data-dh-client-target"');
-      expect(result.code).toContain('"data-dh-client-strategy"');
-      expect(result.code).toContain('"visible"');
+      expect(result.code).toContain("data-dh-client-target");
+      expect(result.code).toContain("data-dh-client-strategy");
+      expect(result.code).toContain("visible");
     });
 
     it("should resolve package-local @/ imports using the nearest tsconfig paths", async () => {

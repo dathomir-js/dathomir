@@ -175,10 +175,18 @@ function shouldNormalizeWords(options?: CaseOptions): boolean {
   return options?.normalize === true;
 }
 
+function isStringArray(
+  value: string | readonly string[],
+): value is readonly string[] {
+  return Array.isArray(value);
+}
+
 function getCaseWords(input: string | readonly string[]): readonly string[] {
-  return Array.isArray(input)
-    ? input
-    : (splitByCase(input) as readonly string[]);
+  if (isStringArray(input)) {
+    return input;
+  }
+
+  return splitByCase(input);
 }
 
 function joinCapitalizedCaseWords(

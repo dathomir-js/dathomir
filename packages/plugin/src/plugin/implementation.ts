@@ -1,4 +1,4 @@
-import { transform, type TransformOptions } from "@dathomir/transformer";
+import { transform } from "@dathomir/transformer";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -68,7 +68,7 @@ function detectMode(
   forcedMode?: "csr" | "ssr",
   environmentName?: string,
   optionsSsr?: boolean,
-): TransformOptions["mode"] {
+): "csr" | "ssr" {
   // User-specified mode takes highest priority
   if (forcedMode !== undefined) {
     return forcedMode;
@@ -109,6 +109,10 @@ type TsconfigPaths = Record<string, string[]>;
 
 const tsconfigPathCache = new Map<string, TsconfigPaths | null>();
 const require = createRequire(import.meta.url);
+
+function parseLooseJson(text: string): unknown {
+  return JSON.parse(text.replace(/,\s*([}\]])/g, "$1"));
+}
 
 function parseSourceMap(
   sourceMap: string | undefined,
@@ -190,7 +194,7 @@ function readTsconfigPaths(
 
   try {
     const raw = fs.readFileSync(tsconfigPath, "utf8");
-    const parsed = JSON.parse(raw) as unknown;
+    const parsed = parseLooseJson(raw);
     if (!isObjectRecord(parsed)) {
       tsconfigPathCache.set(cacheKey, null);
       return null;
@@ -369,9 +373,14 @@ function createVitePlugin(options: PluginOptions = {}): VitePlugin {
       return resolveLocalSourceAlias(importer, source);
     },
 
-    transform(code: string, id: string, transformOptions?: { ssr?: boolean }) {
+    transform(
+      this: ViteTransformContext,
+      code: string,
+      id: string,
+      transformOptions?: { ssr?: boolean },
+    ) {
       const isSsr = transformOptions?.ssr ?? false;
-      const environmentName = this.environment.name;
+      const environmentName = this.environment?.name;
       return doTransform(code, id, isSsr, environmentName, options);
     },
   };

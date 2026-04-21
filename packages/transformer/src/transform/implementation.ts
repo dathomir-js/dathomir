@@ -564,41 +564,302 @@ function containsColocatedDirective(node: ESTNode): boolean {
   return found;
 }
 
-function containsIdentifierNamed(
-  node: ESTNode,
-  names: readonly string[],
-): boolean {
-  if (isIdentifier(node) && names.includes(node.name)) {
-    return true;
+type ScopedBinding = {
+  init: ESTNode | null;
+  kind: "param" | "decl";
+};
+
+function resolveScopedBinding(
+  scopes: readonly ReadonlyMap<string, ScopedBinding>[],
+  name: string,
+): ScopedBinding | undefined {
+  for (let index = scopes.length - 1; index >= 0; index -= 1) {
+    const binding = scopes[index]?.get(name);
+    if (binding !== undefined) {
+      return binding;
+    }
   }
 
-  for (const [key, value] of Object.entries(node)) {
-    if (
-      node.type === "UnaryExpression" &&
-      node.operator === "typeof" &&
-      key === "argument" &&
-      isIdentifier(value as ESTNode) &&
-      (value as ESTNode).name !== undefined &&
-      names.includes((value as ESTNode & { name: string }).name)
-    ) {
-      continue;
-    }
+  return undefined;
+}
 
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        if (isESTNode(item)) {
-          if (containsIdentifierNamed(item, names)) {
-            return true;
-          }
+function collectScopedBindingsFromStatements(
+  statements: readonly ESTNode[],
+): Map<string, ScopedBinding> {
+  const bindings = new Map<string, ScopedBinding>();
+
+  for (const statement of statements) {
+    if (statement.type === "VariableDeclaration") {
+      for (const declarator of statement.declarations as ESTNode[]) {
+        const variableDeclarator = declarator as ESTNode & {
+          id: ESTNode;
+          init: ESTNode | null;
+        };
+        if (isIdentifier(variableDeclarator.id)) {
+          bindings.set(variableDeclarator.id.name, {
+            init: variableDeclarator.init,
+            kind: "decl",
+          });
+          continue;
+        }
+
+        for (const name of collectBindingNames(variableDeclarator.id)) {
+          bindings.set(name, { init: null, kind: "decl" });
         }
       }
       continue;
     }
 
-    if (isESTNode(value)) {
-      if (containsIdentifierNamed(value, names)) {
+    if (statement.type === "FunctionDeclaration" && statement.id) {
+      for (const name of collectBindingNames(statement.id as ESTNode)) {
+        bindings.set(name, { init: null, kind: "decl" });
+      }
+      continue;
+    }
+
+    if (statement.type === "ClassDeclaration" && statement.id) {
+      for (const name of collectBindingNames(statement.id as ESTNode)) {
+        bindings.set(name, { init: null, kind: "decl" });
+      }
+    }
+  }
+
+  return bindings;
+}
+
+function createFunctionScope(
+  node: FunctionLikeNode | ESTNode,
+): Map<string, ScopedBinding> {
+  const scope = new Map<string, ScopedBinding>();
+
+  if (
+    node.type === "FunctionExpression" &&
+    node.id &&
+    isIdentifier(node.id as ESTNode)
+  ) {
+    scope.set((node.id as ESTNode & { name: string }).name, {
+      init: null,
+      kind: "decl",
+    });
+  }
+
+  if (
+    node.type === "FunctionDeclaration" &&
+    node.id &&
+    isIdentifier(node.id as ESTNode)
+  ) {
+    scope.set((node.id as ESTNode & { name: string }).name, {
+      init: null,
+      kind: "decl",
+    });
+  }
+
+  for (const param of (node.params ?? []) as ESTNode[]) {
+    if (isIdentifier(param)) {
+      scope.set(param.name, { init: null, kind: "param" });
+      continue;
+    }
+
+    for (const name of collectBindingNames(param)) {
+      scope.set(name, { init: null, kind: "param" });
+    }
+  }
+
+  const body = (node as FunctionLikeNode).body;
+  if (isBlockStatement(body)) {
+    for (const [name, binding] of collectScopedBindingsFromStatements(
+      body.body,
+    )) {
+      scope.set(name, binding);
+    }
+  }
+
+  return scope;
+}
+
+function isGlobalAliasExpression(
+  node: ESTNode | null | undefined,
+  target: "document" | "window" | "Text" | "Comment" | "DocumentFragment",
+  scopes: readonly ReadonlyMap<string, ScopedBinding>[],
+  visited: Set<string> = new Set(),
+): boolean {
+  if (node == null) {
+    return false;
+  }
+
+  const current = unwrapParenthesizedExpression(node);
+  if (isIdentifier(current)) {
+    if (current.name === target) {
+      const binding = resolveScopedBinding(scopes, current.name);
+      return binding === undefined;
+    }
+
+    if (target === "window" && current.name === "globalThis") {
+      return resolveScopedBinding(scopes, current.name) === undefined;
+    }
+
+    if (visited.has(current.name)) {
+      return false;
+    }
+
+    const binding = resolveScopedBinding(scopes, current.name);
+    if (binding === undefined) {
+      return false;
+    }
+
+    visited.add(current.name);
+    return isGlobalAliasExpression(binding.init, target, scopes, visited);
+  }
+
+  if (isMemberExpression(current)) {
+    if (current.computed) {
+      return false;
+    }
+
+    if (isIdentifier(current.object) && isIdentifier(current.property)) {
+      const objectName = current.object.name;
+      const propertyName = current.property.name;
+
+      if (
+        objectName === "globalThis" &&
+        resolveScopedBinding(scopes, objectName) === undefined
+      ) {
+        if (target === "window" && propertyName === "window") {
+          return true;
+        }
+
+        if (propertyName === target) {
+          return true;
+        }
+      }
+
+      if (target === "document" && propertyName === "document") {
+        return isGlobalAliasExpression(
+          current.object as ESTNode,
+          "window",
+          scopes,
+          visited,
+        );
+      }
+
+      if (
+        ["Text", "Comment", "DocumentFragment"].includes(target) &&
+        propertyName === target
+      ) {
+        return isGlobalAliasExpression(
+          current.object as ESTNode,
+          "window",
+          scopes,
+          visited,
+        );
+      }
+    }
+  }
+
+  return false;
+}
+
+function containsImperativeDomQuery(
+  node: ESTNode | null | undefined,
+  trackedParams: ReadonlySet<string>,
+  scopes: readonly ReadonlyMap<string, ScopedBinding>[] = [],
+): boolean {
+  if (!isESTNode(node)) {
+    return false;
+  }
+
+  if (isIdentifier(node)) {
+    if (node.name === "document" || node.name === "window") {
+      const binding = resolveScopedBinding(scopes, node.name);
+      return (
+        binding === undefined ||
+        isGlobalAliasExpression(binding.init, node.name, scopes)
+      );
+    }
+
+    if (
+      (node.name === "host" || node.name === "shadowRoot") &&
+      trackedParams.has(node.name)
+    ) {
+      const binding = resolveScopedBinding(scopes, node.name);
+      return binding?.kind === "param";
+    }
+
+    return false;
+  }
+
+  if (node.type === "UnaryExpression" && node.operator === "typeof") {
+    return false;
+  }
+
+  if (
+    node.type === "FunctionDeclaration" ||
+    node.type === "FunctionExpression" ||
+    node.type === "ArrowFunctionExpression"
+  ) {
+    const nextScopes = [
+      ...scopes,
+      createFunctionScope(node as FunctionLikeNode | ESTNode),
+    ];
+    const body = (node as FunctionLikeNode).body;
+    return containsImperativeDomQuery(body, trackedParams, nextScopes);
+  }
+
+  if (isBlockStatement(node)) {
+    const nextScopes = [
+      ...scopes,
+      collectScopedBindingsFromStatements(node.body as ESTNode[]),
+    ];
+    return (node.body as ESTNode[]).some((statement) =>
+      containsImperativeDomQuery(statement, trackedParams, nextScopes),
+    );
+  }
+
+  if (node.type === "VariableDeclaration") {
+    return (node.declarations as ESTNode[]).some((declarator) =>
+      containsImperativeDomQuery(
+        ((declarator as ESTNode & { init: ESTNode | null }).init ??
+          null) as ESTNode,
+        trackedParams,
+        scopes,
+      ),
+    );
+  }
+
+  if (node.type === "Property" && !node.computed) {
+    return containsImperativeDomQuery(
+      node.value as ESTNode,
+      trackedParams,
+      scopes,
+    );
+  }
+
+  if (node.type === "JSXAttribute") {
+    if (node.value && isESTNode(node.value)) {
+      return containsImperativeDomQuery(node.value, trackedParams, scopes);
+    }
+    return false;
+  }
+
+  for (const value of Object.values(node)) {
+    if (Array.isArray(value)) {
+      if (
+        value.some(
+          (item) =>
+            isESTNode(item) &&
+            containsImperativeDomQuery(item, trackedParams, scopes),
+        )
+      ) {
         return true;
       }
+      continue;
+    }
+
+    if (
+      isESTNode(value) &&
+      containsImperativeDomQuery(value, trackedParams, scopes)
+    ) {
+      return true;
     }
   }
 
@@ -918,10 +1179,13 @@ function resolveTopLevelHelperNode(
 }
 
 function containsNodeIdentityCreationWithBindings(
-  node: ESTNode,
-  blockedBindings: ReadonlySet<string>,
+  node: ESTNode | null | undefined,
+  scopes: readonly ReadonlyMap<string, ScopedBinding>[],
 ): boolean {
-  let found = false;
+  if (!isESTNode(node)) {
+    return false;
+  }
+
   const documentFactoryNames = [
     "createElement",
     "createTextNode",
@@ -930,33 +1194,102 @@ function containsNodeIdentityCreationWithBindings(
   ];
   const domConstructors = ["Text", "Comment", "DocumentFragment"];
 
-  walk(node, null, {
-    CallExpression(candidate: ESTNode) {
-      if (
-        isCallExpression(candidate) &&
-        isMemberExpression(candidate.callee) &&
-        isIdentifier(candidate.callee.object) &&
-        candidate.callee.object.name === "document" &&
-        !blockedBindings.has("document") &&
-        isIdentifier(candidate.callee.property) &&
-        documentFactoryNames.includes(candidate.callee.property.name)
-      ) {
-        found = true;
-      }
-    },
-    NewExpression(candidate: ESTNode) {
-      if (
-        isNewExpression(candidate) &&
-        isIdentifier(candidate.callee) &&
-        !blockedBindings.has(candidate.callee.name) &&
-        domConstructors.includes(candidate.callee.name)
-      ) {
-        found = true;
-      }
-    },
-  });
+  if (
+    isCallExpression(node) &&
+    isMemberExpression(node.callee) &&
+    isIdentifier(node.callee.object) &&
+    isIdentifier(node.callee.property) &&
+    documentFactoryNames.includes(node.callee.property.name) &&
+    ((node.callee.object.name === "document" &&
+      (resolveScopedBinding(scopes, "document") === undefined ||
+        isGlobalAliasExpression(
+          resolveScopedBinding(scopes, "document")?.init,
+          "document",
+          scopes,
+        ))) ||
+      isGlobalAliasExpression(
+        node.callee.object as ESTNode,
+        "document",
+        scopes,
+      ))
+  ) {
+    return true;
+  }
 
-  return found;
+  if (
+    isNewExpression(node) &&
+    isIdentifier(node.callee) &&
+    domConstructors.includes(node.callee.name) &&
+    (resolveScopedBinding(scopes, node.callee.name) === undefined ||
+      isGlobalAliasExpression(
+        resolveScopedBinding(scopes, node.callee.name)?.init,
+        node.callee.name as "Text" | "Comment" | "DocumentFragment",
+        scopes,
+      ))
+  ) {
+    return true;
+  }
+
+  if (
+    node.type === "FunctionDeclaration" ||
+    node.type === "FunctionExpression" ||
+    node.type === "ArrowFunctionExpression"
+  ) {
+    return containsNodeIdentityCreationWithBindings(node.body as ESTNode, [
+      ...scopes,
+      createFunctionScope(node as FunctionLikeNode | ESTNode),
+    ]);
+  }
+
+  if (isBlockStatement(node)) {
+    const nextScopes = [
+      ...scopes,
+      collectScopedBindingsFromStatements(node.body as ESTNode[]),
+    ];
+    return (node.body as ESTNode[]).some((statement) =>
+      containsNodeIdentityCreationWithBindings(statement, nextScopes),
+    );
+  }
+
+  if (node.type === "VariableDeclaration") {
+    return (node.declarations as ESTNode[]).some((declarator) =>
+      containsNodeIdentityCreationWithBindings(
+        (declarator as ESTNode & { init: ESTNode | null }).init,
+        scopes,
+      ),
+    );
+  }
+
+  if (node.type === "Property" && !node.computed) {
+    return containsNodeIdentityCreationWithBindings(
+      node.value as ESTNode,
+      scopes,
+    );
+  }
+
+  for (const value of Object.values(node)) {
+    if (Array.isArray(value)) {
+      if (
+        value.some(
+          (item) =>
+            isESTNode(item) &&
+            containsNodeIdentityCreationWithBindings(item, scopes),
+        )
+      ) {
+        return true;
+      }
+      continue;
+    }
+
+    if (
+      isESTNode(value) &&
+      containsNodeIdentityCreationWithBindings(value, scopes)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function collectFunctionParameterBindings(componentArg: ESTNode): Set<string> {
@@ -971,48 +1304,6 @@ function collectFunctionParameterBindings(componentArg: ESTNode): Set<string> {
 
   for (const param of componentArg.params ?? []) {
     collectBindingNames(param, names);
-  }
-
-  return names;
-}
-
-function collectImmediateBodyBindings(componentArg: ESTNode): Set<string> {
-  const names = new Set<string>();
-
-  if (
-    !isFunctionLikeNode(componentArg) &&
-    !isFunctionDeclaration(componentArg)
-  ) {
-    return names;
-  }
-
-  for (const param of componentArg.params ?? []) {
-    collectBindingNames(param, names);
-  }
-
-  if (!isBlockStatement(componentArg.body)) {
-    return names;
-  }
-
-  for (const statement of componentArg.body.body as ESTNode[]) {
-    if (statement.type === "VariableDeclaration") {
-      for (const declarator of statement.declarations as ESTNode[]) {
-        collectBindingNames(
-          (declarator as ESTNode & { id: ESTNode }).id,
-          names,
-        );
-      }
-      continue;
-    }
-
-    if (statement.type === "FunctionDeclaration" && statement.id) {
-      collectBindingNames(statement.id as ESTNode, names);
-      continue;
-    }
-
-    if (statement.type === "ClassDeclaration" && statement.id) {
-      collectBindingNames(statement.id as ESTNode, names);
-    }
   }
 
   return names;
@@ -1886,11 +2177,24 @@ function getSpecificUnsupportedHydrationReason(
 
   const bodyToInspect = componentArg.body;
   const parameterBindings = collectFunctionParameterBindings(componentArg);
-  const immediateBindings = collectImmediateBodyBindings(componentArg);
+  const rootScope = isBlockStatement(bodyToInspect)
+    ? collectScopedBindingsFromStatements(bodyToInspect.body as ESTNode[])
+    : new Map<string, ScopedBinding>();
 
-  if (
-    containsNodeIdentityCreationWithBindings(bodyToInspect, immediateBindings)
-  ) {
+  for (const param of (componentArg.params ?? []) as ESTNode[]) {
+    if (isIdentifier(param)) {
+      rootScope.set(param.name, { init: null, kind: "param" });
+      continue;
+    }
+
+    for (const name of collectBindingNames(param)) {
+      rootScope.set(name, { init: null, kind: "param" });
+    }
+  }
+
+  const scopes = [rootScope];
+
+  if (containsNodeIdentityCreationWithBindings(bodyToInspect, scopes)) {
     return "node-identity-reuse";
   }
 
@@ -1898,19 +2202,7 @@ function getSpecificUnsupportedHydrationReason(
     return "non-normalizable-spread";
   }
 
-  const imperativeIdentifiers = ["document", "window"].filter(
-    (name) => !immediateBindings.has(name),
-  );
-  if (parameterBindings.has("host")) {
-    imperativeIdentifiers.push("host");
-  }
-  if (parameterBindings.has("shadowRoot")) {
-    imperativeIdentifiers.push("shadowRoot");
-  }
-  if (
-    imperativeIdentifiers.length > 0 &&
-    containsIdentifierNamed(bodyToInspect, imperativeIdentifiers)
-  ) {
+  if (containsImperativeDomQuery(bodyToInspect, parameterBindings, scopes)) {
     return "imperative-dom-query";
   }
 

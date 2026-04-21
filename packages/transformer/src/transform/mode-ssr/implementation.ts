@@ -12,6 +12,7 @@ import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
 import type { TransformState } from "@/transform/state/implementation";
 import {
   hasCustomElement,
+  isHtmlVoidElement,
   readStaticTreeRoots,
   serializeStaticAttrs,
   type StaticTreeNode,
@@ -189,25 +190,7 @@ function transformJSXForSSRNode(
       }
     }
 
-    const isHtmlVoidElement =
-      namespace === "html" &&
-      [
-        "area",
-        "base",
-        "br",
-        "col",
-        "embed",
-        "hr",
-        "img",
-        "input",
-        "link",
-        "meta",
-        "param",
-        "source",
-        "track",
-        "wbr",
-      ].includes(currentNode.tag.toLowerCase());
-    if (isHtmlVoidElement) {
+    if (namespace === "html" && isHtmlVoidElement(currentNode.tag)) {
       mergeStaticPart(parts, " />");
       return;
     }

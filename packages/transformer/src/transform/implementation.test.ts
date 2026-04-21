@@ -3586,6 +3586,47 @@ describe("transform", () => {
       );
     });
 
+    it("should still classify aliases to global document as imperative-dom-query", () => {
+      const code = `
+        const AliasDocumentCard = defineComponent(
+          "alias-document-card",
+          () => {
+            const document = globalThis.document;
+            return <div>{document.getElementById("root")?.id}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("__hydrationMetadata__");
+      expect(result.code).toContain(
+        'unsupportedReason: "imperative-dom-query"',
+      );
+    });
+
+    it("should ignore nested shadowed document binding inside IIFE", () => {
+      const code = `
+        const NestedShadowDocumentCard = defineComponent(
+          "nested-shadow-document-card",
+          () => {
+            const value = (() => {
+              const document = { label: "nested" };
+              return document.label;
+            })();
+            return <div>{value}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain(
+        'unsupportedReason: "imperative-dom-query"',
+      );
+    });
+
     it("should classify new Text() as node-identity-reuse", () => {
       const code = `
         const TextNodeCard = defineComponent(
@@ -3668,6 +3709,45 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain(
+        'unsupportedReason: "node-identity-reuse"',
+      );
+    });
+
+    it("should still classify aliases to global Text as node-identity-reuse", () => {
+      const code = `
+        const AliasTextCard = defineComponent(
+          "alias-text-card",
+          () => {
+            const Text = globalThis.Text;
+            return <div>{new Text("hello")}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("__hydrationMetadata__");
+      expect(result.code).toContain('unsupportedReason: "node-identity-reuse"');
+    });
+
+    it("should ignore nested shadowed Text binding inside IIFE", () => {
+      const code = `
+        const NestedShadowTextCard = defineComponent(
+          "nested-shadow-text-card",
+          () => {
+            const value = (() => {
+              const Text = String;
+              return new Text("hello");
+            })();
+            return <div>{value}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
       expect(result.code).toContain("planFactory");
       expect(result.code).not.toContain(
         'unsupportedReason: "node-identity-reuse"',

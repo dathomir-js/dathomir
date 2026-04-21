@@ -17,6 +17,10 @@ const HTML_VOID_ELEMENTS = new Set([
   "wbr",
 ]);
 
+function isHtmlVoidElement(tag: string): boolean {
+  return HTML_VOID_ELEMENTS.has(tag.toLowerCase());
+}
+
 type StaticStyleValue = string | number | boolean | null;
 
 type StaticAttrValue =
@@ -324,6 +328,7 @@ function serializeMarkupNode(
 
 export {
   hasCustomElement,
+  isHtmlVoidElement,
   readStaticTreeRoots,
   serializeMarkupNode,
   serializeStaticAttrs,

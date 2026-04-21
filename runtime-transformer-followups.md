@@ -80,6 +80,8 @@ Current findings:
   - component-context `host` / `shadowRoot` access
 - Concrete refinement completed:
   - shadowed local `document` / `window` bindings no longer trigger `imperative-dom-query`
+  - nested function / IIFE shadowing is handled by scope-aware detection
+  - aliases back to globals like `const document = globalThis.document` still remain classified as imperative
 - Current conclusion:
   - no meaningful compile-time lowering candidate was found here beyond removing false positives.
 
@@ -96,6 +98,7 @@ Current findings:
   - `new Text(...)`, `new Comment(...)`, `new DocumentFragment()`
 - Concrete refinement completed:
   - shadowed local `document` and DOM-constructor names no longer trigger `node-identity-reuse`
+  - aliases back to globals like `const Text = globalThis.Text` still remain classified as `node-identity-reuse`
 - Current conclusion:
   - no safe compile-time lowering candidate was found beyond removing false positives, because node identity itself remains observable runtime state.
 

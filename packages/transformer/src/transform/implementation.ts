@@ -605,24 +605,6 @@ function containsIdentifierNamed(
   return false;
 }
 
-function containsNodeType(node: ESTNode, types: readonly string[]): boolean {
-  /* c8 ignore next @preserve -- defensive guard: callers always pass BlockStatement, never a matching type directly */
-  if (types.includes(node.type)) {
-    return true;
-  }
-
-  let found = false;
-  walk(node, null, {
-    _: (candidate: ESTNode, { next }: { next: () => void }) => {
-      if (types.includes(candidate.type)) {
-        found = true;
-      }
-      next();
-    },
-  });
-  return found;
-}
-
 function isObjectExpression(
   node: ESTNode | null | undefined,
 ): node is ESTNode & { properties: ESTNode[] } {
@@ -935,10 +917,6 @@ function resolveTopLevelHelperNode(
   };
 }
 
-function containsNodeIdentityCreation(node: ESTNode): boolean {
-  return containsNodeIdentityCreationWithBindings(node, new Set());
-}
-
 function containsNodeIdentityCreationWithBindings(
   node: ESTNode,
   blockedBindings: ReadonlySet<string>,
@@ -984,7 +962,10 @@ function containsNodeIdentityCreationWithBindings(
 function collectFunctionParameterBindings(componentArg: ESTNode): Set<string> {
   const names = new Set<string>();
 
-  if (!isFunctionLikeNode(componentArg) && !isFunctionDeclaration(componentArg)) {
+  if (
+    !isFunctionLikeNode(componentArg) &&
+    !isFunctionDeclaration(componentArg)
+  ) {
     return names;
   }
 
@@ -998,7 +979,10 @@ function collectFunctionParameterBindings(componentArg: ESTNode): Set<string> {
 function collectImmediateBodyBindings(componentArg: ESTNode): Set<string> {
   const names = new Set<string>();
 
-  if (!isFunctionLikeNode(componentArg) && !isFunctionDeclaration(componentArg)) {
+  if (
+    !isFunctionLikeNode(componentArg) &&
+    !isFunctionDeclaration(componentArg)
+  ) {
     return names;
   }
 
@@ -1013,7 +997,10 @@ function collectImmediateBodyBindings(componentArg: ESTNode): Set<string> {
   for (const statement of componentArg.body.body as ESTNode[]) {
     if (statement.type === "VariableDeclaration") {
       for (const declarator of statement.declarations as ESTNode[]) {
-        collectBindingNames((declarator as ESTNode & { id: ESTNode }).id, names);
+        collectBindingNames(
+          (declarator as ESTNode & { id: ESTNode }).id,
+          names,
+        );
       }
       continue;
     }
@@ -1901,7 +1888,9 @@ function getSpecificUnsupportedHydrationReason(
   const parameterBindings = collectFunctionParameterBindings(componentArg);
   const immediateBindings = collectImmediateBodyBindings(componentArg);
 
-  if (containsNodeIdentityCreationWithBindings(bodyToInspect, immediateBindings)) {
+  if (
+    containsNodeIdentityCreationWithBindings(bodyToInspect, immediateBindings)
+  ) {
     return "node-identity-reuse";
   }
 

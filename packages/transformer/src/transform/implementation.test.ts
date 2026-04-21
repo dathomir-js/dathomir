@@ -3669,7 +3669,9 @@ describe("transform", () => {
 
       expect(result.code).toContain("__hydrationMetadata__");
       expect(result.code).toContain("planFactory");
-      expect(result.code).not.toContain('unsupportedReason: "node-identity-reuse"');
+      expect(result.code).not.toContain(
+        'unsupportedReason: "node-identity-reuse"',
+      );
     });
 
     it("should support setup with function expression (not arrow) returning JSX", () => {

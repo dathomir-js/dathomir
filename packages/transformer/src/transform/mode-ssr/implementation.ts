@@ -1,4 +1,13 @@
-import { nArr, nCall, nId, nLit, nMember, nNew, nObj, type ESTNode } from "@/transform/ast/implementation";
+import {
+  nArr,
+  nCall,
+  nId,
+  nLit,
+  nMember,
+  nNew,
+  nObj,
+  type ESTNode,
+} from "@/transform/ast/implementation";
 import type { JSXElement, JSXFragment } from "@/transform/jsx/implementation";
 import type { TransformState } from "@/transform/state/implementation";
 import {
@@ -17,7 +26,7 @@ function escapeHtml(value: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;");
+    .replace(/"/g, "&quot;");
 }
 
 function mergeStaticPart(parts: ESTNode[], value: string): void {

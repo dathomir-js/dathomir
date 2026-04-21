@@ -310,7 +310,9 @@ function serializeMarkupNode(
     node.tag === "svg" ? "svg" : node.tag === "math" ? "math" : namespace;
   const openingTag = `<${node.tag}${serializeStaticAttrs(node.attrs)}>`;
   const children = node.children
-    .map((child) => serializeMarkupNode(child, nextNamespace, textPlaceholderId))
+    .map((child) =>
+      serializeMarkupNode(child, nextNamespace, textPlaceholderId),
+    )
     .join("");
 
   if (namespace === "html" && HTML_VOID_ELEMENTS.has(node.tag.toLowerCase())) {

@@ -30,6 +30,7 @@
   "license": "MPL-2.0",
   "packageManager": "pnpm@10.17.1",
   "devDependencies": {
-    "@opencode-ai/plugin": "^1.2.19"
+    "@opencode-ai/plugin": "^1.2.19",
+    "typescript": "catalog:"
   }
 }

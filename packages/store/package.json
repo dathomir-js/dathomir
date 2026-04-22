@@ -59,7 +59,7 @@
   "scripts": {
     "dev": "tsdown --watch",
     "build": "tsdown",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "lint": "oxlint",
     "lint:type-aware": "oxlint --type-aware",
     "fmt": "oxfmt --ignore-path ../../.gitignore --write .",

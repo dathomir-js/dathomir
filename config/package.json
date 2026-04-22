@@ -8,6 +8,7 @@
   "type": "module",
   "bin": {
     "tsc": "./bin/tsc.js",
+    "tsgo": "./bin/tsgo.js",
     "eslint": "./bin/eslint.js",
     "oxlint": "./bin/oxlint.js",
     "oxfmt": "./bin/oxfmt.js",
@@ -50,6 +51,7 @@
     "oxfmt": "catalog:",
     "oxlint-tsgolint": "catalog:",
     "tsdown": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "typescript": "catalog:"
   }
 }

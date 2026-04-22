@@ -2097,10 +2097,7 @@ describe("transform", () => {
       expect(result.code).not.toContain("planFactory");
     });
 
-    it("should cover containsNodeType for deeply nested IfStatement via getUnsupportedHydrationReason fallback (lines 1234, 1242)", () => {
-      // Setup: function body with an expression statement (fails extractFunctionRenderFrame)
-      // AND a deeply nested IfStatement that hasRuntimeBranching won't catch at top level
-      // but containsNodeType will find via deep walk
+    it("should classify deeply nested IfStatement hidden in an IIFE as unsupported-component-body", () => {
       const code = `
         const DeepIfCard = defineComponent(
           "deep-if-card",
@@ -2114,15 +2111,14 @@ describe("transform", () => {
 
       const result = transform(code, { mode: "csr" });
 
-      // ExpressionStatement in prelude → extractFunctionRenderFrame fails
-      // No specific reason from getSpecificUnsupportedHydrationReason
-      // containsNodeType finds IfStatement nested inside IIFE → "runtime-branching"
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain('unsupportedReason: "runtime-branching"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
       expect(result.code).not.toContain("planFactory");
     });
 
-    it("should cover containsNodeType for deeply nested SwitchStatement", () => {
+    it("should classify deeply nested SwitchStatement hidden in an IIFE as unsupported-component-body", () => {
       const code = `
         const DeepSwitchCard = defineComponent(
           "deep-switch-card",
@@ -2137,7 +2133,9 @@ describe("transform", () => {
       const result = transform(code, { mode: "csr" });
 
       expect(result.code).toContain("__hydrationMetadata__");
-      expect(result.code).toContain('unsupportedReason: "runtime-branching"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should cover getExplicitNestedBoundary with JSX component child having client:load (nested island)", () => {
@@ -3568,6 +3566,67 @@ describe("transform", () => {
       );
     });
 
+    it("should not classify shadowed local document binding as imperative-dom-query", () => {
+      const code = `
+        const LocalDocumentCard = defineComponent(
+          "local-document-card",
+          () => {
+            const document = { label: "local" };
+            return <div>{document.label}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("__hydrationMetadata__");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain(
+        'unsupportedReason: "imperative-dom-query"',
+      );
+    });
+
+    it("should still classify aliases to global document as imperative-dom-query", () => {
+      const code = `
+        const AliasDocumentCard = defineComponent(
+          "alias-document-card",
+          () => {
+            const document = globalThis.document;
+            return <div>{document.getElementById("root")?.id}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("__hydrationMetadata__");
+      expect(result.code).toContain(
+        'unsupportedReason: "imperative-dom-query"',
+      );
+    });
+
+    it("should ignore nested shadowed document binding inside IIFE", () => {
+      const code = `
+        const NestedShadowDocumentCard = defineComponent(
+          "nested-shadow-document-card",
+          () => {
+            const value = (() => {
+              const document = { label: "nested" };
+              return document.label;
+            })();
+            return <div>{value}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain(
+        'unsupportedReason: "imperative-dom-query"',
+      );
+    });
+
     it("should classify new Text() as node-identity-reuse", () => {
       const code = `
         const TextNodeCard = defineComponent(
@@ -3634,6 +3693,65 @@ describe("transform", () => {
 
       expect(result.code).toContain("__hydrationMetadata__");
       expect(result.code).toContain('unsupportedReason: "node-identity-reuse"');
+    });
+
+    it("should not classify shadowed local Text binding as node-identity-reuse", () => {
+      const code = `
+        const LocalTextCard = defineComponent(
+          "local-text-card",
+          () => {
+            const Text = String;
+            return <div>{new Text("hello")}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("__hydrationMetadata__");
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain(
+        'unsupportedReason: "node-identity-reuse"',
+      );
+    });
+
+    it("should still classify aliases to global Text as node-identity-reuse", () => {
+      const code = `
+        const AliasTextCard = defineComponent(
+          "alias-text-card",
+          () => {
+            const Text = globalThis.Text;
+            return <div>{new Text("hello")}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("__hydrationMetadata__");
+      expect(result.code).toContain('unsupportedReason: "node-identity-reuse"');
+    });
+
+    it("should ignore nested shadowed Text binding inside IIFE", () => {
+      const code = `
+        const NestedShadowTextCard = defineComponent(
+          "nested-shadow-text-card",
+          () => {
+            const value = (() => {
+              const Text = String;
+              return new Text("hello");
+            })();
+            return <div>{value}</div>;
+          },
+        );
+      `;
+
+      const result = transform(code, { mode: "csr" });
+
+      expect(result.code).toContain("planFactory");
+      expect(result.code).not.toContain(
+        'unsupportedReason: "node-identity-reuse"',
+      );
     });
 
     it("should support setup with function expression (not arrow) returning JSX", () => {
@@ -4387,8 +4505,9 @@ describe("transform", () => {
         );
       `;
       const result = transform(code, { mode: "csr" });
-      // The IIFE body contains `if`, which is detected by hasRuntimeBranching
-      expect(result.code).toContain('unsupportedReason: "runtime-branching"');
+      expect(result.code).toContain(
+        'unsupportedReason: "unsupported-component-body"',
+      );
     });
 
     it("should classify setup with with-statement as unsupported-component-body", () => {

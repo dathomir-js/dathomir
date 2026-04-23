@@ -569,9 +569,8 @@ describe("defineComponent", () => {
       expect(canUseComponentDOMRuntime()).toBe(false);
 
       const tag = uniqueTag();
-      const Comp = defineComponent(
-        tag,
-        () => document.createTextNode("test"),
+      const Comp = defineComponent(tag, () =>
+        document.createTextNode("test"),
       ) as any;
 
       expect(Comp.webComponent.__tagName__).toBe(tag);

@@ -1,7 +1,7 @@
 {
   "name": "@dathomir/plugin",
   "description": "dathomir plugin package",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "private": false,
   "publishConfig": {
     "access": "public",
@@ -40,7 +40,7 @@
   "scripts": {
     "dev": "tsdown --watch",
     "build": "tsdown",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "lint": "oxlint",
     "lint:type-aware": "oxlint --type-aware",
     "fmt": "oxfmt --ignore-path ../../.gitignore --write .",

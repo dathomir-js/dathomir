@@ -91,7 +91,7 @@
     "editor.defaultFormatter": "oxc.oxc-vscode",
     "editor.inlineSuggest.enabled": true,
     "github.copilot.nextEditSuggestions.enabled": true,
-    "js/ts.experimental.useTsgo": false,
+    "js/ts.experimental.useTsgo": true,
     "editor.codeActionsOnSave": {
       "source.fixAll.oxc": "explicit",
       "source.fixAll.eslint": "explicit",
@@ -118,7 +118,10 @@
     "eslint.useFlatConfig": true,
     "typst.fontPaths": ["SPEC/fonts"],
     "json.schemaDownload.enable": true,
-    "js/ts.tsdk.path": "<root>/node_modules/typescript/lib",
+    "[javascript]": {
+      "editor.defaultFormatter": "oxc.oxc-vscode",
+    },
+    // "js/ts.tsdk.path": "<root>/node_modules/typescript/lib",
   },
   "tasks": {
     "version": "2.0.0",

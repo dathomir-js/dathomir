@@ -4,6 +4,7 @@ packages:
   - playgrounds/**
 
 catalog:
+  "@typescript/native-preview": beta
   "@takuma-ru/rlse": 0.0.1-beta.8
   "@types/node": 24.2.0
   "@vitest/browser-playwright": 4.0.4

@@ -7,6 +7,14 @@ type StoreBoundHost = HTMLElement & {
   [STORE_BINDING]?: AtomStore;
 };
 
+function canUseComponentDOMRuntime(): boolean {
+  return (
+    typeof globalThis.document !== "undefined" &&
+    typeof globalThis.HTMLElement !== "undefined" &&
+    typeof globalThis.customElements !== "undefined"
+  );
+}
+
 function bindStoreToHost(host: HTMLElement, store: AtomStore): void {
   const boundHost = host as StoreBoundHost;
   if (boundHost[STORE_BINDING] === undefined) {
@@ -63,6 +71,7 @@ function bindCurrentStoreToSubtree(root: Node): void {
 export {
   bindCurrentStoreToSubtree,
   bindStoreToHost,
+  canUseComponentDOMRuntime,
   captureCurrentStore,
   getStoreFromHost,
   peekStoreFromHost,

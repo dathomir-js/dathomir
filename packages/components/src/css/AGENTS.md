@@ -1,4 +1,4 @@
-# 📦 @dathra/core • src/css
+# 📦 @dathra/components • src/css
 
 ## AI エージェント向けガイド
 

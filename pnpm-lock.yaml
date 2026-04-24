@@ -107,20 +107,20 @@ importers:
 
   packages/components:
     dependencies:
-      '@dathomir/reactivity':
+      '@dathra/reactivity':
         specifier: workspace:*
         version: link:../reactivity
-      '@dathomir/runtime':
+      '@dathra/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@dathomir/shared':
+      '@dathra/shared':
         specifier: workspace:*
         version: link:../shared
-      '@dathomir/store':
+      '@dathra/store':
         specifier: workspace:*
         version: link:../store
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
       '@takuma-ru/rlse':
@@ -144,23 +144,23 @@ importers:
 
   packages/core:
     dependencies:
-      '@dathomir/components':
+      '@dathra/components':
         specifier: workspace:*
         version: link:../components
-      '@dathomir/reactivity':
+      '@dathra/reactivity':
         specifier: workspace:*
         version: link:../reactivity
-      '@dathomir/runtime':
+      '@dathra/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@dathomir/shared':
+      '@dathra/shared':
         specifier: workspace:*
         version: link:../shared
-      '@dathomir/store':
+      '@dathra/store':
         specifier: workspace:*
         version: link:../store
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
       '@takuma-ru/rlse':
@@ -190,14 +190,14 @@ importers:
       '@babel/preset-typescript':
         specifier: ^7.28.5
         version: 7.28.5(@babel/core@7.28.5)
-      '@dathomir/transformer':
+      '@dathra/transformer':
         specifier: workspace:*
         version: link:../transformer
       unplugin:
         specifier: ^2.3.10
         version: 2.3.10
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
       '@takuma-ru/rlse':
@@ -222,7 +222,7 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
       '@takuma-ru/rlse':
@@ -240,20 +240,20 @@ importers:
 
   packages/runtime:
     dependencies:
-      '@dathomir/reactivity':
+      '@dathra/reactivity':
         specifier: workspace:*
         version: link:../reactivity
-      '@dathomir/shared':
+      '@dathra/shared':
         specifier: workspace:*
         version: link:../shared
-      '@dathomir/store':
+      '@dathra/store':
         specifier: workspace:*
         version: link:../store
       devalue:
         specifier: ^5.6.2
         version: 5.6.2
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
       '@takuma-ru/rlse':
@@ -280,7 +280,7 @@ importers:
 
   packages/shared:
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
       '@takuma-ru/rlse':
@@ -298,11 +298,11 @@ importers:
 
   packages/store:
     dependencies:
-      '@dathomir/reactivity':
+      '@dathra/reactivity':
         specifier: workspace:*
         version: link:../reactivity
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
       '@takuma-ru/rlse':
@@ -320,7 +320,7 @@ importers:
 
   packages/transformer:
     dependencies:
-      '@dathomir/shared':
+      '@dathra/shared':
         specifier: workspace:*
         version: link:../shared
       esrap:
@@ -333,7 +333,7 @@ importers:
         specifier: ^1.1.4
         version: 1.1.4
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
       '@takuma-ru/rlse':
@@ -351,23 +351,23 @@ importers:
 
   playgrounds/e2e:
     dependencies:
-      '@dathomir/components':
+      '@dathra/components':
         specifier: workspace:*
         version: link:../../packages/components
-      '@dathomir/core':
+      '@dathra/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@dathomir/runtime':
+      '@dathra/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
-      '@dathomir/store':
+      '@dathra/store':
         specifier: workspace:*
         version: link:../../packages/store
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
-      '@dathomir/plugin':
+      '@dathra/plugin':
         specifier: workspace:*
         version: link:../../packages/plugin
       '@types/node':
@@ -391,16 +391,16 @@ importers:
 
   playgrounds/nuxt:
     dependencies:
-      '@dathomir/components':
+      '@dathra/components':
         specifier: workspace:*
         version: link:../../packages/components
-      '@dathomir/core':
+      '@dathra/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@dathomir/reactivity':
+      '@dathra/reactivity':
         specifier: workspace:*
         version: link:../../packages/reactivity
-      '@dathomir/runtime':
+      '@dathra/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
       nuxt:
@@ -410,7 +410,7 @@ importers:
         specifier: ^3.5.13
         version: 3.5.28(typescript@6.0.3)
     devDependencies:
-      '@dathomir/plugin':
+      '@dathra/plugin':
         specifier: workspace:*
         version: link:../../packages/plugin
       '@nuxt/devtools':
@@ -419,20 +419,20 @@ importers:
 
   playgrounds/ssr:
     dependencies:
-      '@dathomir/components':
+      '@dathra/components':
         specifier: workspace:*
         version: link:../../packages/components
-      '@dathomir/core':
+      '@dathra/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@dathomir/runtime':
+      '@dathra/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
-      '@dathomir/plugin':
+      '@dathra/plugin':
         specifier: workspace:*
         version: link:../../packages/plugin
       '@types/node':
@@ -450,14 +450,14 @@ importers:
 
   playgrounds/vanilla:
     dependencies:
-      '@dathomir/core':
+      '@dathra/core':
         specifier: workspace:*
         version: link:../../packages/core
     devDependencies:
-      '@dathomir/config':
+      '@dathra/config':
         specifier: workspace:*
         version: link:../../config
-      '@dathomir/plugin':
+      '@dathra/plugin':
         specifier: workspace:*
         version: link:../../packages/plugin
       typescript:

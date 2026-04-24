@@ -1,5 +1,5 @@
-import { onCleanup, signal, templateEffect } from "@dathomir/reactivity";
-import { atom, createAtomStore, withStore } from "@dathomir/store";
+import { onCleanup, signal, templateEffect } from "@dathra/reactivity";
+import { atom, createAtomStore, withStore } from "@dathra/store";
 
 import { bindStoreToHost, peekStoreFromHost } from "./internal";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,7 +8,7 @@ import {
   HYDRATE_ISLANDS_HOOK,
   hydrateIslands,
   HYDRATE_ISLANDS_STATUS,
-} from "@dathomir/runtime/hydration";
+} from "@dathra/runtime/hydration";
 
 import {
   adoptGlobalStyles,
@@ -16,7 +16,7 @@ import {
   css,
 } from "../css/implementation";
 import { defineComponent } from "./implementation";
-import type { GenericHydrationPlan } from "@dathomir/runtime/hydration";
+import type { GenericHydrationPlan } from "@dathra/runtime/hydration";
 
 /**
  * Helper to wait for custom element upgrade and connectedCallback.
@@ -1158,7 +1158,7 @@ describe("defineComponent", () => {
     await waitForMicrotask();
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "[dathomir] colocated load:on* / interaction:on* / idle:on* / visible:on* cannot be combined with a hydrate option in the same component",
+      "[dathra] colocated load:on* / interaction:on* / idle:on* / visible:on* cannot be combined with a hydrate option in the same component",
     );
     expect(el.getAttribute("data-dh-island")).toBeNull();
 
@@ -1180,7 +1180,7 @@ describe("defineComponent", () => {
     await waitForMicrotask();
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "[dathomir] host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
+      "[dathra] host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
     );
     expect(el.getAttribute("data-dh-island")).toBe("load");
 

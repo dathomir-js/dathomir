@@ -402,7 +402,7 @@
     outer island の subtree 内でも、優先度や trigger が異なる interactive UI を独立して起動したい。boundary を host 単位に限定したまま nested islands を正式に扱えれば、SSR shell を維持しつつ局所的な interactivity を段階的に解放できる。
   ],
   [
-    descendant custom element host が独立した canonical `data-dh-island*` metadata を持つ場合、Dathomir はそれを outer host とは別の explicit nested island boundary として扱う。nested boundary は nearest ancestor island host の subtree 内に存在してもよく、runtime scheduler は outer/inner をそれぞれ独立に schedule できるようにする。
+    descendant custom element host が独立した canonical `data-dh-island*` metadata を持つ場合、Dathra はそれを outer host とは別の explicit nested island boundary として扱う。nested boundary は nearest ancestor island host の subtree 内に存在してもよく、runtime scheduler は outer/inner をそれぞれ独立に schedule できるようにする。
   ],
   [
     - author は eager child / deferred parent のような構成を explicit host 分割で表現できる
@@ -516,12 +516,12 @@
     `withStore()` の boundary を custom element instance まで運ぶ仕組みは必要だが、利用者に public API として公開すると mental model が複雑になる。
   ],
   [
-    current store の捕捉と host への binding は `@dathomir/components` 内部実装に閉じ込め、公開 API には含めない。
+    current store の捕捉と host への binding は `@dathra/components` 内部実装に閉じ込め、公開 API には含めない。
   ],
   [
     - 利用者は `withStore()` と `ctx.store` だけを理解すればよい
     - host-to-store binding の実装を将来変更しやすい
-    - `@dathomir/store` は atom/store/boundary の public API に集中できる
+    - `@dathra/store` は atom/store/boundary の public API に集中できる
   ],
 )
 

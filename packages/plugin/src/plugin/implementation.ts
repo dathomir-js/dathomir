@@ -1,4 +1,4 @@
-import { transform } from "@dathomir/transformer";
+import { transform } from "@dathra/transformer";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -6,7 +6,7 @@ import { createUnplugin, type UnpluginContext } from "unplugin";
 import type { TransformResult, Plugin as VitePlugin } from "vite";
 
 /**
- * Plugin options for the Dathomir plugin.
+ * Plugin options for the Dathra plugin.
  */
 interface PluginOptions {
   /**
@@ -20,7 +20,7 @@ interface PluginOptions {
   exclude?: string[];
 
   /**
-   * Module to import runtime functions from (default: '@dathomir/core').
+   * Module to import runtime functions from (default: '@dathra/core').
    */
   runtimeModule?: string;
 
@@ -335,7 +335,7 @@ function doTransform(
       mode,
       sourceMap: true,
       filename: id,
-      runtimeModule: options.runtimeModule ?? "@dathomir/core",
+      runtimeModule: options.runtimeModule ?? "@dathra/core",
     });
 
     const map = parseSourceMap(result.map);
@@ -350,19 +350,19 @@ function doTransform(
         };
   } catch (error) {
     if (error instanceof Error) {
-      error.message = `[dathomir] Error transforming ${id}: ${error.message}`;
+      error.message = `[dathra] Error transforming ${id}: ${error.message}`;
     }
     throw error;
   }
 }
 
 /**
- * Create the Dathomir Vite plugin with proper SSR detection.
+ * Create the Dathra Vite plugin with proper SSR detection.
  * Vite's transform hook receives ssr option directly.
  */
 function createVitePlugin(options: PluginOptions = {}): VitePlugin {
   return {
-    name: "dathomir",
+    name: "dathra",
     enforce: "pre",
 
     resolveId(source: string, importer?: string) {
@@ -387,11 +387,11 @@ function createVitePlugin(options: PluginOptions = {}): VitePlugin {
 }
 
 /**
- * Create the Dathomir unplugin factory for non-Vite bundlers.
+ * Create the Dathra unplugin factory for non-Vite bundlers.
  */
 const unpluginFactory = createUnplugin((options: PluginOptions = {}) => {
   return {
-    name: "dathomir",
+    name: "dathra",
 
     transformInclude(id: string) {
       return shouldTransform(id, options);
@@ -406,36 +406,36 @@ const unpluginFactory = createUnplugin((options: PluginOptions = {}) => {
 });
 
 /**
- * Universal dathomir plugin (unplugin factory).
+ * Universal dathra plugin (unplugin factory).
  */
-const dathomir = unpluginFactory;
+const dathra = unpluginFactory;
 
 /**
- * Vite plugin for Dathomir with proper SSR detection.
+ * Vite plugin for Dathra with proper SSR detection.
  */
-const dathomirVitePlugin = createVitePlugin;
+const dathraVitePlugin = createVitePlugin;
 
 /**
- * Webpack plugin for Dathomir.
+ * Webpack plugin for Dathra.
  */
-const dathomirWebpackPlugin = dathomir.webpack;
+const dathraWebpackPlugin = dathra.webpack;
 
 /**
- * Rollup plugin for Dathomir.
+ * Rollup plugin for Dathra.
  */
-const dathomirRollupPlugin = dathomir.rollup;
+const dathraRollupPlugin = dathra.rollup;
 
 /**
- * esbuild plugin for Dathomir.
+ * esbuild plugin for Dathra.
  */
-const dathomirEsbuildPlugin = dathomir.esbuild;
+const dathraEsbuildPlugin = dathra.esbuild;
 
 export {
-  dathomir,
-  dathomirEsbuildPlugin,
-  dathomirRollupPlugin,
-  dathomirVitePlugin,
-  dathomirWebpackPlugin,
+  dathra,
+  dathraEsbuildPlugin,
+  dathraRollupPlugin,
+  dathraVitePlugin,
+  dathraWebpackPlugin,
 };
 export type { PluginOptions };
-export default dathomir;
+export default dathra;

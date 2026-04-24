@@ -1,6 +1,6 @@
-import { clearGlobalStyles } from "@dathomir/components";
-import { bindStoreToHost } from "@dathomir/components/internal";
-import { hydrateIslands } from "@dathomir/runtime/hydration";
+import { clearGlobalStyles } from "@dathra/components";
+import { bindStoreToHost } from "@dathra/components/internal";
+import { hydrateIslands } from "@dathra/runtime/hydration";
 
 import { createDemoStore } from "./demoStore";
 

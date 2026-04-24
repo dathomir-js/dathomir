@@ -1,5 +1,5 @@
-import { renderDSD } from "@dathomir/components/ssr";
-import { signal } from "@dathomir/core";
+import { renderDSD } from "@dathra/components/ssr";
+import { signal } from "@dathra/core";
 
 import type { DemoTheme } from "../demoStore";
 import { nextTheme } from "../demoStore";

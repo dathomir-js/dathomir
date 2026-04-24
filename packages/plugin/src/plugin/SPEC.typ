@@ -8,22 +8,22 @@
 
 Vite、webpack 等のビルドツール向けプラグインを提供する。
 unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイルに対して
-`\@dathomir/transformer` を適用する。
+`\@dathra/transformer` を適用する。
 
 == インターフェース仕様
 
 #interface_spec(
   name: "plugin API",
   summary: [
-    unplugin ベースで複数バンドラーに対応し、JSX/TSX ファイルへ `@dathomir/transformer` を適用するプラグイン API。
+    unplugin ベースで複数バンドラーに対応し、JSX/TSX ファイルへ `@dathra/transformer` を適用するプラグイン API。
   ],
   format: [
     *エクスポート*:
-    - `dathomir: UnpluginInstance<PluginOptions | undefined>`
-    - `dathomirVitePlugin(options?: PluginOptions): VitePlugin`
-    - `dathomirWebpackPlugin(options?: PluginOptions): WebpackPlugin`
-    - `dathomirRollupPlugin(options?: PluginOptions): RollupPlugin`
-    - `dathomirEsbuildPlugin(options?: PluginOptions): EsbuildPlugin`
+    - `dathra: UnpluginInstance<PluginOptions | undefined>`
+    - `dathraVitePlugin(options?: PluginOptions): VitePlugin`
+    - `dathraWebpackPlugin(options?: PluginOptions): WebpackPlugin`
+    - `dathraRollupPlugin(options?: PluginOptions): RollupPlugin`
+    - `dathraEsbuildPlugin(options?: PluginOptions): EsbuildPlugin`
 
     *オプション*:
     ```typescript
@@ -39,7 +39,7 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
     - `include` に一致し `exclude` に一致しないファイルのみ変換する
     - デフォルトで `.tsx` と `.jsx` を対象とする
     - モード判定の優先順位は `options.mode` → `environment.name` → `options.ssr` → CSR
-    - `@dathomir/transformer` の `transform()` を呼び出し、`filename` と `runtimeModule` を渡す
+    - `@dathra/transformer` の `transform()` を呼び出し、`filename` と `runtimeModule` を渡す
     - transform 失敗時はファイルパスを付与したエラーとして再スローする
     - Vite plugin は importer から最も近い `tsconfig.json` の `compilerOptions.paths` を参照して path alias import を解決できる
   ],
@@ -82,6 +82,6 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
 
     *エクスポート*:
     - 全てのプラグインファクトリ（Vite/webpack/Rollup/esbuild）が正しくエクスポートされる
-    - デフォルトエクスポートとして `dathomir` が提供される
+    - デフォルトエクスポートとして `dathra` が提供される
   ],
 )

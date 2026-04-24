@@ -1,5 +1,5 @@
-import { clearGlobalStyles } from "@dathomir/components";
-import { renderDSD } from "@dathomir/components/ssr";
+import { clearGlobalStyles } from "@dathra/components";
+import { renderDSD } from "@dathra/components/ssr";
 
 import { SSRAppRoot } from "./SSRAppRoot";
 import { createDemoStore } from "./demoStore";

@@ -2,9 +2,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
-import { transform } from "@dathomir/transformer";
+import { transform } from "@dathra/transformer";
 
-vi.mock("@dathomir/transformer", () => ({
+vi.mock("@dathra/transformer", () => ({
   transform: vi.fn(() => ({
     code: "transformed",
     map: '{"version":3}',
@@ -16,15 +16,15 @@ vi.mock("@dathomir/transformer", () => ({
  * so we test via the exported plugin factories.
  */
 import {
-  dathomir,
-  dathomirEsbuildPlugin,
-  dathomirRollupPlugin,
-  dathomirVitePlugin,
-  dathomirWebpackPlugin,
+  dathra,
+  dathraEsbuildPlugin,
+  dathraRollupPlugin,
+  dathraVitePlugin,
+  dathraWebpackPlugin,
 } from "./implementation";
 
 const actualTransformer = await vi.importActual<TransformerModule>(
-  "@dathomir/transformer",
+  "@dathra/transformer",
 );
 
 type RollupLikePlugin = {
@@ -70,7 +70,7 @@ function requireTransformResult(
 }
 
 function invokeViteTransform(
-  plugin: ReturnType<typeof dathomirVitePlugin>,
+  plugin: ReturnType<typeof dathraVitePlugin>,
   code: string,
   id: string,
   transformOptions: { ssr?: boolean } = {},
@@ -81,7 +81,7 @@ function invokeViteTransform(
 }
 
 async function invokeResolveId(
-  plugin: ReturnType<typeof dathomirVitePlugin>,
+  plugin: ReturnType<typeof dathraVitePlugin>,
   source: string,
   importer?: string,
 ): Promise<string | null> {
@@ -91,47 +91,47 @@ async function invokeResolveId(
 
 describe("plugin", () => {
   describe("exports", () => {
-    it("should export dathomir unplugin factory", () => {
-      expect(dathomir).toBeDefined();
+    it("should export dathra unplugin factory", () => {
+      expect(dathra).toBeDefined();
     });
 
-    it("should export dathomirVitePlugin", () => {
-      expect(dathomirVitePlugin).toBeDefined();
-      expect(typeof dathomirVitePlugin).toBe("function");
+    it("should export dathraVitePlugin", () => {
+      expect(dathraVitePlugin).toBeDefined();
+      expect(typeof dathraVitePlugin).toBe("function");
     });
 
-    it("should export dathomirWebpackPlugin", () => {
-      expect(dathomirWebpackPlugin).toBeDefined();
+    it("should export dathraWebpackPlugin", () => {
+      expect(dathraWebpackPlugin).toBeDefined();
     });
 
-    it("should export dathomirRollupPlugin", () => {
-      expect(dathomirRollupPlugin).toBeDefined();
+    it("should export dathraRollupPlugin", () => {
+      expect(dathraRollupPlugin).toBeDefined();
     });
 
-    it("should export dathomirEsbuildPlugin", () => {
-      expect(dathomirEsbuildPlugin).toBeDefined();
+    it("should export dathraEsbuildPlugin", () => {
+      expect(dathraEsbuildPlugin).toBeDefined();
     });
   });
 
-  describe("dathomirVitePlugin", () => {
+  describe("dathraVitePlugin", () => {
     it("should create a Vite plugin with correct name", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       expect(plugin).toBeDefined();
-      expect(plugin.name).toBe("dathomir");
+      expect(plugin.name).toBe("dathra");
     });
 
     it("should set enforce to pre", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       expect(plugin.enforce).toBe("pre");
     });
 
     it("should have a transform function", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       expect(typeof plugin.transform).toBe("function");
     });
 
     it("should transform TSX files", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       const result = requireTransformResult(
         invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {}),
       );
@@ -141,7 +141,7 @@ describe("plugin", () => {
     });
 
     it("should transform JSX files", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       const result = invokeViteTransform(
         plugin,
         "const x = <div />;",
@@ -154,7 +154,7 @@ describe("plugin", () => {
     });
 
     it("should skip non-JSX/TSX files", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       const result = invokeViteTransform(
         plugin,
         "const x = 1;",
@@ -166,7 +166,7 @@ describe("plugin", () => {
     });
 
     it("should skip excluded files", () => {
-      const plugin = dathomirVitePlugin({
+      const plugin = dathraVitePlugin({
         exclude: ["node_modules"],
       });
       const result = invokeViteTransform(
@@ -180,7 +180,7 @@ describe("plugin", () => {
     });
 
     it("should transform files that do not match the exclude pattern", () => {
-      const plugin = dathomirVitePlugin({
+      const plugin = dathraVitePlugin({
         exclude: ["node_modules"],
       });
       const result = requireTransformResult(
@@ -196,7 +196,7 @@ describe("plugin", () => {
     });
 
     it("should respect custom include extensions", () => {
-      const plugin = dathomirVitePlugin({
+      const plugin = dathraVitePlugin({
         include: [".tsx"],
       });
 
@@ -219,7 +219,7 @@ describe("plugin", () => {
     });
 
     it("should pass SSR flag from Vite transform options", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {
         ssr: true,
       });
@@ -231,7 +231,7 @@ describe("plugin", () => {
     });
 
     it("should default to CSR mode", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {});
 
       expect(transform).toHaveBeenCalledWith(
@@ -241,7 +241,7 @@ describe("plugin", () => {
     });
 
     it("should use forced mode over SSR flag", () => {
-      const plugin = dathomirVitePlugin({ mode: "ssr" });
+      const plugin = dathraVitePlugin({ mode: "ssr" });
       invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {});
 
       expect(transform).toHaveBeenCalledWith(
@@ -251,7 +251,7 @@ describe("plugin", () => {
     });
 
     it("should pass custom runtimeModule to transformer", () => {
-      const plugin = dathomirVitePlugin({ runtimeModule: "custom-runtime" });
+      const plugin = dathraVitePlugin({ runtimeModule: "custom-runtime" });
       invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {});
 
       expect(transform).toHaveBeenCalledWith(
@@ -261,7 +261,7 @@ describe("plugin", () => {
     });
 
     it("should pass filename to transformer", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       invokeViteTransform(
         plugin,
         "const x = <div />;",
@@ -280,7 +280,7 @@ describe("plugin", () => {
         throw new Error("Parse error");
       });
 
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
 
       expect(() => {
         invokeViteTransform(
@@ -289,7 +289,7 @@ describe("plugin", () => {
           "/path/to/component.tsx",
           {},
         );
-      }).toThrow("[dathomir] Error transforming /path/to/component.tsx");
+      }).toThrow("[dathra] Error transforming /path/to/component.tsx");
     });
 
     it("should rethrow non-Error objects as-is", () => {
@@ -299,7 +299,7 @@ describe("plugin", () => {
         throw nonErrorThrow;
       });
 
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
 
       expect(() => {
         invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {});
@@ -312,7 +312,7 @@ describe("plugin", () => {
         map: undefined,
       }));
 
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       const result = requireTransformResult(
         invokeViteTransform(plugin, "const x = <div />;", "component.tsx", {}),
       );
@@ -323,7 +323,7 @@ describe("plugin", () => {
     it("should preserve the islands metadata contract through real transformer output", () => {
       vi.mocked(transform).mockImplementation(actualTransformer.transform);
 
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       const result = requireTransformResult(
         invokeViteTransform(
           plugin,
@@ -341,7 +341,7 @@ describe("plugin", () => {
     });
 
     it("should resolve package-local @/ imports using the nearest tsconfig paths", async () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       const importer = path.join(repoRoot, "packages/components/src/index.ts");
       const expected = path.join(
         repoRoot,
@@ -358,7 +358,7 @@ describe("plugin", () => {
     });
 
     it("should resolve directory aliases to index.ts using tsconfig paths", async () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       const importer = path.join(repoRoot, "packages/runtime/src/index.ts");
       const expected = path.join(repoRoot, "packages/runtime/src/ssr/index.ts");
 
@@ -368,7 +368,7 @@ describe("plugin", () => {
     });
 
     it("should ignore aliases when no matching tsconfig path mapping exists", async () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       const importer = path.join(repoRoot, "packages/runtime/src/index.ts");
 
       const resolved = await invokeResolveId(plugin, "#internal/foo", importer);
@@ -379,7 +379,7 @@ describe("plugin", () => {
 
   describe("edge mode detection", () => {
     it("should detect SSR mode from edge environment name", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       const context = {
         environment: { name: "edge" },
       };
@@ -399,7 +399,7 @@ describe("plugin", () => {
     });
 
     it("should detect CSR mode from client environment name", () => {
-      const plugin = dathomirVitePlugin();
+      const plugin = dathraVitePlugin();
       const context = {
         environment: { name: "client" },
       };
@@ -421,21 +421,21 @@ describe("plugin", () => {
 
   describe("unplugin rollup factory (non-Vite bundlers)", () => {
     it("should include JSX/TSX files via transformInclude", () => {
-      const plugin = dathomirRollupPlugin({}) as unknown as RollupLikePlugin;
+      const plugin = dathraRollupPlugin({}) as unknown as RollupLikePlugin;
 
       expect(plugin.transformInclude("component.tsx")).toBe(true);
       expect(plugin.transformInclude("component.jsx")).toBe(true);
     });
 
     it("should exclude non-JSX/TSX files via transformInclude", () => {
-      const plugin = dathomirRollupPlugin({}) as unknown as RollupLikePlugin;
+      const plugin = dathraRollupPlugin({}) as unknown as RollupLikePlugin;
 
       expect(plugin.transformInclude("module.ts")).toBe(false);
       expect(plugin.transformInclude("styles.css")).toBe(false);
     });
 
     it("should transform JSX/TSX files via transform hook", () => {
-      const plugin = dathomirRollupPlugin({}) as unknown as RollupLikePlugin;
+      const plugin = dathraRollupPlugin({}) as unknown as RollupLikePlugin;
       const transformHook = plugin.transform;
 
       const result = transformHook.call(
@@ -449,7 +449,7 @@ describe("plugin", () => {
     });
 
     it("should detect SSR mode from ssr environment name in unplugin transform", () => {
-      const plugin = dathomirRollupPlugin({}) as unknown as RollupLikePlugin;
+      const plugin = dathraRollupPlugin({}) as unknown as RollupLikePlugin;
       const transformHook = plugin.transform;
 
       transformHook.call(
@@ -465,7 +465,7 @@ describe("plugin", () => {
     });
 
     it("should detect SSR mode from edge environment name in unplugin transform", () => {
-      const plugin = dathomirRollupPlugin({}) as unknown as RollupLikePlugin;
+      const plugin = dathraRollupPlugin({}) as unknown as RollupLikePlugin;
       const transformHook = plugin.transform;
 
       transformHook.call(

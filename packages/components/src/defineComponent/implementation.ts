@@ -18,16 +18,16 @@ import {
 } from "@/defineComponent/internal";
 import { registerComponent } from "@/registry/implementation";
 import { ensureComponentRenderer, renderDSD } from "@/ssr/implementation";
-import type { RootDispose, Signal } from "@dathomir/reactivity";
-import { createRoot, signal, templateEffect } from "@dathomir/reactivity";
+import type { RootDispose, Signal } from "@dathra/reactivity";
+import { createRoot, signal, templateEffect } from "@dathra/reactivity";
 import {
   cancelScheduledIslandHydration,
   hydrateWithPlan,
   type GenericHydrationPlan,
   HYDRATE_ISLANDS_HOOK,
   HYDRATE_ISLANDS_STATUS,
-} from "@dathomir/runtime/hydration";
-import { getClientAction, insert, setAttr } from "@dathomir/runtime";
+} from "@dathra/runtime/hydration";
+import { getClientAction, insert, setAttr } from "@dathra/runtime";
 import {
   CLIENT_ACTIONS_METADATA_ATTRIBUTE,
   CLIENT_EVENT_METADATA_ATTRIBUTE,
@@ -40,8 +40,8 @@ import {
   isIslandStrategyName,
   type ColocatedClientStrategyName,
   type IslandStrategyName,
-} from "@dathomir/shared";
-import type { AtomStore } from "@dathomir/store";
+} from "@dathra/shared";
+import type { AtomStore } from "@dathra/store";
 
 // ── Type definitions ────────────────────────────────────────────────
 
@@ -345,7 +345,7 @@ function getColocatedClientStrategyFromShadowRoot(
       strategy = nextStrategy;
     } else if (strategy !== nextStrategy) {
       throw new Error(
-        "[dathomir] Mixed colocated client strategies are not supported in one component shadow root",
+        "[dathra] Mixed colocated client strategies are not supported in one component shadow root",
       );
     }
 
@@ -363,7 +363,7 @@ function getColocatedClientStrategyFromShadowRoot(
 
     if (interactionEventType !== nextEventType) {
       throw new Error(
-        "[dathomir] Mixed colocated interaction event types are not supported in one component shadow root",
+        "[dathra] Mixed colocated interaction event types are not supported in one component shadow root",
       );
     }
   }
@@ -468,7 +468,7 @@ function getHostClientActionBindings(
     >;
   } catch {
     console.error(
-      `[dathomir] Invalid ${CLIENT_ACTIONS_METADATA_ATTRIBUTE} metadata on component host`,
+      `[dathra] Invalid ${CLIENT_ACTIONS_METADATA_ATTRIBUTE} metadata on component host`,
     );
     return {};
   }
@@ -484,7 +484,7 @@ function bindHostClientActions(host: HTMLElement): () => void {
       | undefined;
     if (factory === undefined) {
       console.warn(
-        `[dathomir] Missing client action artifact for id ${binding.id}`,
+        `[dathra] Missing client action artifact for id ${binding.id}`,
       );
       continue;
     }
@@ -830,7 +830,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
   if (typeof __DEV__ !== "undefined" && __DEV__) {
     if (!tagName.includes("-")) {
       console.warn(
-        `[dathomir] Custom element tag name "${tagName}" must contain a hyphen.`,
+        `[dathra] Custom element tag name "${tagName}" must contain a hyphen.`,
       );
     }
   }
@@ -924,14 +924,14 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
 
       if (colocatedStrategy !== null && hydrateSetup !== undefined) {
         console.error(
-          "[dathomir] colocated load:on* / interaction:on* / idle:on* / visible:on* cannot be combined with a hydrate option in the same component",
+          "[dathra] colocated load:on* / interaction:on* / idle:on* / visible:on* cannot be combined with a hydrate option in the same component",
         );
         colocatedStrategy = null;
       }
 
       if (colocatedStrategy !== null && hasHostIslandMetadata) {
         console.error(
-          "[dathomir] host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
+          "[dathra] host-level client:* directives or data-dh-island metadata cannot be combined with colocated client directives in the same component render subtree",
         );
         colocatedStrategy = null;
       }
@@ -1007,7 +1007,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
       const isMissingStoreError = (error: unknown): boolean => {
         return (
           error instanceof Error &&
-          error.message === "[dathomir] No store bound to component host"
+          error.message === "[dathra] No store bound to component host"
         );
       };
 
@@ -1042,7 +1042,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
           ) {
             return false;
           }
-          console.error("[dathomir] Error in component hydrate:", error);
+          console.error("[dathra] Error in component hydrate:", error);
           return false;
         }
       };
@@ -1083,7 +1083,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
             return false;
           }
           console.error(
-            "[dathomir] Error in compiler-generated hydration plan:",
+            "[dathra] Error in compiler-generated hydration plan:",
             error,
           );
           return false;
@@ -1096,7 +1096,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
         }
 
         console.warn(
-          `[dathomir] Falling back to setup rerender for <${tagName}> because compiler-generated hydration is unsupported: ${hydrationMetadata.unsupportedReason}`,
+          `[dathra] Falling back to setup rerender for <${tagName}> because compiler-generated hydration is unsupported: ${hydrationMetadata.unsupportedReason}`,
         );
       };
 
@@ -1128,7 +1128,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
           ) {
             return false;
           }
-          console.error("[dathomir] Error in component setup:", error);
+          console.error("[dathra] Error in component setup:", error);
           return false;
         }
       };
@@ -1208,7 +1208,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
         try {
           sig.set(coerceValue(def, newValue) as never);
         } catch (error) {
-          console.error("[dathomir] Error updating prop signal:", error);
+          console.error("[dathra] Error updating prop signal:", error);
         }
       }
     }

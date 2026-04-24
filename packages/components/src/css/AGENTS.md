@@ -1,4 +1,4 @@
-# 📦 @dathomir/core • src/css
+# 📦 @dathra/core • src/css
 
 ## AI エージェント向けガイド
 

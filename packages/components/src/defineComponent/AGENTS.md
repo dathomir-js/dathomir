@@ -1,4 +1,4 @@
-# 📦 @dathomir/core • src/defineComponent
+# 📦 @dathra/core • src/defineComponent
 
 ## AI エージェント向けガイド
 

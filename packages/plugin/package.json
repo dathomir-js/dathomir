@@ -1,6 +1,6 @@
 {
-  "name": "@dathomir/plugin",
-  "description": "dathomir plugin package",
+  "name": "@dathra/plugin",
+  "description": "dathra plugin package",
   "version": "0.0.12",
   "private": false,
   "publishConfig": {
@@ -12,16 +12,16 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com:dathomir-js/dathomir.git"
+    "url": "git+ssh://git@github.com:dathra-js/dathra.git"
   },
   "bugs": {
-    "url": "https://github.com/dathomir-js/dathomir/issues",
-    "email": "dathomir@takumaru.dev"
+    "url": "https://github.com/dathra-js/dathra/issues",
+    "email": "dathra@takumaru.dev"
   },
-  "homepage": "https://github.com/dathomir-js/dathomir#readme",
+  "homepage": "https://github.com/dathra-js/dathra#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
   "keywords": [
-    "dathomir",
+    "dathra",
     "framework",
     "frontend",
     "javascript",
@@ -49,7 +49,7 @@
     "release": "rlse"
   },
   "devDependencies": {
-    "@dathomir/config": "workspace:*",
+    "@dathra/config": "workspace:*",
     "@takuma-ru/rlse": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
@@ -60,7 +60,7 @@
     "@babel/core": "^7.28.5",
     "@babel/plugin-transform-react-jsx": "^7.27.1",
     "@babel/preset-typescript": "^7.28.5",
-    "@dathomir/transformer": "workspace:*",
+    "@dathra/transformer": "workspace:*",
     "unplugin": "^2.3.10"
   }
 }

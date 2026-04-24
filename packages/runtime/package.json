@@ -1,6 +1,6 @@
 {
-  "name": "@dathomir/runtime",
-  "description": "dathomir runtime package",
+  "name": "@dathra/runtime",
+  "description": "dathra runtime package",
   "version": "0.0.12",
   "private": false,
   "publishConfig": {
@@ -12,16 +12,16 @@
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com:dathomir-js/dathomir.git"
+    "url": "git+ssh://git@github.com:dathra-js/dathra.git"
   },
   "bugs": {
-    "url": "https://github.com/dathomir-js/dathomir/issues",
-    "email": "dathomir@takumaru.dev"
+    "url": "https://github.com/dathra-js/dathra/issues",
+    "email": "dathra@takumaru.dev"
   },
-  "homepage": "https://github.com/dathomir-js/dathomir#readme",
+  "homepage": "https://github.com/dathra-js/dathra#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
   "keywords": [
-    "dathomir",
+    "dathra",
     "framework",
     "frontend",
     "javascript",
@@ -75,13 +75,13 @@
     "release": "rlse"
   },
   "dependencies": {
-    "@dathomir/reactivity": "workspace:*",
-    "@dathomir/shared": "workspace:*",
-    "@dathomir/store": "workspace:*",
+    "@dathra/reactivity": "workspace:*",
+    "@dathra/shared": "workspace:*",
+    "@dathra/store": "workspace:*",
     "devalue": "^5.6.2"
   },
   "devDependencies": {
-    "@dathomir/config": "workspace:*",
+    "@dathra/config": "workspace:*",
     "@takuma-ru/rlse": "catalog:",
     "@types/node": "24.2.0",
     "@vitest/browser-playwright": "catalog:",

@@ -12,13 +12,13 @@
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com:dathra-js/dathra.git"
+    "url": "git+ssh://git@github.com:dathra/dathra.git"
   },
   "bugs": {
-    "url": "https://github.com/dathra-js/dathra/issues",
+    "url": "https://github.com/dathra/dathra/issues",
     "email": "dathra@takumaru.dev"
   },
-  "homepage": "https://github.com/dathra-js/dathra#readme",
+  "homepage": "https://github.com/dathra/dathra#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
   "keywords": [
     "dathra",

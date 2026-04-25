@@ -74,7 +74,7 @@ jobs:
 
       - name: Release dependent packages
         run: |
-          for pkg in reactivity transformer runtime plugin components core; do
+          for pkg in reactivity store transformer runtime plugin components core; do
             pnpm p:${pkg} release --level fix --release-version ${{ steps.get-version.outputs.package-version }} -k create-release-branch,build
           done
 

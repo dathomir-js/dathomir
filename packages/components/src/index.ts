@@ -5,7 +5,7 @@ export {
   css,
   getCssText,
 } from "@/css/implementation";
-export type { DathomirStyleSheet } from "@/css/implementation";
+export type { DathraStyleSheet } from "@/css/implementation";
 export { defineComponent } from "@/defineComponent/implementation";
 export type {
   ComponentClass,

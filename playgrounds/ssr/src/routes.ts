@@ -4,7 +4,7 @@ const playgroundRoutes = [
     label: "Overview",
     title: "SSR Playground Overview",
     description:
-      "Browse focused Dathomir SSR demos by feature instead of stacking every experiment onto one page.",
+      "Browse focused Dathra SSR demos by feature instead of stacking every experiment onto one page.",
   },
   {
     path: "/als",

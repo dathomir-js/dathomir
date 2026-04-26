@@ -1,6 +1,6 @@
-import { defineComponent } from "@dathomir/components";
+import { defineComponent } from "@dathra/components";
 
-import { getCurrentStore, withStore } from "@dathomir/core";
+import { getCurrentStore, withStore } from "@dathra/core";
 import { createDemoStore } from "./demoStore";
 import { PlaygroundShell } from "./PlaygroundShell";
 import { ALSPage } from "./pages/ALSPage";

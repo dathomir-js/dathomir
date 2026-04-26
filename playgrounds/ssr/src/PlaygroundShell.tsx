@@ -20,7 +20,7 @@ function PlaygroundShell(props: {
   return (
     <main>
       <header class="page-hero">
-        <p class="eyebrow">Dathomir SSR Playground</p>
+        <p class="eyebrow">Dathra SSR Playground</p>
         <h1>{currentRoute.title}</h1>
         <p>{currentRoute.description}</p>
         <div class="hero-meta">

@@ -1,11 +1,11 @@
 /**
- * JSX Runtime for Dathomir
+ * JSX Runtime for Dathra
  *
  * Provides jsx(), jsxs(), and Fragment for JSX transformation.
  * This enables JSX syntax in components.
  */
-import { templateEffect } from "@dathomir/reactivity";
-import { bindCurrentStoreToSubtree } from "@dathomir/components/internal";
+import { templateEffect } from "@dathra/reactivity";
+import { bindCurrentStoreToSubtree } from "@dathra/components/internal";
 import {
   event,
   firstChild,
@@ -14,7 +14,7 @@ import {
   setText,
   type RuntimeJSX,
   type Tree,
-} from "@dathomir/runtime";
+} from "@dathra/runtime";
 
 export { Fragment } from "./Fragment";
 

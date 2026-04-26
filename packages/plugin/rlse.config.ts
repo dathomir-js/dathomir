@@ -1,7 +1,7 @@
 import { defineConfig } from "@takuma-ru/rlse";
 
 export default defineConfig({
-  name: "@dathomir/plugin",
+  name: "@dathra/plugin",
   buildCmd: "pnpm build",
   gitUserName: "github-actions[bot]",
   gitUserEmail: "41898282+github-actions[bot]@users.noreply.github.com",

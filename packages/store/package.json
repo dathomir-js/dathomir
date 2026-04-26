@@ -1,6 +1,6 @@
 {
-  "name": "@dathomir/store",
-  "description": "dathomir atom store package",
+  "name": "@dathra/store",
+  "description": "dathra atom store package",
   "version": "0.0.9",
   "private": false,
   "publishConfig": {
@@ -12,16 +12,16 @@
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com:dathomir-js/dathomir.git"
+    "url": "git+ssh://git@github.com:dathra/dathra.git"
   },
   "bugs": {
-    "url": "https://github.com/dathomir-js/dathomir/issues",
-    "email": "dathomir@takumaru.dev"
+    "url": "https://github.com/dathra/dathra/issues",
+    "email": "dathra@takumaru.dev"
   },
-  "homepage": "https://github.com/dathomir-js/dathomir#readme",
+  "homepage": "https://github.com/dathra/dathra#readme",
   "author": "takuma-ru <takuma-ru@takumaru.dev> (https://github.com/takuma-ru/)",
   "keywords": [
-    "dathomir",
+    "dathra",
     "framework",
     "frontend",
     "javascript",
@@ -68,13 +68,13 @@
     "release": "rlse"
   },
   "devDependencies": {
-    "@dathomir/config": "workspace:*",
+    "@dathra/config": "workspace:*",
     "@takuma-ru/rlse": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   },
   "dependencies": {
-    "@dathomir/reactivity": "workspace:*"
+    "@dathra/reactivity": "workspace:*"
   }
 }

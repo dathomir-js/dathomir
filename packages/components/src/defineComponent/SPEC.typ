@@ -143,6 +143,7 @@
     - DSD に SSR `<style>` が存在し、CSR で `adoptedStyleSheets` を適用する場合は `<style>` を除去して重複適用を避ける
     - `disconnectedCallback` では `dispose` により cleanup を実行する
     - SSR では `getCssText()`、`registerComponent()`、`ensureComponentRenderer()` を用いて SSR 情報を登録する
+    - browser implementation path へ入る条件は `window` 単独ではなく、`document` / `HTMLElement` / `customElements` の capability で判定する
     - 属性から Signal への型変換は `String` / `Number` / `Boolean` / カスタム関数の規則に従い、初期化時と属性変更時で同じ coercion 規則を使う。`Number` では `null` を `Number(null)` にせずデフォルト値へフォールバックする
   ],
 )
@@ -203,6 +204,21 @@
   [
     - Node.js / Edge ランタイムで機能する
     - SSR ではプレースホルダークラス返却で十分になる
+  ],
+)
+
+#adr(
+  header("browser 実装 path は custom element capability で判定する", Status.Accepted, "2026-04-23"),
+  [
+    `defineComponent` が実際に必要とするのは server かどうかそのものではなく、browser custom element 実装を安全に有効化できるかどうかである。`window` だけを見ると shim / partial DOM / test runtime で誤判定しやすい。
+  ],
+  [
+    `defineComponent` と JSX helper の runtime branch は `document` / `HTMLElement` / `customElements` を満たすときだけ browser implementation path に入る。満たさない場合は SSR registration / placeholder path を使う。
+  ],
+  [
+    - `window` 単独より意図に近い capability probe になる
+    - partial DOM runtime で unsafe な custom element path を避けられる
+    - SSR registration と JSX helper の branch 条件を揃えやすい
   ],
 )
 

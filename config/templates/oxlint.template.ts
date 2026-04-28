@@ -1,7 +1,7 @@
 import { defineConfig } from "oxlint";
 
 const packageStructurePlugin = new URL(
-  "../plugins/package-structure.mjs",
+  "../plugins/package-structure.mts",
   import.meta.url,
 ).pathname;
 

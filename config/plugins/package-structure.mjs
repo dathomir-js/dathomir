@@ -2,6 +2,11 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+/**
+ * @typedef {{ excludePaths?: string[] }} FeatureDirectoryFilesOptions
+ * @typedef {{ filename?: string; getFilename?: () => string; options: FeatureDirectoryFilesOptions[]; report: (descriptor: { node: unknown; messageId: string; data: { message: string } }) => void }} RuleContext
+ */
+
 const requiredFiles = [
   "AGENTS.md",
   "SPEC.typ",
@@ -11,14 +16,26 @@ const requiredFiles = [
 const markerFiles = new Set(requiredFiles);
 const scannedDirectories = new Set();
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function toPosixPath(value) {
   return value.split(path.sep).join("/");
 }
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function escapeRegExp(value) {
   return value.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
 }
 
+/**
+ * @param {string} pattern
+ * @returns {RegExp}
+ */
 function pathPatternToRegExp(pattern) {
   let source = "";
   let needsSeparator = false;
@@ -45,23 +62,45 @@ function pathPatternToRegExp(pattern) {
   return new RegExp(`^${source}(?:/.*)?$`);
 }
 
+/**
+ * @param {string[]} excludePaths
+ * @returns {RegExp[]}
+ */
 function createExcludeMatchers(excludePaths) {
   return excludePaths.map((excludePath) =>
     pathPatternToRegExp(toPosixPath(excludePath).replace(/^\.\//, "")),
   );
 }
 
+/**
+ * @param {string} root
+ * @param {string} directory
+ * @param {RegExp[]} excludeMatchers
+ * @returns {boolean}
+ */
 function isExcludedPath(root, directory, excludeMatchers) {
   const relativePath = toPosixPath(path.relative(root, directory));
 
   return excludeMatchers.some((matcher) => matcher.test(relativePath));
 }
 
+/**
+ * @param {unknown} value
+ * @returns {value is NodeJS.ErrnoException}
+ */
+function isErrnoException(value) {
+  return value instanceof Error && "code" in value;
+}
+
+/**
+ * @param {string} directory
+ * @returns {import("node:fs").Dirent[]}
+ */
 function readEntries(directory) {
   try {
     return readdirSync(directory, { withFileTypes: true });
   } catch (error) {
-    if (error && error.code === "ENOENT") {
+    if (isErrnoException(error) && error.code === "ENOENT") {
       return [];
     }
 
@@ -69,10 +108,21 @@ function readEntries(directory) {
   }
 }
 
+/**
+ * @param {import("node:fs").Dirent[]} entries
+ * @returns {boolean}
+ */
 function hasStructureMarker(entries) {
   return entries.some((entry) => entry.isFile() && markerFiles.has(entry.name));
 }
 
+/**
+ * @param {string} root
+ * @param {string} directory
+ * @param {RegExp[]} excludeMatchers
+ * @param {string[]} errors
+ * @returns {void}
+ */
 function lintStructureDirectory(root, directory, excludeMatchers, errors) {
   if (isExcludedPath(root, directory, excludeMatchers)) {
     return;
@@ -105,9 +155,15 @@ function lintStructureDirectory(root, directory, excludeMatchers, errors) {
   }
 }
 
+/**
+ * @param {string} root
+ * @param {RegExp[]} excludeMatchers
+ * @returns {string[]}
+ */
 function lintPackageStructure(root, excludeMatchers) {
   const srcDir = path.join(root, "src");
   const srcEntries = readEntries(srcDir);
+  /** @type {string[]} */
   const errors = [];
 
   for (const entry of srcEntries) {
@@ -149,6 +205,9 @@ const featureDirectoryFiles = {
       },
     ],
   },
+  /**
+   * @param {RuleContext} context
+   */
   create(context) {
     return {
       Program(node) {

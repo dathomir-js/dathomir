@@ -20,17 +20,27 @@ function escapeRegExp(value) {
 }
 
 function pathPatternToRegExp(pattern) {
-  const source = pattern
-    .split("/")
-    .map((segment) => {
-      if (segment === "**") {
-        return "(?:[^/]+/)*";
+  let source = "";
+  let needsSeparator = false;
+
+  for (const segment of pattern.split("/")) {
+    if (segment === "**") {
+      if (needsSeparator) {
+        source += "/";
       }
 
-      return escapeRegExp(segment).replaceAll("*", "[^/]*");
-    })
-    .join("/")
-    .replaceAll("*)/", "*)");
+      source += "(?:[^/]+/)*";
+      needsSeparator = false;
+      continue;
+    }
+
+    if (needsSeparator) {
+      source += "/";
+    }
+
+    source += escapeRegExp(segment).replaceAll("*", "[^/]*");
+    needsSeparator = true;
+  }
 
   return new RegExp(`^${source}(?:/.*)?$`);
 }

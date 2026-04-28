@@ -101,7 +101,9 @@ describe("transform/staticTree", () => {
         title: null,
         style: { backgroundColor: "red", opacity: 0.5, empty: "" },
       }),
-    ).toBe(' class="button &amp; primary" disabled style="background-color: red; opacity: 0.5"');
+    ).toBe(
+      ' class="button &amp; primary" disabled style="background-color: red; opacity: 0.5"',
+    );
   });
 
   it("serializes static markup with escaped text and text placeholders", () => {

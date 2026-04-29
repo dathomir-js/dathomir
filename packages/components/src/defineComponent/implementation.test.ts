@@ -1,7 +1,11 @@
 import { onCleanup, signal, templateEffect } from "@dathra/reactivity";
 import { atom, createAtomStore, withStore } from "@dathra/store";
 
-import { bindStoreToHost, peekStoreFromHost } from "./internal";
+import {
+  bindStoreToHost,
+  canUseComponentDOMRuntime,
+  peekStoreFromHost,
+} from "./internal";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   registerClientAction,
@@ -554,6 +558,50 @@ describe("defineComponent", () => {
     expect(Comp.jsx).toBe(Comp);
     const el = Comp({}) as HTMLElement;
     expect(el.tagName.toLowerCase()).toBe(tag);
+  });
+
+  it("should require custom element capabilities for the browser implementation path", () => {
+    const originalCustomElements = globalThis.customElements;
+
+    vi.stubGlobal("customElements", undefined);
+
+    try {
+      expect(canUseComponentDOMRuntime()).toBe(false);
+
+      const tag = uniqueTag();
+      const Comp = defineComponent(tag, () =>
+        document.createTextNode("test"),
+      ) as any;
+
+      expect(Comp.webComponent.__tagName__).toBe(tag);
+      expect(Comp.webComponent.__propsSchema__).toBeUndefined();
+    } finally {
+      vi.stubGlobal("customElements", originalCustomElements);
+    }
+  });
+
+  it("should keep JSX helper on the define-time server path", () => {
+    const originalCustomElements = globalThis.customElements;
+
+    vi.stubGlobal("customElements", undefined);
+
+    try {
+      const tag = uniqueTag();
+      const Comp = defineComponent(tag, () => "server-only", {
+        props: { id: { type: String } },
+      });
+
+      vi.stubGlobal("customElements", originalCustomElements);
+
+      const rendered = Comp({ id: "stable" }) as unknown;
+
+      expect(typeof rendered).toBe("string");
+      expect(rendered).toContain(`<${tag} id="stable">`);
+      expect(rendered).toContain("server-only");
+      expect(rendered).not.toBeInstanceOf(HTMLElement);
+    } finally {
+      vi.stubGlobal("customElements", originalCustomElements);
+    }
   });
 
   it("should support JSX helper props and children", async () => {

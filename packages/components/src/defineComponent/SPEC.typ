@@ -213,12 +213,27 @@
     `defineComponent` が実際に必要とするのは server かどうかそのものではなく、browser custom element 実装を安全に有効化できるかどうかである。`window` だけを見ると shim / partial DOM / test runtime で誤判定しやすい。
   ],
   [
-    `defineComponent` は `document` / `HTMLElement` / `customElements` を満たすときだけ browser implementation path に入る。満たさない場合は SSR registration / placeholder path を使う。返却される JSX helper は define-time の runtime decision に固定し、後から capability が変化しても `defineComponent` と異なる path へ分岐しない。
+    `defineComponent` と JSX helper の runtime branch は `document` / `HTMLElement` / `customElements` を満たすときだけ browser implementation path に入る。満たさない場合は SSR registration / placeholder path を使う。
   ],
   [
     - `window` 単独より意図に近い capability probe になる
     - partial DOM runtime で unsafe な custom element path を避けられる
     - SSR registration と JSX helper の branch 条件を揃えやすい
+  ],
+)
+
+#adr(
+  header("JSX helper は define-time の runtime decision に固定する", Status.Accepted, "2026-04-29"),
+  [
+    capability が非同期 polyfill などで後から変化すると、`defineComponent` が SSR registration / placeholder path を選んだ後に JSX helper だけが browser path へ切り替わる可能性がある。その場合、custom element が登録されていない tag の `HTMLElement` を生成し、upgrade / lifecycle / hydration が実行されない。
+  ],
+  [
+    JSX helper は `defineComponent` 呼び出し時に決定した runtime decision を保持し、呼び出しごとに capability を再判定しない。browser path を選んだ definition は browser JSX element を生成し、server path を選んだ definition は capability が後から増えても DSD 文字列を返す。
+  ],
+  [
+    - `defineComponent` と JSX helper の runtime path が常に一致する
+    - 後から追加された partial DOM / customElements polyfill による未登録 custom element 生成を避けられる
+    - runtime capability が変わる環境では、必要な polyfill を読み込んだ後に `defineComponent` を呼ぶ責務が明確になる
   ],
 )
 

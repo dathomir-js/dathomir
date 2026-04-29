@@ -213,7 +213,7 @@
     `defineComponent` が実際に必要とするのは server かどうかそのものではなく、browser custom element 実装を安全に有効化できるかどうかである。`window` だけを見ると shim / partial DOM / test runtime で誤判定しやすい。
   ],
   [
-    `defineComponent` と JSX helper の runtime branch は `document` / `HTMLElement` / `customElements` を満たすときだけ browser implementation path に入る。満たさない場合は SSR registration / placeholder path を使う。
+    `defineComponent` は `document` / `HTMLElement` / `customElements` を満たすときだけ browser implementation path に入る。満たさない場合は SSR registration / placeholder path を使う。返却される JSX helper は define-time の runtime decision に固定し、後から capability が変化しても `defineComponent` と異なる path へ分岐しない。
   ],
   [
     - `window` 単独より意図に近い capability probe になる

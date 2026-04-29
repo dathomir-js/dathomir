@@ -580,6 +580,30 @@ describe("defineComponent", () => {
     }
   });
 
+  it("should keep JSX helper on the define-time server path", () => {
+    const originalCustomElements = globalThis.customElements;
+
+    vi.stubGlobal("customElements", undefined);
+
+    try {
+      const tag = uniqueTag();
+      const Comp = defineComponent(tag, () => "server-only", {
+        props: { id: { type: String } },
+      });
+
+      vi.stubGlobal("customElements", originalCustomElements);
+
+      const rendered = Comp({ id: "stable" }) as unknown;
+
+      expect(typeof rendered).toBe("string");
+      expect(rendered).toContain(`<${tag} id="stable">`);
+      expect(rendered).toContain("server-only");
+      expect(rendered).not.toBeInstanceOf(HTMLElement);
+    } finally {
+      vi.stubGlobal("customElements", originalCustomElements);
+    }
+  });
+
   it("should support JSX helper props and children", async () => {
     const tag = uniqueTag();
     const Comp = defineComponent(

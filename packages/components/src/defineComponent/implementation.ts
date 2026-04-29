@@ -716,11 +716,12 @@ function createBrowserJSXElement<S extends PropsSchema>(
 function createJSXComponent<S extends PropsSchema>(
   tagName: string,
   propsSchema?: S,
+  useBrowserRuntime = canUseComponentDOMRuntime(),
 ): JSXComponent<S> {
   return (props: JSXComponentProps<S> | null) => {
     const safeProps = props ?? ({} as JSXComponentProps<S>);
 
-    if (!canUseComponentDOMRuntime()) {
+    if (!useBrowserRuntime) {
       return renderDSD(
         tagName,
         propsToSSRAttributes(safeProps, propsSchema),
@@ -1282,7 +1283,8 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
   component: FunctionComponent<S>,
   options: ComponentOptions<S> = {},
 ): DefinedComponent<S> {
-  const jsx = createJSXComponent(tagName, options.props);
+  const useBrowserRuntime = canUseComponentDOMRuntime();
+  const jsx = createJSXComponent(tagName, options.props, useBrowserRuntime);
   const hydrationMetadata = (component as unknown as ComponentMetadata<S>)
     .__hydrationMetadata__;
   const resolvedSetup: SetupFunction<S> = wrapFunctionComponent(
@@ -1290,7 +1292,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
     options.props,
   );
 
-  if (!canUseComponentDOMRuntime()) {
+  if (!useBrowserRuntime) {
     return createServerDefinedComponent(
       tagName,
       resolvedSetup,

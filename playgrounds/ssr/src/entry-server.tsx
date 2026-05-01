@@ -3,6 +3,7 @@ import {
   defineSsrEntry,
   render as renderSSR,
   type SsrEntryContext,
+  type SsrEntryResult,
 } from "@dathra/core/ssr";
 
 import { SSRAppRoot } from "./SSRAppRoot";
@@ -14,11 +15,6 @@ import {
   type PlaygroundRoutePath,
 } from "./routes";
 
-type SSRRenderResult = {
-  html: string;
-  statusCode?: number;
-};
-
 function renderClientFallback(routePath: PlaygroundRoutePath): string {
   return `<playground-ssr-app routePath="${routePath}"></playground-ssr-app>`;
 }
@@ -27,7 +23,7 @@ function renderClientFallback(routePath: PlaygroundRoutePath): string {
  * Render the application to HTML string for SSR.
  */
 const render = defineSsrEntry(
-  async ({ request, requestId }: SsrEntryContext): Promise<SSRRenderResult> => {
+  async ({ request, requestId }: SsrEntryContext): Promise<SsrEntryResult> => {
     clearGlobalStyles();
 
     const route = getPlaygroundRoute(

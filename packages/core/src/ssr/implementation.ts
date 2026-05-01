@@ -31,7 +31,9 @@ function render(
 /**
  * Define a typed SSR entry handler for Dathra SSR adapters.
  */
-function defineSsrEntry(handler: SsrEntryHandler): SsrEntryHandler {
+function defineSsrEntry<const Handler extends SsrEntryHandler>(
+  handler: Handler,
+): Handler {
   return handler;
 }
 

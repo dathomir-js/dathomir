@@ -20,7 +20,7 @@ Dathra アプリケーションを SSR で使い始めるための公開 API を
   format: [
     *エクスポート*:
     - `render(...args: Parameters<typeof renderDSD>): ReturnType<typeof renderDSD>`
-    - `defineSsrEntry(handler: SsrEntryHandler): SsrEntryHandler`
+    - `defineSsrEntry<const Handler extends SsrEntryHandler>(handler: Handler): Handler`
     - `SsrEntryContext`
     - `SsrEntryResult`
     - `SsrEntryHandler`
@@ -42,7 +42,7 @@ Dathra アプリケーションを SSR で使い始めるための公開 API を
     - `render()` は `@dathra/components/ssr` の `renderDSD()` と同じ引数を受け付ける
     - `render()` は `renderDSD()` の戻り値をそのまま返す
     - store などの SSR option は `renderDSD()` に透過的に渡す
-    - `defineSsrEntry()` は handler を変更せずそのまま返す
+    - `defineSsrEntry()` は handler を変更せず、具体的な handler 型を保ったまま返す
     - `defineSsrEntry()` の handler は `{ request, requestId, url }` を受け取る
     - `defineSsrEntry()` の handler は `string`、`Response`、または `{ html, statusCode?, headers? }` を返せる
   ],

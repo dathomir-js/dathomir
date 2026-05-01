@@ -80,6 +80,24 @@ type ViteConfigureServerHook = (server: {
   transformIndexHtml: ReturnType<typeof vi.fn>;
 }) => void;
 
+type SsrRenderMock = ReturnType<
+  typeof vi.fn<
+    (context: { request: Request; requestId: string; url: string }) =>
+      | string
+      | Response
+      | { html: string; statusCode?: number; headers?: Record<string, string> }
+      | Promise<
+          | string
+          | Response
+          | {
+              html: string;
+              statusCode?: number;
+              headers?: Record<string, string>;
+            }
+        >
+  >
+>;
+
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../..",
@@ -128,12 +146,18 @@ function createSsrDevServerHarness(
   renderResult:
     | string
     | Response
-    | { html: string; statusCode?: number; headers?: Record<string, string> } =
-    "<main>app</main>",
+    | {
+        html: string;
+        statusCode?: number;
+        headers?: Record<string, string>;
+      } = "<main>app</main>",
 ) {
   let middleware: Middleware = () => {
     throw new Error("Expected configureServer to install middleware");
   };
+  const render: SsrRenderMock = vi.fn(
+    async () => await Promise.resolve(renderResult),
+  );
   const server = {
     config: { root: "/project" },
     middlewares: {
@@ -145,7 +169,7 @@ function createSsrDevServerHarness(
     ssrLoadModule: vi.fn(
       async () =>
         await Promise.resolve({
-          render: vi.fn(async () => await Promise.resolve(renderResult)),
+          render,
         }),
     ),
     transformIndexHtml: vi.fn(
@@ -157,7 +181,7 @@ function createSsrDevServerHarness(
 
   configureServer(server);
 
-  return { middleware, server };
+  return { middleware, render, server };
 }
 
 describe("plugin", () => {
@@ -279,7 +303,7 @@ describe("plugin", () => {
       const plugin = dathraVitePlugin({
         ssr: { entry: "/src/entry-server.tsx" },
       });
-      const { middleware, server } = createSsrDevServerHarness(plugin);
+      const { middleware, render } = createSsrDevServerHarness(plugin);
       const res = { writeHead: vi.fn(), end: vi.fn() };
 
       await middleware(
@@ -292,19 +316,19 @@ describe("plugin", () => {
         vi.fn(),
       );
 
-      const loadResult = server.ssrLoadModule.mock.results[0];
-      if (loadResult === undefined) {
-        throw new Error("Expected SSR module to be loaded");
-      }
-      const render = (await loadResult.value).render;
       expect(render).toHaveBeenCalledWith(
         expect.objectContaining({
-          request: expect.any(Request),
           requestId: "req-2",
           url: "/users/1?requestId=req-2",
         }),
       );
-      const request = render.mock.calls[0]?.[0].request as Request;
+      const firstCall = render.mock.calls[0];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defense against empty mock calls array
+      if (firstCall === undefined) {
+        throw new Error("Expected SSR render to be called");
+      }
+      const request = firstCall[0].request;
+      expect(request).toBeInstanceOf(Request);
       expect(request.url).toBe("http://example.test/users/1?requestId=req-2");
 
       readFileSyncSpy.mockRestore();
@@ -373,7 +397,9 @@ describe("plugin", () => {
         302,
         expect.objectContaining({ location: "/login" }),
       );
-      expect(res.end).toHaveBeenCalledWith("<html><main>redirect</main></html>");
+      expect(res.end).toHaveBeenCalledWith(
+        "<html><main>redirect</main></html>",
+      );
 
       readFileSyncSpy.mockRestore();
     });

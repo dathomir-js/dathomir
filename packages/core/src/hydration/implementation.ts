@@ -6,7 +6,9 @@ type HydrationRoot = Parameters<typeof hydrateIslands>[0];
 /**
  * Hydrate Dathra islands under the provided root.
  */
-function hydrate(root: HydrationRoot = document): ReturnType<typeof hydrateIslands> {
+function hydrate(
+  root: HydrationRoot = document,
+): ReturnType<typeof hydrateIslands> {
   return hydrateIslands(root);
 }
 

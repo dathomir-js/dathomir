@@ -30,12 +30,12 @@ describe("core ssr", () => {
     expect(defineSsrEntry(handler)).toBe(handler);
   });
 
-  it("accepts SSR entry handlers that return Response", async () => {
+  it("accepts SSR entry handlers that return Response", () => {
     const entry = defineSsrEntry(({ request }) => {
       return new Response(new URL(request.url).pathname, { status: 404 });
     });
 
-    const result = await entry({
+    const result = entry({
       request: new Request("http://localhost/missing"),
       requestId: "req-1",
       url: "/missing",

@@ -1,5 +1,6 @@
 import { transform } from "@dathra/transformer";
 import fs from "node:fs";
+import type { IncomingHttpHeaders } from "node:http";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { createUnplugin, type UnpluginContext } from "unplugin";
@@ -374,7 +375,7 @@ function shouldHandleSsrPath(pathname: string): boolean {
   return path.extname(pathname) === "";
 }
 
-function acceptsHtml(headers: { accept?: string | string[] }): boolean {
+function acceptsHtml(headers: IncomingHttpHeaders): boolean {
   const acceptHeader = headers.accept;
   const accept = Array.isArray(acceptHeader)
     ? acceptHeader.join(",")
@@ -385,7 +386,7 @@ function acceptsHtml(headers: { accept?: string | string[] }): boolean {
   );
 }
 
-function isHtmlContentType(headers: Record<string, string>): boolean {
+function isHtmlContentType(headers: Partial<Record<string, string>>): boolean {
   const contentType = headers["content-type"];
   return contentType === undefined || contentType.includes("text/html");
 }
@@ -393,9 +394,11 @@ function isHtmlContentType(headers: Record<string, string>): boolean {
 function getSsrRenderFunction(
   ssrModule: SsrRenderModule,
   exportName: string,
-): ((context: PluginSsrContext) =>
-  | PluginSsrRenderResult
-  | Promise<PluginSsrRenderResult>) | null {
+):
+  | ((
+      context: PluginSsrContext,
+    ) => PluginSsrRenderResult | Promise<PluginSsrRenderResult>)
+  | null {
   const candidate = ssrModule[exportName] ?? ssrModule.default;
   return typeof candidate === "function"
     ? (candidate as (
@@ -404,8 +407,16 @@ function getSsrRenderFunction(
     : null;
 }
 
-function createRequest(req: { method?: string; url?: string; headers: object }): Request {
-  const rawHeaders = req.headers as Record<string, string | string[] | undefined>;
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
+function createRequest(req: {
+  method?: string;
+  url?: string;
+  headers: IncomingHttpHeaders;
+}): Request {
+  const rawHeaders = req.headers as Record<
+    string,
+    string | string[] | undefined
+  >;
   const host = rawHeaders.host ?? "localhost";
   const normalizedHost = Array.isArray(host) ? host[0] : host;
   const requestUrl = new URL(req.url ?? "/", `http://${normalizedHost}`);
@@ -428,7 +439,9 @@ function createRequest(req: { method?: string; url?: string; headers: object }):
   });
 }
 
-function headersToRecord(headers: HeadersInit | undefined): Record<string, string> {
+function headersToRecord(
+  headers: HeadersInit | undefined,
+): Partial<Record<string, string>> {
   if (headers === undefined) {
     return {};
   }
@@ -441,7 +454,7 @@ async function normalizeSsrRenderResult(
 ): Promise<{
   body: string;
   statusCode: number;
-  headers: Record<string, string>;
+  headers: Partial<Record<string, string>>;
   template: boolean;
 }> {
   if (typeof result === "string") {
@@ -466,6 +479,86 @@ async function normalizeSsrRenderResult(
   };
 }
 
+async function handleSsrDevRequest(
+  vite: ViteDevServer,
+  ssrOptions: PluginSsrOptions,
+  outlet: string,
+  renderExport: string,
+  req: {
+    method?: string;
+    url?: string;
+    headers: IncomingHttpHeaders;
+  },
+  res: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    writeHead: any;
+    end: (body: string) => void;
+  },
+  next: (error?: unknown) => void,
+): Promise<void> {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    next();
+    return;
+  }
+
+  const requestUrl = new URL(req.url ?? "/", "http://localhost");
+  if (!shouldHandleSsrPath(requestUrl.pathname)) {
+    next();
+    return;
+  }
+
+  const request = createRequest(req);
+  const context: PluginSsrContext = {
+    request,
+    requestId: createRequestId(requestUrl),
+    url: `${requestUrl.pathname}${requestUrl.search}`,
+  };
+
+  try {
+    const ssrModule = (await vite.ssrLoadModule(
+      ssrOptions.entry,
+    )) as SsrRenderModule;
+    const render = getSsrRenderFunction(ssrModule, renderExport);
+    if (render === null) {
+      throw new Error(
+        `[dathra] SSR module does not export a ${renderExport}() or default render function`,
+      );
+    }
+
+    const result = await normalizeSsrRenderResult(await render(context));
+    if (!result.template) {
+      res.writeHead(result.statusCode, {
+        ...result.headers,
+        "X-Dathra-Request-Id": context.requestId,
+      });
+      res.end(result.body);
+      return;
+    }
+
+    if (!acceptsHtml(req.headers)) {
+      next();
+      return;
+    }
+
+    let template = fs.readFileSync(
+      path.resolve(vite.config.root, "index.html"),
+      "utf-8",
+    );
+    template = await vite.transformIndexHtml(requestUrl.pathname, template);
+    const html = template.replace(outlet, result.body);
+
+    res.writeHead(result.statusCode, {
+      "Content-Type": "text/html",
+      ...result.headers,
+      "X-Dathra-Request-Id": context.requestId,
+    });
+    res.end(html);
+  } catch (error) {
+    vite.ssrFixStacktrace(error as Error);
+    next(error);
+  }
+}
+
 function configureSsrDevServer(
   vite: ViteDevServer,
   ssrOptions: PluginSsrOptions,
@@ -473,68 +566,17 @@ function configureSsrDevServer(
   const outlet = ssrOptions.outlet ?? "<!--ssr-outlet-->";
   const renderExport = ssrOptions.renderExport ?? "render";
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises -- connect middleware returns void but processes async
   vite.middlewares.use(async (req, res, next) => {
-    if (req.method !== "GET" && req.method !== "HEAD") {
-      next();
-      return;
-    }
-
-    const requestUrl = new URL(req.url ?? "/", "http://localhost");
-    if (!shouldHandleSsrPath(requestUrl.pathname)) {
-      next();
-      return;
-    }
-
-    const request = createRequest(req);
-    const context: PluginSsrContext = {
-      request,
-      requestId: createRequestId(requestUrl),
-      url: `${requestUrl.pathname}${requestUrl.search}`,
-    };
-
-    try {
-      const ssrModule = (await vite.ssrLoadModule(
-        ssrOptions.entry,
-      )) as SsrRenderModule;
-      const render = getSsrRenderFunction(ssrModule, renderExport);
-      if (render === null) {
-        throw new Error(
-          `[dathra] SSR module does not export a ${renderExport}() or default render function`,
-        );
-      }
-
-      const result = await normalizeSsrRenderResult(await render(context));
-      if (!result.template) {
-        res.writeHead(result.statusCode, {
-          ...result.headers,
-          "X-Dathra-Request-Id": context.requestId,
-        });
-        res.end(result.body);
-        return;
-      }
-
-      if (!acceptsHtml(req.headers)) {
-        next();
-        return;
-      }
-
-      let template = fs.readFileSync(
-        path.resolve(vite.config.root, "index.html"),
-        "utf-8",
-      );
-      template = await vite.transformIndexHtml(requestUrl.pathname, template);
-      const html = template.replace(outlet, result.body);
-
-      res.writeHead(result.statusCode, {
-        "Content-Type": "text/html",
-        ...result.headers,
-        "X-Dathra-Request-Id": context.requestId,
-      });
-      res.end(html);
-    } catch (error) {
-      vite.ssrFixStacktrace(error as Error);
-      next(error);
-    }
+    await handleSsrDevRequest(
+      vite,
+      ssrOptions,
+      outlet,
+      renderExport,
+      req,
+      res,
+      next,
+    );
   });
 }
 

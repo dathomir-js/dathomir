@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { renderDSD } from "@dathra/components/ssr";
-import { render } from "./implementation";
+import { defineSsrEntry, render } from "./implementation";
 
 vi.mock("@dathra/components/ssr", () => ({
   renderDSD: vi.fn(() => "<my-app></my-app>"),
@@ -22,5 +22,25 @@ describe("core ssr", () => {
 
   it("returns the renderDSD result", () => {
     expect(render("my-app")).toBe("<my-app></my-app>");
+  });
+
+  it("returns the SSR entry handler unchanged", () => {
+    const handler = () => ({ html: "<main>ok</main>", statusCode: 200 });
+
+    expect(defineSsrEntry(handler)).toBe(handler);
+  });
+
+  it("accepts SSR entry handlers that return Response", async () => {
+    const entry = defineSsrEntry(({ request }) => {
+      return new Response(new URL(request.url).pathname, { status: 404 });
+    });
+
+    const result = await entry({
+      request: new Request("http://localhost/missing"),
+      requestId: "req-1",
+      url: "/missing",
+    });
+
+    expect(result).toBeInstanceOf(Response);
   });
 });

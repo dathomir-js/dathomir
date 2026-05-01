@@ -63,7 +63,7 @@ type Middleware = (
   req: {
     method?: string;
     url?: string;
-    headers: { accept?: string | string[] };
+    headers: { accept?: string | string[]; host?: string | string[] };
   },
   res: {
     writeHead: ReturnType<typeof vi.fn>;
@@ -125,6 +125,11 @@ function invokeViteConfig(
 
 function createSsrDevServerHarness(
   plugin: ReturnType<typeof dathraVitePlugin>,
+  renderResult:
+    | string
+    | Response
+    | { html: string; statusCode?: number; headers?: Record<string, string> } =
+    "<main>app</main>",
 ) {
   let middleware: Middleware = () => {
     throw new Error("Expected configureServer to install middleware");
@@ -140,7 +145,7 @@ function createSsrDevServerHarness(
     ssrLoadModule: vi.fn(
       async () =>
         await Promise.resolve({
-          render: vi.fn(({ routePath }) => `<main>${routePath}</main>`),
+          render: vi.fn(async () => await Promise.resolve(renderResult)),
         }),
     ),
     transformIndexHtml: vi.fn(
@@ -261,8 +266,114 @@ describe("plugin", () => {
         200,
         expect.objectContaining({ "X-Dathra-Request-Id": "req-1" }),
       );
-      expect(res.end).toHaveBeenCalledWith("<html><main>/docs</main></html>");
+      expect(res.end).toHaveBeenCalledWith("<html><main>app</main></html>");
       expect(next).not.toHaveBeenCalled();
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should pass a Request and context to SSR render", async () => {
+      const readFileSyncSpy = vi
+        .spyOn(fs, "readFileSync")
+        .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
+      const plugin = dathraVitePlugin({
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(plugin);
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/users/1?requestId=req-2",
+          headers: { accept: "text/html", host: "example.test" },
+        },
+        res,
+        vi.fn(),
+      );
+
+      const loadResult = server.ssrLoadModule.mock.results[0];
+      if (loadResult === undefined) {
+        throw new Error("Expected SSR module to be loaded");
+      }
+      const render = (await loadResult.value).render;
+      expect(render).toHaveBeenCalledWith(
+        expect.objectContaining({
+          request: expect.any(Request),
+          requestId: "req-2",
+          url: "/users/1?requestId=req-2",
+        }),
+      );
+      const request = render.mock.calls[0]?.[0].request as Request;
+      expect(request.url).toBe("http://example.test/users/1?requestId=req-2");
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should apply status code and headers from object SSR results", async () => {
+      const readFileSyncSpy = vi
+        .spyOn(fs, "readFileSync")
+        .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
+      const plugin = dathraVitePlugin({
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware } = createSsrDevServerHarness(plugin, {
+        html: "<main>missing</main>",
+        statusCode: 404,
+        headers: { "X-Route-Status": "not-found" },
+      });
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/missing",
+          headers: { accept: "text/html" },
+        },
+        res,
+        vi.fn(),
+      );
+
+      expect(res.writeHead).toHaveBeenCalledWith(
+        404,
+        expect.objectContaining({ "x-route-status": "not-found" }),
+      );
+      expect(res.end).toHaveBeenCalledWith("<html><main>missing</main></html>");
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should apply status code and headers from Response SSR results", async () => {
+      const readFileSyncSpy = vi
+        .spyOn(fs, "readFileSync")
+        .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
+      const plugin = dathraVitePlugin({
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware } = createSsrDevServerHarness(
+        plugin,
+        new Response("<main>redirect</main>", {
+          status: 302,
+          headers: { Location: "/login" },
+        }),
+      );
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/private",
+          headers: { accept: "text/html" },
+        },
+        res,
+        vi.fn(),
+      );
+
+      expect(res.writeHead).toHaveBeenCalledWith(
+        302,
+        expect.objectContaining({ location: "/login" }),
+      );
+      expect(res.end).toHaveBeenCalledWith("<html><main>redirect</main></html>");
 
       readFileSyncSpy.mockRestore();
     });

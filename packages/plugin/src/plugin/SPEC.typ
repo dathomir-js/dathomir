@@ -36,12 +36,6 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
         entry: string;
         outlet?: string;
         renderExport?: string;
-        resolveRoute?: (pathname: string) => string | undefined;
-        fallback?: string | ((context: {
-          requestId: string;
-          routePath: string;
-          url: string;
-        }) => string);
       };
     }
     ```
@@ -54,7 +48,9 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
     - transform 失敗時はファイルパスを付与したエラーとして再スローする
     - Vite plugin は importer から最も近い `tsconfig.json` の `compilerOptions.paths` を参照して path alias import を解決できる
     - Vite plugin は JSX が esbuild に先に変換されないよう `esbuild.jsx = "preserve"` を自動設定する
-    - `ssr.entry` を指定した Vite dev server では HTML request に対して SSR module を読み込み、`<!--ssr-outlet-->` を SSR HTML で置換する
+    - `ssr.entry` を指定した Vite dev server では HTML request に対して SSR module を読み込み、`{ request, requestId, url }` を render 関数へ渡す
+    - Vite dev SSR render 関数は `string`、`Response`、または `{ html, statusCode?, headers? }` を返せる
+    - Vite dev SSR middleware は render 結果の HTML を `<!--ssr-outlet-->` に差し込み、status code と headers を HTTP response に反映する
   ],
 )
 
@@ -82,7 +78,8 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
       - `filename` が変換対象ファイルの ID として渡される
       - Vite plugin が最寄り `tsconfig.json` の path alias を使って importer 基準で `.ts` / `.tsx` / `index.ts` まで解決する
       - Vite plugin が既存 `esbuild` 設定を保持しながら `jsx: "preserve"` を自動設定する
-      - Vite plugin が `ssr.entry` 設定時に dev SSR middleware を登録し HTML response を生成する
+      - Vite plugin が `ssr.entry` 設定時に dev SSR middleware を登録し `Request` を render 関数へ渡す
+      - Vite plugin が render 結果の status code と headers を dev SSR response に反映する
       - Vite plugin が `ssr.entry` 未設定時は dev SSR middleware を登録しない
       - Vite plugin の dev SSR middleware は非 HTML request を処理しない
       - 実 transformer を使った integration test で islands metadata contract (`data-dh-island*`, `data-dh-client-*`) が plugin 出力に残る

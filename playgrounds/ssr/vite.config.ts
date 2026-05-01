@@ -3,8 +3,6 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { defineConfig, type ViteDevServer } from "vite";
 
-import { getPlaygroundRoute, normalizePlaygroundPath } from "./src/routes";
-
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const workspacePackages = [
@@ -15,15 +13,6 @@ const workspacePackages = [
   "@dathra/reactivity",
   "@dathra/shared",
 ];
-
-function resolveRoutePath(pathname: string): string | undefined {
-  const normalizedPath = normalizePlaygroundPath(pathname);
-  return getPlaygroundRoute(normalizedPath)?.path;
-}
-
-function renderClientFallback(routePath: string): string {
-  return `<playground-ssr-app routePath="${routePath}"></playground-ssr-app>`;
-}
 
 function playgroundAlsApi() {
   return {
@@ -64,8 +53,6 @@ export default defineConfig({
     dathraVitePlugin({
       ssr: {
         entry: "/src/entry-server.tsx",
-        resolveRoute: resolveRoutePath,
-        fallback: ({ routePath }) => renderClientFallback(routePath),
       },
     }),
   ],

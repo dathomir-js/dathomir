@@ -46,7 +46,7 @@ const playgroundRoutes = [
     label: "Islands Runtime",
     title: "Hydration Strategy Engine",
     description:
-      "Shows runtime-side `hydrateIslands()` scheduling plus colocated `load:onClick`, `interaction:onClick`, `idle:onClick`, and `visible:onClick` demos.",
+      "Shows core `hydrate()` scheduling plus colocated `load:onClick`, `interaction:onClick`, `idle:onClick`, and `visible:onClick` demos.",
   },
   {
     path: "/hydration-plan",

@@ -3,7 +3,12 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { createUnplugin, type UnpluginContext } from "unplugin";
-import type { TransformResult, Plugin as VitePlugin } from "vite";
+import type {
+  TransformResult,
+  Plugin as VitePlugin,
+  UserConfig,
+  ViteDevServer,
+} from "vite";
 
 /**
  * Plugin options for the Dathra plugin.
@@ -28,6 +33,34 @@ interface PluginOptions {
    * Force a specific mode (overrides automatic detection).
    */
   mode?: "csr" | "ssr";
+
+  /**
+   * Configure Vite dev SSR HTML rendering.
+   */
+  ssr?: false | PluginSsrOptions;
+}
+
+interface PluginSsrContext {
+  requestId: string;
+  routePath: string;
+  url: string;
+}
+
+interface PluginSsrOptions {
+  /** SSR module entry passed to Vite's ssrLoadModule(). */
+  entry: string;
+
+  /** HTML placeholder replaced with the rendered app HTML. */
+  outlet?: string;
+
+  /** Export name to call from the SSR module. Defaults to `render`, then default. */
+  renderExport?: string;
+
+  /** Resolve a request pathname into an SSR route path. Return undefined to skip. */
+  resolveRoute?: (pathname: string) => string | undefined;
+
+  /** HTML used when SSR rendering fails. */
+  fallback?: string | ((context: PluginSsrContext) => string);
 }
 
 /**
@@ -106,6 +139,11 @@ type PluginTransformOutput = {
 };
 
 type TsconfigPaths = Record<string, string[]>;
+
+type SsrRenderModule = Record<string, unknown> & {
+  default?: unknown;
+  render?: unknown;
+};
 
 const tsconfigPathCache = new Map<string, TsconfigPaths | null>();
 const require = createRequire(import.meta.url);
@@ -314,6 +352,138 @@ function resolveLocalSourceAlias(
   return null;
 }
 
+function createRequestId(requestUrl: URL): string {
+  return (
+    requestUrl.searchParams.get("requestId") ??
+    `dathra-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+  );
+}
+
+function defaultResolveSsrRoute(pathname: string): string | undefined {
+  if (pathname.startsWith("/@") || pathname.startsWith("/node_modules/")) {
+    return undefined;
+  }
+
+  if (pathname === "/index.html") {
+    return "/";
+  }
+
+  return path.extname(pathname) === "" ? pathname : undefined;
+}
+
+function acceptsHtml(headers: { accept?: string | string[] }): boolean {
+  const acceptHeader = headers.accept;
+  const accept = Array.isArray(acceptHeader)
+    ? acceptHeader.join(",")
+    : (acceptHeader ?? "");
+
+  return (
+    accept === "" || accept.includes("text/html") || accept.includes("*/*")
+  );
+}
+
+function getSsrRenderFunction(
+  ssrModule: SsrRenderModule,
+  exportName: string,
+): ((context: PluginSsrContext) => string | Promise<string>) | null {
+  const candidate = ssrModule[exportName] ?? ssrModule.default;
+  return typeof candidate === "function"
+    ? (candidate as (context: PluginSsrContext) => string | Promise<string>)
+    : null;
+}
+
+function resolveFallbackHtml(
+  fallback: PluginSsrOptions["fallback"],
+  context: PluginSsrContext,
+): string {
+  if (typeof fallback === "function") {
+    return fallback(context);
+  }
+
+  return fallback ?? "";
+}
+
+function configureSsrDevServer(
+  vite: ViteDevServer,
+  ssrOptions: PluginSsrOptions,
+): void {
+  const outlet = ssrOptions.outlet ?? "<!--ssr-outlet-->";
+  const renderExport = ssrOptions.renderExport ?? "render";
+  const resolveRoute = ssrOptions.resolveRoute ?? defaultResolveSsrRoute;
+
+  vite.middlewares.use(async (req, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      next();
+      return;
+    }
+
+    if (!acceptsHtml(req.headers)) {
+      next();
+      return;
+    }
+
+    const requestUrl = new URL(req.url ?? "/", "http://localhost");
+    const routePath = resolveRoute(requestUrl.pathname);
+    if (routePath === undefined) {
+      next();
+      return;
+    }
+
+    const context: PluginSsrContext = {
+      requestId: createRequestId(requestUrl),
+      routePath,
+      url: `${requestUrl.pathname}${requestUrl.search}`,
+    };
+
+    try {
+      let template = fs.readFileSync(
+        path.resolve(vite.config.root, "index.html"),
+        "utf-8",
+      );
+      template = await vite.transformIndexHtml(requestUrl.pathname, template);
+
+      try {
+        const ssrModule = (await vite.ssrLoadModule(
+          ssrOptions.entry,
+        )) as SsrRenderModule;
+        const render = getSsrRenderFunction(ssrModule, renderExport);
+        if (render === null) {
+          throw new Error(
+            `[dathra] SSR module does not export a ${renderExport}() or default render function`,
+          );
+        }
+
+        const appHtml = await render(context);
+        const html = template.replace(outlet, appHtml);
+
+        res.writeHead(200, {
+          "Content-Type": "text/html",
+          "X-Dathra-Request-Id": context.requestId,
+        });
+        res.end(html);
+      } catch (ssrError) {
+        vite.ssrFixStacktrace(ssrError as Error);
+        vite.config.logger.error(
+          `[dathra] SSR Error: ${
+            ssrError instanceof Error ? ssrError.message : String(ssrError)
+          }`,
+        );
+
+        const html = template.replace(
+          outlet,
+          resolveFallbackHtml(ssrOptions.fallback, context),
+        );
+
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(html);
+      }
+    } catch (error) {
+      vite.ssrFixStacktrace(error as Error);
+      next(error);
+    }
+  });
+}
+
 /**
  * Core transform function shared by all plugins.
  */
@@ -364,6 +534,23 @@ function createVitePlugin(options: PluginOptions = {}): VitePlugin {
   return {
     name: "dathra",
     enforce: "pre",
+
+    config(config: UserConfig): UserConfig {
+      return {
+        esbuild: {
+          ...(typeof config.esbuild === "object" ? config.esbuild : {}),
+          jsx: "preserve",
+        },
+      };
+    },
+
+    configureServer(vite: ViteDevServer) {
+      if (options.ssr === undefined || options.ssr === false) {
+        return;
+      }
+
+      configureSsrDevServer(vite, options.ssr);
+    },
 
     resolveId(source: string, importer?: string) {
       if (importer === undefined) {

@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
@@ -54,6 +55,31 @@ type ViteResolveIdHook = (
   importer?: string,
 ) => string | null | Promise<string | null>;
 
+type ViteConfigHook = (config: {
+  esbuild?: false | Record<string, unknown>;
+}) => { esbuild?: false | Record<string, unknown> };
+
+type Middleware = (
+  req: {
+    method?: string;
+    url?: string;
+    headers: { accept?: string | string[] };
+  },
+  res: {
+    writeHead: ReturnType<typeof vi.fn>;
+    end: ReturnType<typeof vi.fn>;
+  },
+  next: (error?: unknown) => void,
+) => void | Promise<void>;
+
+type ViteConfigureServerHook = (server: {
+  config: { root: string };
+  middlewares: { use: (middleware: Middleware) => void };
+  ssrFixStacktrace: ReturnType<typeof vi.fn>;
+  ssrLoadModule: ReturnType<typeof vi.fn>;
+  transformIndexHtml: ReturnType<typeof vi.fn>;
+}) => void;
+
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../..",
@@ -87,6 +113,46 @@ async function invokeResolveId(
 ): Promise<string | null> {
   const resolveId = plugin.resolveId as ViteResolveIdHook;
   return await resolveId.call({}, source, importer);
+}
+
+function invokeViteConfig(
+  plugin: ReturnType<typeof dathraVitePlugin>,
+  config = {},
+) {
+  const configHook = plugin.config as ViteConfigHook;
+  return configHook(config);
+}
+
+function createSsrDevServerHarness(
+  plugin: ReturnType<typeof dathraVitePlugin>,
+) {
+  let middleware: Middleware = () => {
+    throw new Error("Expected configureServer to install middleware");
+  };
+  const server = {
+    config: { root: "/project" },
+    middlewares: {
+      use: vi.fn((handler: Middleware) => {
+        middleware = handler;
+      }),
+    },
+    ssrFixStacktrace: vi.fn(),
+    ssrLoadModule: vi.fn(
+      async () =>
+        await Promise.resolve({
+          render: vi.fn(({ routePath }) => `<main>${routePath}</main>`),
+        }),
+    ),
+    transformIndexHtml: vi.fn(
+      async (_path: string, html: string) => await Promise.resolve(html),
+    ),
+  };
+  const configureServer =
+    plugin.configureServer as unknown as ViteConfigureServerHook;
+
+  configureServer(server);
+
+  return { middleware, server };
 }
 
 describe("plugin", () => {
@@ -128,6 +194,98 @@ describe("plugin", () => {
     it("should have a transform function", () => {
       const plugin = dathraVitePlugin();
       expect(typeof plugin.transform).toBe("function");
+    });
+
+    it("should preserve JSX before esbuild transforms it", () => {
+      const plugin = dathraVitePlugin();
+
+      expect(invokeViteConfig(plugin)).toEqual({
+        esbuild: { jsx: "preserve" },
+      });
+    });
+
+    it("should keep existing esbuild options when preserving JSX", () => {
+      const plugin = dathraVitePlugin();
+
+      expect(
+        invokeViteConfig(plugin, {
+          esbuild: { target: "es2022" },
+        }),
+      ).toEqual({
+        esbuild: { target: "es2022", jsx: "preserve" },
+      });
+    });
+
+    it("should not install SSR dev middleware without ssr options", () => {
+      const plugin = dathraVitePlugin();
+      const server = {
+        config: { root: "/project" },
+        middlewares: { use: vi.fn() },
+        ssrFixStacktrace: vi.fn(),
+        ssrLoadModule: vi.fn(),
+        transformIndexHtml: vi.fn(),
+      };
+      const configureServer =
+        plugin.configureServer as unknown as ViteConfigureServerHook;
+
+      configureServer(server);
+
+      expect(server.middlewares.use).not.toHaveBeenCalled();
+    });
+
+    it("should render HTML through configured SSR dev middleware", async () => {
+      const readFileSyncSpy = vi
+        .spyOn(fs, "readFileSync")
+        .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
+      const plugin = dathraVitePlugin({
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(plugin);
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+      const next = vi.fn();
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/docs?requestId=req-1",
+          headers: { accept: "text/html" },
+        },
+        res,
+        next,
+      );
+
+      expect(server.ssrLoadModule).toHaveBeenCalledWith(
+        "/src/entry-server.tsx",
+      );
+      expect(res.writeHead).toHaveBeenCalledWith(
+        200,
+        expect.objectContaining({ "X-Dathra-Request-Id": "req-1" }),
+      );
+      expect(res.end).toHaveBeenCalledWith("<html><main>/docs</main></html>");
+      expect(next).not.toHaveBeenCalled();
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should skip SSR dev middleware for non-HTML requests", async () => {
+      const plugin = dathraVitePlugin({
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(plugin);
+      const next = vi.fn();
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/src/main.ts",
+          headers: { accept: "application/javascript" },
+        },
+        { writeHead: vi.fn(), end: vi.fn() },
+        next,
+      );
+
+      expect(server.ssrLoadModule).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith();
     });
 
     it("should transform TSX files", () => {

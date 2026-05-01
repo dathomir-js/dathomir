@@ -365,7 +365,7 @@ const PlaygroundColocatedInteractionCard = defineComponent(
         </p>
         <p>
           This replay starts once the client boot script has wired{" "}
-          <code>hydrateIslands()</code>.
+          <code>hydrate()</code>.
         </p>
         <p>Active strategy in setup: {client.strategy ?? "none"}</p>
         <button
@@ -767,7 +767,7 @@ function IslandsRuntimePage() {
         <h2>Deferred hydration strategies</h2>
         <p>
           This page keeps the server-rendered DSD in place and lets{" "}
-          <code>hydrateIslands()</code>
+          <code>hydrate()</code>
           decide when each custom element should attach client behavior.
         </p>
         <p>

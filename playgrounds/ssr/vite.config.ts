@@ -1,7 +1,9 @@
 import { dathraVitePlugin } from "@dathra/plugin";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { defineConfig } from "vite";
+import { defineConfig, type ViteDevServer } from "vite";
+
+import { getPlaygroundRoute, normalizePlaygroundPath } from "./src/routes";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
@@ -14,47 +16,64 @@ const workspacePackages = [
   "@dathra/shared",
 ];
 
-function storeNodeInternalSwap() {
-  const withStoreDir = path.resolve(
-    projectRoot,
-    "../../packages/store/src/withStore",
-  );
-  const storeSrcDir = path.resolve(projectRoot, "../../packages/store/src");
+function resolveRoutePath(pathname: string): string | undefined {
+  const normalizedPath = normalizePlaygroundPath(pathname);
+  return getPlaygroundRoute(normalizedPath)?.path;
+}
 
+function renderClientFallback(routePath: string): string {
+  return `<playground-ssr-app routePath="${routePath}"></playground-ssr-app>`;
+}
+
+function playgroundAlsApi() {
   return {
-    name: "playground-store-node-internal-swap",
-    enforce: "pre" as const,
-    resolveId(source: string, importer?: string, options?: { ssr?: boolean }) {
-      if (!options?.ssr || importer === undefined) {
-        return;
-      }
+    name: "playground-als-api",
+    configureServer(vite: ViteDevServer) {
+      vite.middlewares.use(async (req, res, next) => {
+        const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
 
-      const importerPath = importer.split("?")[0] ?? importer;
-      const importerDir = path.dirname(importerPath);
+        try {
+          if (pathname !== "/api/als/parallel") {
+            next();
+            return;
+          }
 
-      if (source === "./internal" && importerDir === withStoreDir) {
-        return path.join(withStoreDir, "internal.node.ts");
-      }
+          const diagnosticsModule = await vite.ssrLoadModule(
+            "/src/alsDiagnostics.ts",
+          );
+          const payload = await diagnosticsModule.runParallelIsolationProbe();
 
-      if (source === "./withStore/internal" && importerDir === storeSrcDir) {
-        return path.join(withStoreDir, "internal.node.ts");
-      }
+          res.writeHead(200, {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          });
+          res.end(JSON.stringify(payload));
+        } catch (error) {
+          vite.ssrFixStacktrace(error as Error);
+          next(error);
+        }
+      });
     },
   };
 }
 
 export default defineConfig({
   root: projectRoot,
-  plugins: [storeNodeInternalSwap(), dathraVitePlugin()],
+  plugins: [
+    playgroundAlsApi(),
+    dathraVitePlugin({
+      ssr: {
+        entry: "/src/entry-server.tsx",
+        resolveRoute: resolveRoutePath,
+        fallback: ({ routePath }) => renderClientFallback(routePath),
+      },
+    }),
+  ],
   optimizeDeps: {
     exclude: workspacePackages,
   },
   ssr: {
     noExternal: workspacePackages,
-  },
-  esbuild: {
-    // Disable esbuild JSX transform - let our plugin handle it
-    jsx: "preserve",
   },
   build: {
     rollupOptions: {

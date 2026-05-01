@@ -1,5 +1,5 @@
 import { clearGlobalStyles } from "@dathra/components";
-import { renderDSD } from "@dathra/components/ssr";
+import { render as renderSSR } from "@dathra/core/ssr";
 
 import { SSRAppRoot } from "./SSRAppRoot";
 import { createDemoStore } from "./demoStore";
@@ -35,7 +35,7 @@ export async function render(context: SSRRenderContext = {}): Promise<string> {
   });
 
   try {
-    return renderDSD(
+    return renderSSR(
       SSRAppRoot,
       {
         requestId,

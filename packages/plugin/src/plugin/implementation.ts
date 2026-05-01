@@ -385,6 +385,11 @@ function acceptsHtml(headers: { accept?: string | string[] }): boolean {
   );
 }
 
+function isHtmlContentType(headers: Record<string, string>): boolean {
+  const contentType = headers["content-type"];
+  return contentType === undefined || contentType.includes("text/html");
+}
+
 function getSsrRenderFunction(
   ssrModule: SsrRenderModule,
   exportName: string,
@@ -433,23 +438,31 @@ function headersToRecord(headers: HeadersInit | undefined): Record<string, strin
 
 async function normalizeSsrRenderResult(
   result: PluginSsrRenderResult,
-): Promise<{ html: string; statusCode: number; headers: Record<string, string> }> {
+): Promise<{
+  body: string;
+  statusCode: number;
+  headers: Record<string, string>;
+  template: boolean;
+}> {
   if (typeof result === "string") {
-    return { html: result, statusCode: 200, headers: {} };
+    return { body: result, statusCode: 200, headers: {}, template: true };
   }
 
   if (result instanceof Response) {
+    const headers = headersToRecord(result.headers);
     return {
-      html: await result.text(),
+      body: await result.text(),
       statusCode: result.status,
-      headers: headersToRecord(result.headers),
+      headers,
+      template: isHtmlContentType(headers),
     };
   }
 
   return {
-    html: result.html,
+    body: result.html,
     statusCode: result.statusCode ?? 200,
     headers: headersToRecord(result.headers),
+    template: true,
   };
 }
 
@@ -462,11 +475,6 @@ function configureSsrDevServer(
 
   vite.middlewares.use(async (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
-      next();
-      return;
-    }
-
-    if (!acceptsHtml(req.headers)) {
       next();
       return;
     }
@@ -485,12 +493,6 @@ function configureSsrDevServer(
     };
 
     try {
-      let template = fs.readFileSync(
-        path.resolve(vite.config.root, "index.html"),
-        "utf-8",
-      );
-      template = await vite.transformIndexHtml(requestUrl.pathname, template);
-
       const ssrModule = (await vite.ssrLoadModule(
         ssrOptions.entry,
       )) as SsrRenderModule;
@@ -502,7 +504,26 @@ function configureSsrDevServer(
       }
 
       const result = await normalizeSsrRenderResult(await render(context));
-      const html = template.replace(outlet, result.html);
+      if (!result.template) {
+        res.writeHead(result.statusCode, {
+          ...result.headers,
+          "X-Dathra-Request-Id": context.requestId,
+        });
+        res.end(result.body);
+        return;
+      }
+
+      if (!acceptsHtml(req.headers)) {
+        next();
+        return;
+      }
+
+      let template = fs.readFileSync(
+        path.resolve(vite.config.root, "index.html"),
+        "utf-8",
+      );
+      template = await vite.transformIndexHtml(requestUrl.pathname, template);
+      const html = template.replace(outlet, result.body);
 
       res.writeHead(result.statusCode, {
         "Content-Type": "text/html",

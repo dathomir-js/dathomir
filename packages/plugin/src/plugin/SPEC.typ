@@ -51,6 +51,7 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
     - `ssr.entry` を指定した Vite dev server では HTML request に対して SSR module を読み込み、`{ request, requestId, url }` を render 関数へ渡す
     - Vite dev SSR render 関数は `string`、`Response`、または `{ html, statusCode?, headers? }` を返せる
     - Vite dev SSR middleware は render 結果の HTML を `<!--ssr-outlet-->` に差し込み、status code と headers を HTTP response に反映する
+    - Vite dev SSR middleware は render 結果が HTML 以外の `Response` の場合、`index.html` へ差し込まず body/status/headers をそのまま返す
   ],
 )
 
@@ -80,6 +81,7 @@ unplugin を使用して複数のバンドラーに対応し、JSX/TSX ファイ
       - Vite plugin が既存 `esbuild` 設定を保持しながら `jsx: "preserve"` を自動設定する
       - Vite plugin が `ssr.entry` 設定時に dev SSR middleware を登録し `Request` を render 関数へ渡す
       - Vite plugin が render 結果の status code と headers を dev SSR response に反映する
+      - Vite plugin が HTML 以外の `Response` render 結果を `index.html` へ差し込まずに返す
       - Vite plugin が `ssr.entry` 未設定時は dev SSR middleware を登録しない
       - Vite plugin の dev SSR middleware は非 HTML request を処理しない
       - 実 transformer を使った integration test で islands metadata contract (`data-dh-island*`, `data-dh-client-*`) が plugin 出力に残る

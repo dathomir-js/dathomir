@@ -2,6 +2,7 @@ import { clearGlobalStyles } from "@dathra/components";
 import { defineSsrEntry, render as renderSSR } from "@dathra/core/ssr";
 
 import { SSRAppRoot } from "./SSRAppRoot";
+import { runParallelIsolationProbe } from "./alsDiagnostics";
 import { createDemoStore } from "./demoStore";
 import { createPagePayload } from "./pageServerData";
 import {
@@ -18,11 +19,17 @@ function renderClientFallback(routePath: PlaygroundRoutePath): string {
  * Render the application to HTML string for SSR.
  */
 const render = defineSsrEntry(async ({ request, requestId }) => {
+  const url = new URL(request.url);
+
+  if (url.pathname === "/api/als/parallel") {
+    return Response.json(await runParallelIsolationProbe(), {
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+
   clearGlobalStyles();
 
-  const route = getPlaygroundRoute(
-    normalizePlaygroundPath(new URL(request.url).pathname),
-  );
+  const route = getPlaygroundRoute(normalizePlaygroundPath(url.pathname));
 
   if (route === undefined) {
     return {

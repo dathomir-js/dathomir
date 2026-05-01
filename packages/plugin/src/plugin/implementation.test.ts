@@ -354,7 +354,7 @@ describe("plugin", () => {
         plugin,
         new Response("<main>redirect</main>", {
           status: 302,
-          headers: { Location: "/login" },
+          headers: { "Content-Type": "text/html", Location: "/login" },
         }),
       );
       const res = { writeHead: vi.fn(), end: vi.fn() };
@@ -374,6 +374,41 @@ describe("plugin", () => {
         expect.objectContaining({ location: "/login" }),
       );
       expect(res.end).toHaveBeenCalledWith("<html><main>redirect</main></html>");
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should return non-HTML Response SSR results without index template", async () => {
+      const readFileSyncSpy = vi.spyOn(fs, "readFileSync");
+      const plugin = dathraVitePlugin({
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(
+        plugin,
+        new Response(JSON.stringify({ isolated: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/api/als/parallel",
+          headers: { accept: "application/json" },
+        },
+        res,
+        vi.fn(),
+      );
+
+      expect(server.transformIndexHtml).not.toHaveBeenCalled();
+      expect(readFileSyncSpy).not.toHaveBeenCalled();
+      expect(res.writeHead).toHaveBeenCalledWith(
+        200,
+        expect.objectContaining({ "content-type": "application/json" }),
+      );
+      expect(res.end).toHaveBeenCalledWith('{"isolated":true}');
 
       readFileSyncSpy.mockRestore();
     });

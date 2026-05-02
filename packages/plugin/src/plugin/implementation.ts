@@ -29,7 +29,6 @@ interface PluginCommonOptions {
    * Module to import runtime functions from (default: '@dathra/core').
    */
   runtimeModule?: string;
-
 }
 
 /**

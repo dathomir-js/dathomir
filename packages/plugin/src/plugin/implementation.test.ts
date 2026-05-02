@@ -245,6 +245,14 @@ describe("plugin", () => {
       });
     });
 
+    it("should preserve esbuild: false when explicitly set", () => {
+      const plugin = dathraVitePlugin();
+
+      expect(invokeViteConfig(plugin, { esbuild: false })).toEqual({
+        esbuild: false,
+      });
+    });
+
     it("should not install SSR dev middleware without ssr options", () => {
       const plugin = dathraVitePlugin();
       const server = {
@@ -422,7 +430,7 @@ describe("plugin", () => {
         {
           method: "GET",
           url: "/api/als/parallel",
-          headers: { accept: "application/json" },
+          headers: { accept: "text/html" },
         },
         res,
         vi.fn(),
@@ -451,6 +459,27 @@ describe("plugin", () => {
           method: "GET",
           url: "/src/main.ts",
           headers: { accept: "application/javascript" },
+        },
+        { writeHead: vi.fn(), end: vi.fn() },
+        next,
+      );
+
+      expect(server.ssrLoadModule).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    it("should skip SSR dev middleware for Accept: */* requests", async () => {
+      const plugin = dathraVitePlugin({
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(plugin);
+      const next = vi.fn();
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/api/users",
+          headers: { accept: "*/*" },
         },
         { writeHead: vi.fn(), end: vi.fn() },
         next,

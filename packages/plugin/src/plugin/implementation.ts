@@ -381,9 +381,7 @@ function acceptsHtml(headers: IncomingHttpHeaders): boolean {
     ? acceptHeader.join(",")
     : (acceptHeader ?? "");
 
-  return (
-    accept === "" || accept.includes("text/html") || accept.includes("*/*")
-  );
+  return accept === "" || accept.includes("text/html");
 }
 
 function isHtmlContentType(headers: Partial<Record<string, string>>): boolean {
@@ -507,6 +505,11 @@ async function handleSsrDevRequest(
     return;
   }
 
+  if (!acceptsHtml(req.headers)) {
+    next();
+    return;
+  }
+
   const request = createRequest(req);
   const context: PluginSsrContext = {
     request,
@@ -532,11 +535,6 @@ async function handleSsrDevRequest(
         "X-Dathra-Request-Id": context.requestId,
       });
       res.end(result.body);
-      return;
-    }
-
-    if (!acceptsHtml(req.headers)) {
-      next();
       return;
     }
 
@@ -632,6 +630,10 @@ function createVitePlugin(options: PluginOptions = {}): VitePlugin {
     enforce: "pre",
 
     config(config: UserConfig): UserConfig {
+      if (config.esbuild === false) {
+        return { esbuild: false };
+      }
+
       return {
         esbuild: {
           ...(typeof config.esbuild === "object" ? config.esbuild : {}),

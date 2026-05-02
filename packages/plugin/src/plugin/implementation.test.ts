@@ -22,6 +22,7 @@ import {
   dathraRollupPlugin,
   dathraVitePlugin,
   dathraWebpackPlugin,
+  type PluginOptions,
 } from "./implementation";
 
 const actualTransformer = await vi.importActual<TransformerModule>(
@@ -253,6 +254,21 @@ describe("plugin", () => {
       });
     });
 
+    it("should only allow ssr options when mode is ssr", () => {
+      const validOptions = {
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      } satisfies PluginOptions;
+
+      const invalidOptions = {
+        ssr: { entry: "/src/entry-server.tsx" },
+        // @ts-expect-error ssr options require mode: "ssr"
+      } satisfies PluginOptions;
+
+      expect(validOptions.ssr.entry).toBe("/src/entry-server.tsx");
+      expect(invalidOptions.ssr.entry).toBe("/src/entry-server.tsx");
+    });
+
     it("should not install SSR dev middleware without ssr options", () => {
       const plugin = dathraVitePlugin();
       const server = {
@@ -275,6 +291,7 @@ describe("plugin", () => {
         .spyOn(fs, "readFileSync")
         .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
       const plugin = dathraVitePlugin({
+        mode: "ssr",
         ssr: { entry: "/src/entry-server.tsx" },
       });
       const { middleware, server } = createSsrDevServerHarness(plugin);
@@ -309,6 +326,7 @@ describe("plugin", () => {
         .spyOn(fs, "readFileSync")
         .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
       const plugin = dathraVitePlugin({
+        mode: "ssr",
         ssr: { entry: "/src/entry-server.tsx" },
       });
       const { middleware, render } = createSsrDevServerHarness(plugin);
@@ -347,6 +365,7 @@ describe("plugin", () => {
         .spyOn(fs, "readFileSync")
         .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
       const plugin = dathraVitePlugin({
+        mode: "ssr",
         ssr: { entry: "/src/entry-server.tsx" },
       });
       const { middleware } = createSsrDevServerHarness(plugin, {
@@ -380,6 +399,7 @@ describe("plugin", () => {
         .spyOn(fs, "readFileSync")
         .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
       const plugin = dathraVitePlugin({
+        mode: "ssr",
         ssr: { entry: "/src/entry-server.tsx" },
       });
       const { middleware } = createSsrDevServerHarness(
@@ -415,6 +435,7 @@ describe("plugin", () => {
     it("should return non-HTML Response SSR results without index template", async () => {
       const readFileSyncSpy = vi.spyOn(fs, "readFileSync");
       const plugin = dathraVitePlugin({
+        mode: "ssr",
         ssr: { entry: "/src/entry-server.tsx" },
       });
       const { middleware, server } = createSsrDevServerHarness(
@@ -449,6 +470,7 @@ describe("plugin", () => {
 
     it("should skip SSR dev middleware for non-HTML requests", async () => {
       const plugin = dathraVitePlugin({
+        mode: "ssr",
         ssr: { entry: "/src/entry-server.tsx" },
       });
       const { middleware, server } = createSsrDevServerHarness(plugin);
@@ -470,6 +492,7 @@ describe("plugin", () => {
 
     it("should skip SSR dev middleware for Accept: */* requests", async () => {
       const plugin = dathraVitePlugin({
+        mode: "ssr",
         ssr: { entry: "/src/entry-server.tsx" },
       });
       const { middleware, server } = createSsrDevServerHarness(plugin);

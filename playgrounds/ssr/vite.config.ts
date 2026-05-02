@@ -18,6 +18,7 @@ export default defineConfig({
   root: projectRoot,
   plugins: [
     dathraVitePlugin({
+      mode: "ssr",
       ssr: {
         entry: "/src/entry-server.tsx",
       },

@@ -12,9 +12,9 @@ import type {
 } from "vite";
 
 /**
- * Plugin options for the Dathra plugin.
+ * Plugin options shared by every runtime mode.
  */
-interface PluginOptions {
+interface PluginCommonOptions {
   /**
    * File extensions to include (default: ['.tsx', '.jsx']).
    */
@@ -30,16 +30,28 @@ interface PluginOptions {
    */
   runtimeModule?: string;
 
-  /**
-   * Force a specific mode (overrides automatic detection).
-   */
-  mode?: "csr" | "ssr";
-
-  /**
-   * Configure Vite dev SSR HTML rendering.
-   */
-  ssr?: false | PluginSsrOptions;
 }
+
+/**
+ * Plugin options for the Dathra plugin.
+ */
+type PluginOptions = PluginCommonOptions &
+  (
+    | {
+        /** Force SSR mode and allow Vite dev SSR rendering options. */
+        mode: "ssr";
+
+        /** Configure Vite dev SSR HTML rendering. */
+        ssr?: false | PluginSsrOptions;
+      }
+    | {
+        /** Force CSR mode, or omit it to use environment-based detection. */
+        mode?: "csr";
+
+        /** SSR rendering options are only valid with mode: "ssr". */
+        ssr?: false;
+      }
+  );
 
 interface PluginSsrContext {
   request: Request;

@@ -14,6 +14,7 @@ import {
   HYDRATE_ISLANDS_STATUS,
 } from "@dathra/runtime/hydration";
 
+import { bindStoreToHost as publicBindStoreToHost } from "../index";
 import {
   adoptGlobalStyles,
   clearGlobalStyles,
@@ -889,6 +890,15 @@ describe("defineComponent", () => {
     expect(capturedStore).toBe(store);
 
     host.remove();
+  });
+
+  it("should expose store binding through the public components API", () => {
+    const host = document.createElement("public-store-host");
+    const store = createAtomStore({ appId: "public-store-binding" });
+
+    publicBindStoreToHost(host, store);
+
+    expect(peekStoreFromHost(host)).toBe(store);
   });
 
   it("should defer island hydration until hydrateIslands triggers the strategy", async () => {

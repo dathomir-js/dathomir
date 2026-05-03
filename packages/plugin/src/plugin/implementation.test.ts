@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
@@ -21,6 +22,7 @@ import {
   dathraRollupPlugin,
   dathraVitePlugin,
   dathraWebpackPlugin,
+  type PluginOptions,
 } from "./implementation";
 
 const actualTransformer = await vi.importActual<TransformerModule>(
@@ -53,6 +55,49 @@ type ViteResolveIdHook = (
   source: string,
   importer?: string,
 ) => string | null | Promise<string | null>;
+
+type ViteConfigHook = (config: {
+  esbuild?: false | Record<string, unknown>;
+}) => { esbuild?: false | Record<string, unknown> };
+
+type Middleware = (
+  req: {
+    method?: string;
+    url?: string;
+    headers: { accept?: string | string[]; host?: string | string[] };
+  },
+  res: {
+    writeHead: ReturnType<typeof vi.fn>;
+    end: ReturnType<typeof vi.fn>;
+  },
+  next: (error?: unknown) => void,
+) => void | Promise<void>;
+
+type ViteConfigureServerHook = (server: {
+  config: { root: string };
+  middlewares: { use: (middleware: Middleware) => void };
+  ssrFixStacktrace: ReturnType<typeof vi.fn>;
+  ssrLoadModule: ReturnType<typeof vi.fn>;
+  transformIndexHtml: ReturnType<typeof vi.fn>;
+}) => void;
+
+type SsrRenderMock = ReturnType<
+  typeof vi.fn<
+    (context: { request: Request; requestId: string; url: string }) =>
+      | string
+      | Response
+      | { html: string; statusCode?: number; headers?: Record<string, string> }
+      | Promise<
+          | string
+          | Response
+          | {
+              html: string;
+              statusCode?: number;
+              headers?: Record<string, string>;
+            }
+        >
+  >
+>;
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -87,6 +132,57 @@ async function invokeResolveId(
 ): Promise<string | null> {
   const resolveId = plugin.resolveId as ViteResolveIdHook;
   return await resolveId.call({}, source, importer);
+}
+
+function invokeViteConfig(
+  plugin: ReturnType<typeof dathraVitePlugin>,
+  config = {},
+) {
+  const configHook = plugin.config as ViteConfigHook;
+  return configHook(config);
+}
+
+function createSsrDevServerHarness(
+  plugin: ReturnType<typeof dathraVitePlugin>,
+  renderResult:
+    | string
+    | Response
+    | {
+        html: string;
+        statusCode?: number;
+        headers?: Record<string, string>;
+      } = "<main>app</main>",
+) {
+  let middleware: Middleware = () => {
+    throw new Error("Expected configureServer to install middleware");
+  };
+  const render: SsrRenderMock = vi.fn(
+    async () => await Promise.resolve(renderResult),
+  );
+  const server = {
+    config: { root: "/project" },
+    middlewares: {
+      use: vi.fn((handler: Middleware) => {
+        middleware = handler;
+      }),
+    },
+    ssrFixStacktrace: vi.fn(),
+    ssrLoadModule: vi.fn(
+      async () =>
+        await Promise.resolve({
+          render,
+        }),
+    ),
+    transformIndexHtml: vi.fn(
+      async (_path: string, html: string) => await Promise.resolve(html),
+    ),
+  };
+  const configureServer =
+    plugin.configureServer as unknown as ViteConfigureServerHook;
+
+  configureServer(server);
+
+  return { middleware, render, server };
 }
 
 describe("plugin", () => {
@@ -128,6 +224,348 @@ describe("plugin", () => {
     it("should have a transform function", () => {
       const plugin = dathraVitePlugin();
       expect(typeof plugin.transform).toBe("function");
+    });
+
+    it("should preserve JSX before esbuild transforms it", () => {
+      const plugin = dathraVitePlugin();
+
+      expect(invokeViteConfig(plugin)).toEqual({
+        esbuild: { jsx: "preserve" },
+      });
+    });
+
+    it("should keep existing esbuild options when preserving JSX", () => {
+      const plugin = dathraVitePlugin();
+
+      expect(
+        invokeViteConfig(plugin, {
+          esbuild: { target: "es2022" },
+        }),
+      ).toEqual({
+        esbuild: { target: "es2022", jsx: "preserve" },
+      });
+    });
+
+    it("should preserve esbuild: false when explicitly set", () => {
+      const plugin = dathraVitePlugin();
+
+      expect(invokeViteConfig(plugin, { esbuild: false })).toEqual({
+        esbuild: false,
+      });
+    });
+
+    it("should only allow ssr options when mode is ssr", () => {
+      const validOptions = {
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      } satisfies PluginOptions;
+
+      const invalidOptions = {
+        ssr: { entry: "/src/entry-server.tsx" },
+        // @ts-expect-error ssr options require mode: "ssr"
+      } satisfies PluginOptions;
+
+      expect(validOptions.ssr.entry).toBe("/src/entry-server.tsx");
+      expect(invalidOptions.ssr.entry).toBe("/src/entry-server.tsx");
+    });
+
+    it("should not install SSR dev middleware without ssr options", () => {
+      const plugin = dathraVitePlugin();
+      const server = {
+        config: { root: "/project" },
+        middlewares: { use: vi.fn() },
+        ssrFixStacktrace: vi.fn(),
+        ssrLoadModule: vi.fn(),
+        transformIndexHtml: vi.fn(),
+      };
+      const configureServer =
+        plugin.configureServer as unknown as ViteConfigureServerHook;
+
+      configureServer(server);
+
+      expect(server.middlewares.use).not.toHaveBeenCalled();
+    });
+
+    it("should render HTML through configured SSR dev middleware", async () => {
+      const readFileSyncSpy = vi
+        .spyOn(fs, "readFileSync")
+        .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
+      const plugin = dathraVitePlugin({
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(plugin);
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+      const next = vi.fn();
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/docs?requestId=req-1",
+          headers: { accept: "text/html" },
+        },
+        res,
+        next,
+      );
+
+      expect(server.ssrLoadModule).toHaveBeenCalledWith(
+        "/src/entry-server.tsx",
+      );
+      expect(res.writeHead).toHaveBeenCalledWith(
+        200,
+        expect.objectContaining({ "X-Dathra-Request-Id": "req-1" }),
+      );
+      expect(res.end).toHaveBeenCalledWith("<html><main>app</main></html>");
+      expect(next).not.toHaveBeenCalled();
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should not send a body for HEAD SSR responses", async () => {
+      const readFileSyncSpy = vi.spyOn(fs, "readFileSync");
+      const plugin = dathraVitePlugin({
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(plugin, {
+        html: "<main>head</main>",
+        statusCode: 204,
+        headers: { "X-Route-Status": "head" },
+      });
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "HEAD",
+          url: "/docs?requestId=req-head",
+          headers: { accept: "text/html" },
+        },
+        res,
+        vi.fn(),
+      );
+
+      expect(server.transformIndexHtml).not.toHaveBeenCalled();
+      expect(readFileSyncSpy).not.toHaveBeenCalled();
+      expect(res.writeHead).toHaveBeenCalledWith(
+        204,
+        expect.objectContaining({
+          "Content-Type": "text/html",
+          "x-route-status": "head",
+          "X-Dathra-Request-Id": "req-head",
+        }),
+      );
+      expect(res.end).toHaveBeenCalledWith("");
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should pass a Request and context to SSR render", async () => {
+      const readFileSyncSpy = vi
+        .spyOn(fs, "readFileSync")
+        .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
+      const plugin = dathraVitePlugin({
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, render } = createSsrDevServerHarness(plugin);
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/users/1?requestId=req-2",
+          headers: { accept: "text/html", host: "example.test" },
+        },
+        res,
+        vi.fn(),
+      );
+
+      expect(render).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: "req-2",
+          url: "/users/1?requestId=req-2",
+        }),
+      );
+      const firstCall = render.mock.calls[0];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defense against empty mock calls array
+      if (firstCall === undefined) {
+        throw new Error("Expected SSR render to be called");
+      }
+      const request = firstCall[0].request;
+      expect(request).toBeInstanceOf(Request);
+      expect(request.url).toBe("http://example.test/users/1?requestId=req-2");
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should apply status code and headers from object SSR results", async () => {
+      const readFileSyncSpy = vi
+        .spyOn(fs, "readFileSync")
+        .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
+      const plugin = dathraVitePlugin({
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware } = createSsrDevServerHarness(plugin, {
+        html: "<main>missing</main>",
+        statusCode: 404,
+        headers: { "X-Route-Status": "not-found" },
+      });
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/missing",
+          headers: { accept: "text/html" },
+        },
+        res,
+        vi.fn(),
+      );
+
+      expect(res.writeHead).toHaveBeenCalledWith(
+        404,
+        expect.objectContaining({ "x-route-status": "not-found" }),
+      );
+      expect(res.end).toHaveBeenCalledWith("<html><main>missing</main></html>");
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should apply status code and headers from Response SSR results", async () => {
+      const readFileSyncSpy = vi
+        .spyOn(fs, "readFileSync")
+        .mockReturnValueOnce("<html><!--ssr-outlet--></html>");
+      const plugin = dathraVitePlugin({
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware } = createSsrDevServerHarness(
+        plugin,
+        new Response("<main>redirect</main>", {
+          status: 302,
+          headers: { "Content-Type": "text/html", Location: "/login" },
+        }),
+      );
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/private",
+          headers: { accept: "text/html" },
+        },
+        res,
+        vi.fn(),
+      );
+
+      expect(res.writeHead).toHaveBeenCalledWith(
+        302,
+        expect.objectContaining({ location: "/login" }),
+      );
+      expect(res.end).toHaveBeenCalledWith(
+        "<html><main>redirect</main></html>",
+      );
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should return non-HTML Response SSR results without index template", async () => {
+      const readFileSyncSpy = vi.spyOn(fs, "readFileSync");
+      const plugin = dathraVitePlugin({
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(
+        plugin,
+        new Response(JSON.stringify({ isolated: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/api/als/parallel",
+          headers: { accept: "text/html" },
+        },
+        res,
+        vi.fn(),
+      );
+
+      expect(server.transformIndexHtml).not.toHaveBeenCalled();
+      expect(readFileSyncSpy).not.toHaveBeenCalled();
+      expect(res.writeHead).toHaveBeenCalledWith(
+        200,
+        expect.objectContaining({ "content-type": "application/json" }),
+      );
+      expect(res.end).toHaveBeenCalledWith('{"isolated":true}');
+
+      readFileSyncSpy.mockRestore();
+    });
+
+    it("should skip SSR dev middleware for non-HTML requests", async () => {
+      const plugin = dathraVitePlugin({
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(plugin);
+      const next = vi.fn();
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/src/main.ts",
+          headers: { accept: "application/javascript" },
+        },
+        { writeHead: vi.fn(), end: vi.fn() },
+        next,
+      );
+
+      expect(server.ssrLoadModule).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    it("should return non-HTML Response SSR results for Accept: */* requests", async () => {
+      const readFileSyncSpy = vi.spyOn(fs, "readFileSync");
+      const plugin = dathraVitePlugin({
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(
+        plugin,
+        new Response(JSON.stringify({ ok: true }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      const next = vi.fn();
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "GET",
+          url: "/api/users",
+          headers: { accept: "*/*" },
+        },
+        res,
+        next,
+      );
+
+      expect(server.ssrLoadModule).toHaveBeenCalledWith(
+        "/src/entry-server.tsx",
+      );
+      expect(server.transformIndexHtml).not.toHaveBeenCalled();
+      expect(readFileSyncSpy).not.toHaveBeenCalled();
+      expect(res.writeHead).toHaveBeenCalledWith(
+        200,
+        expect.objectContaining({ "content-type": "application/json" }),
+      );
+      expect(res.end).toHaveBeenCalledWith('{"ok":true}');
+      expect(next).not.toHaveBeenCalled();
+
+      readFileSyncSpy.mockRestore();
     });
 
     it("should transform TSX files", () => {

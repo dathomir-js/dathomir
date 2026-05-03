@@ -15,6 +15,9 @@ function canUseComponentDOMRuntime(): boolean {
   );
 }
 
+/**
+ * Bind an atom store to a component host before hydration or connection.
+ */
 function bindStoreToHost(host: HTMLElement, store: AtomStore): void {
   const boundHost = host as StoreBoundHost;
   if (boundHost[STORE_BINDING] === undefined) {

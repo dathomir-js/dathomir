@@ -19,6 +19,8 @@
       component: FunctionComponent<S>,
       options?: ComponentOptions<S>,
     ): DefinedComponent<S>
+
+    function bindStoreToHost(host: HTMLElement, store: AtomStore): void
     ```
 
     *主要型*:
@@ -145,6 +147,7 @@
     - SSR では `getCssText()`、`registerComponent()`、`ensureComponentRenderer()` を用いて SSR 情報を登録する
     - browser implementation path へ入る条件は `window` 単独ではなく、`document` / `HTMLElement` / `customElements` の capability で判定する
     - 属性から Signal への型変換は `String` / `Number` / `Boolean` / カスタム関数の規則に従い、初期化時と属性変更時で同じ coercion 規則を使う。`Number` では `null` を `Number(null)` にせずデフォルト値へフォールバックする
+    - `bindStoreToHost()` は SSR markup の client entry など、store boundary を public API 経由で host に紐付けるために公開する
   ],
 )
 

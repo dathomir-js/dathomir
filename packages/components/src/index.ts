@@ -27,6 +27,7 @@ export type {
   PropsSchema,
   PropType,
 } from "@/defineComponent/implementation";
+export { bindStoreToHost } from "@/defineComponent/internal";
 export {
   clearRegistry,
   getComponent,

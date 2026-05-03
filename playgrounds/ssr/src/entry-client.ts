@@ -1,5 +1,4 @@
-import { clearGlobalStyles } from "@dathra/components";
-import { bindStoreToHost } from "@dathra/components/internal";
+import { bindStoreToHost, clearGlobalStyles } from "@dathra/components";
 import { hydrate } from "@dathra/core/hydration";
 
 import { createDemoStore } from "./demoStore";

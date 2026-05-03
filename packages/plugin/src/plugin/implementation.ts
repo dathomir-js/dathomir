@@ -392,7 +392,9 @@ function acceptsHtml(headers: IncomingHttpHeaders): boolean {
     ? acceptHeader.join(",")
     : (acceptHeader ?? "");
 
-  return accept === "" || accept.includes("text/html");
+  return (
+    accept === "" || accept.includes("text/html") || accept.includes("*/*")
+  );
 }
 
 function isHtmlContentType(headers: Partial<Record<string, string>>): boolean {
@@ -501,7 +503,7 @@ async function handleSsrDevRequest(
   res: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeHead: any;
-    end: (body: string) => void;
+    end: (body?: string) => void;
   },
   next: (error?: unknown) => void,
 ): Promise<void> {
@@ -512,11 +514,6 @@ async function handleSsrDevRequest(
 
   const requestUrl = new URL(req.url ?? "/", "http://localhost");
   if (!shouldHandleSsrPath(requestUrl.pathname)) {
-    next();
-    return;
-  }
-
-  if (!acceptsHtml(req.headers)) {
     next();
     return;
   }
@@ -545,7 +542,22 @@ async function handleSsrDevRequest(
         ...result.headers,
         "X-Dathra-Request-Id": context.requestId,
       });
-      res.end(result.body);
+      res.end(req.method === "HEAD" ? "" : result.body);
+      return;
+    }
+
+    if (!acceptsHtml(req.headers)) {
+      next();
+      return;
+    }
+
+    if (req.method === "HEAD") {
+      res.writeHead(result.statusCode, {
+        "Content-Type": "text/html",
+        ...result.headers,
+        "X-Dathra-Request-Id": context.requestId,
+      });
+      res.end("");
       return;
     }
 

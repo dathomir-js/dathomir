@@ -64,7 +64,8 @@ const render = defineSsrEntry(async ({ request, requestId }) => {
         { store: requestStore },
       ),
     };
-  } catch {
+  } catch (error) {
+    console.error("[playground:ssr] Failed to render SSR route", error);
     return {
       html: renderClientFallback(routePath),
       statusCode: 500,

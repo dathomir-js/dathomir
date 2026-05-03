@@ -321,6 +321,44 @@ describe("plugin", () => {
       readFileSyncSpy.mockRestore();
     });
 
+    it("should not send a body for HEAD SSR responses", async () => {
+      const readFileSyncSpy = vi.spyOn(fs, "readFileSync");
+      const plugin = dathraVitePlugin({
+        mode: "ssr",
+        ssr: { entry: "/src/entry-server.tsx" },
+      });
+      const { middleware, server } = createSsrDevServerHarness(plugin, {
+        html: "<main>head</main>",
+        statusCode: 204,
+        headers: { "X-Route-Status": "head" },
+      });
+      const res = { writeHead: vi.fn(), end: vi.fn() };
+
+      await middleware(
+        {
+          method: "HEAD",
+          url: "/docs?requestId=req-head",
+          headers: { accept: "text/html" },
+        },
+        res,
+        vi.fn(),
+      );
+
+      expect(server.transformIndexHtml).not.toHaveBeenCalled();
+      expect(readFileSyncSpy).not.toHaveBeenCalled();
+      expect(res.writeHead).toHaveBeenCalledWith(
+        204,
+        expect.objectContaining({
+          "Content-Type": "text/html",
+          "x-route-status": "head",
+          "X-Dathra-Request-Id": "req-head",
+        }),
+      );
+      expect(res.end).toHaveBeenCalledWith("");
+
+      readFileSyncSpy.mockRestore();
+    });
+
     it("should pass a Request and context to SSR render", async () => {
       const readFileSyncSpy = vi
         .spyOn(fs, "readFileSync")
@@ -490,13 +528,20 @@ describe("plugin", () => {
       expect(next).toHaveBeenCalledWith();
     });
 
-    it("should skip SSR dev middleware for Accept: */* requests", async () => {
+    it("should return non-HTML Response SSR results for Accept: */* requests", async () => {
+      const readFileSyncSpy = vi.spyOn(fs, "readFileSync");
       const plugin = dathraVitePlugin({
         mode: "ssr",
         ssr: { entry: "/src/entry-server.tsx" },
       });
-      const { middleware, server } = createSsrDevServerHarness(plugin);
+      const { middleware, server } = createSsrDevServerHarness(
+        plugin,
+        new Response(JSON.stringify({ ok: true }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
       const next = vi.fn();
+      const res = { writeHead: vi.fn(), end: vi.fn() };
 
       await middleware(
         {
@@ -504,12 +549,23 @@ describe("plugin", () => {
           url: "/api/users",
           headers: { accept: "*/*" },
         },
-        { writeHead: vi.fn(), end: vi.fn() },
+        res,
         next,
       );
 
-      expect(server.ssrLoadModule).not.toHaveBeenCalled();
-      expect(next).toHaveBeenCalledWith();
+      expect(server.ssrLoadModule).toHaveBeenCalledWith(
+        "/src/entry-server.tsx",
+      );
+      expect(server.transformIndexHtml).not.toHaveBeenCalled();
+      expect(readFileSyncSpy).not.toHaveBeenCalled();
+      expect(res.writeHead).toHaveBeenCalledWith(
+        200,
+        expect.objectContaining({ "content-type": "application/json" }),
+      );
+      expect(res.end).toHaveBeenCalledWith('{"ok":true}');
+      expect(next).not.toHaveBeenCalled();
+
+      readFileSyncSpy.mockRestore();
     });
 
     it("should transform TSX files", () => {

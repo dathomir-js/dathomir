@@ -131,7 +131,7 @@
     - JSX runtime が生成した subtree 内の custom element に対しても current store boundary が伝播する
     - `attribute: false` の prop は属性監視せず、property setter 経由でのみ更新する
     - `connectedCallback` では host に bind 済みの store を解決し、`createRoot` スコープ内で関数コンポーネントを実行する
-    - 関数コンポーネントが `string` を返す場合、`defineComponent` は文字列を text node として扱わず、runtime の DOM 構築 API へ委譲して Shadow DOM に挿入する
+    - 関数コンポーネントが `string` を返す場合、`defineComponent` は文字列を text node として扱わず、runtime の DOM 構築 API へ委譲して Shadow DOM に挿入する。返す文字列は **信頼できるソースからのみ渡すこと** — `innerHTML` 経由でパースされるため、平文テキストを表示したい場合は `Document` または `Text` node を返すこと
     - `connectedCallback` と `hydrate` へ渡す context には、host の island metadata を正規化した read-only `client` context を含める。`interaction` strategy で `data-dh-island-value` が欠ける場合は canonical default `click` を補完する
     - `connectedCallback` では local `styles` と `adoptGlobalStyles()` で登録済みの global style を合成し、`adoptedStyleSheets` へ反映する
     - host-level `data-dh-island*` metadata はその custom element host の hydration boundary を定義し、同じ host setup が生成した subtree 全体は strategy 発火までその boundary に従う

@@ -37,6 +37,7 @@
       - runtime は descriptor を再度 tree 解釈せず、markup を 1 回だけ template 化してクローンする
       - compiler が text placeholder を comment marker として埋め込んだ場合、runtime は template 初期化時に空 text node へ置き換える
     - `fromMarkup()` は runtime 外部から HTML/SVG/MathML markup 文字列を runtime の DOM 構築経路で `DocumentFragment` 化するための公開 API として提供する
+    - 入力 `markup` は **信頼できるソースからのみ渡すこと** — `innerHTML` 経由でパースされるため、インラインイベントハンドラや `javascript:` URL を含む文字列を挿入すると XSS 脆弱性となる
 
     *型定義*:
 

@@ -69,7 +69,9 @@ type EmptyPropsSchema = Record<never, never>;
 
 function buildComponentContent(content: Node | string): Node {
   if (typeof content === "string") {
-    return fromMarkup(content)();
+    const fragment = fromMarkup(content)();
+    bindCurrentStoreToSubtree(fragment);
+    return fragment;
   }
 
   return content;

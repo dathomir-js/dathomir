@@ -425,6 +425,9 @@ importers:
       '@dathra/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@dathra/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
     devDependencies:
       '@dathra/config':
         specifier: workspace:*

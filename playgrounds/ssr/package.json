@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@dathra/core": "workspace:*",
-    "@dathra/components": "workspace:*"
+    "@dathra/components": "workspace:*",
+    "@dathra/runtime": "workspace:*"
   },
   "devDependencies": {
     "@dathra/config": "workspace:*",

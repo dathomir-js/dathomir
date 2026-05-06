@@ -76,6 +76,25 @@ describe("defineComponent", () => {
     el.remove();
   });
 
+  it("should build DOM from string setup output through the runtime", async () => {
+    const tag = uniqueTag();
+    defineComponent(tag, () => {
+      return '<section><p data-testid="status">ready</p></section>';
+    });
+
+    const el = document.createElement(tag);
+    document.body.appendChild(el);
+    await waitForMicrotask();
+
+    const section = el.shadowRoot!.querySelector("section");
+    expect(section).not.toBeNull();
+    expect(section!.querySelector("[data-testid='status']")?.textContent).toBe(
+      "ready",
+    );
+
+    el.remove();
+  });
+
   it("should cleanup effects on disconnectedCallback", async () => {
     const tag = uniqueTag();
     const cleanupFn = vi.fn();

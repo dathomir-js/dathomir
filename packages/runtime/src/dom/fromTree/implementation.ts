@@ -312,4 +312,20 @@ function fromTree(
   return factory;
 }
 
-export { fromTree };
+/**
+ * Create a DOM fragment factory from pre-rendered markup.
+ */
+function fromMarkup(
+  markup: string,
+  flags: Namespace = Namespace.HTML,
+): () => DocumentFragment {
+  const template = buildCompiledFragment({
+    kind: "compiled",
+    markup,
+    namespace: flags,
+  });
+
+  return () => template.cloneNode(true) as DocumentFragment;
+}
+
+export { fromMarkup, fromTree };

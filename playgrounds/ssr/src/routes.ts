@@ -60,6 +60,17 @@ const playgroundRoutes = [
 type PlaygroundRoute = (typeof playgroundRoutes)[number];
 type PlaygroundRoutePath = PlaygroundRoute["path"];
 
+const playgroundRouteByPath = {
+  "/": playgroundRoutes[0],
+  "/als": playgroundRoutes[1],
+  "/store-boundaries": playgroundRoutes[2],
+  "/component-ssr": playgroundRoutes[3],
+  "/global-styles": playgroundRoutes[4],
+  "/islands-directive": playgroundRoutes[5],
+  "/islands-runtime": playgroundRoutes[6],
+  "/hydration-plan": playgroundRoutes[7],
+} satisfies Record<PlaygroundRoutePath, PlaygroundRoute>;
+
 function normalizePlaygroundPath(pathname: string): string {
   if (pathname === "/index.html") {
     return "/";
@@ -78,13 +89,15 @@ function getPlaygroundRoute(pathname: string): PlaygroundRoute | undefined {
   return playgroundRoutes.find((route) => route.path === normalized);
 }
 
-function getPlaygroundRouteOrDefault(pathname: string): PlaygroundRoute {
-  return getPlaygroundRoute(pathname) ?? playgroundRoutes[0];
+function getPlaygroundRouteByPath(
+  pathname: PlaygroundRoutePath,
+): PlaygroundRoute {
+  return playgroundRouteByPath[pathname];
 }
 
 export {
   getPlaygroundRoute,
-  getPlaygroundRouteOrDefault,
+  getPlaygroundRouteByPath,
   normalizePlaygroundPath,
   playgroundRoutes,
 };

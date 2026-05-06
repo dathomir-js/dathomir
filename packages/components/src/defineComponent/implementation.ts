@@ -28,7 +28,7 @@ import {
   HYDRATE_ISLANDS_HOOK,
   HYDRATE_ISLANDS_STATUS,
 } from "@dathra/runtime/hydration";
-import { getClientAction, insert, setAttr } from "@dathra/runtime";
+import { fromMarkup, getClientAction, insert, setAttr } from "@dathra/runtime";
 import {
   CLIENT_ACTIONS_METADATA_ATTRIBUTE,
   CLIENT_EVENT_METADATA_ATTRIBUTE,
@@ -66,6 +66,16 @@ interface PropDefinition {
 /** Schema mapping prop names to their definitions. */
 type PropsSchema = Record<string, PropDefinition>;
 type EmptyPropsSchema = Record<never, never>;
+
+function buildComponentContent(content: Node | string): Node {
+  if (typeof content === "string") {
+    const fragment = fromMarkup(content)();
+    bindCurrentStoreToSubtree(fragment);
+    return fragment;
+  }
+
+  return content;
+}
 
 /** Infer the runtime type from a PropDefinition's type field. */
 type InferPropType<D extends PropDefinition> = D extends {
@@ -1126,7 +1136,7 @@ function createClientDefinedComponent<S extends PropsSchema>(
               shadowRoot.innerHTML = "";
             }
             const content = resolvedSetup(this, ctx);
-            shadowRoot.append(content as string | Node);
+            shadowRoot.append(buildComponentContent(content as string | Node));
             finalizeHostClientActions(trigger);
             replayHydrationTrigger(shadowRoot, trigger);
           });

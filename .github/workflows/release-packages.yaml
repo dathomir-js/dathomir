@@ -39,13 +39,13 @@ jobs:
           ref: main
 
       - name: Set up Node.js
-        uses: jdx/mise-action@v3
+        uses: jdx/mise-action@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           install_args: "node pnpm"
           cache: true
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
 
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
@@ -73,6 +73,19 @@ jobs:
             pnpm p:${pkg} release --level fix --release-version ${{ steps.get-version.outputs.package-version }} -k create-release-branch,build
           done
 
+      - name: Format release changes
+        run: pnpm fmt
+
+      - name: Commit formatted release changes
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "style: format release changes"
+          git push
+
       - name: Create Pull Request
         run: |
           gh pr create \
@@ -84,7 +97,7 @@ jobs:
 
       - name: Create GitHub Release
         id: create-release
-        uses: release-drafter/release-drafter@v6
+        uses: release-drafter/release-drafter@v7
         with:
           version: ${{ steps.get-version.outputs.package-version }}
           prerelease: ${{ contains(steps.get-version.outputs.package-version, '-beta') }}

@@ -121,6 +121,7 @@
     "[javascript]": {
       "editor.defaultFormatter": "oxc.oxc-vscode",
     },
+    "typescript.native-preview.tsdk": "/config/node_modules/@typescript/native-preview",
     // "js/ts.tsdk.path": "<root>/node_modules/typescript/lib",
   },
   "tasks": {

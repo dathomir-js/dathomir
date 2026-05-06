@@ -1,5 +1,5 @@
 // DOM generation
-export { fromTree } from "./dom/fromTree/implementation";
+export { fromMarkup, fromTree } from "./dom/fromTree/implementation";
 
 // DOM navigation
 export { firstChild, nextSibling } from "./dom/navigation/implementation";

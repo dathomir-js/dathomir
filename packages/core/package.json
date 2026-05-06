@@ -53,6 +53,16 @@
       "import": "./dist/runtime/index.mjs",
       "require": "./dist/runtime/index.cjs"
     },
+    "./ssr": {
+      "types": "./dist/ssr/index.d.mts",
+      "import": "./dist/ssr/index.mjs",
+      "require": "./dist/ssr/index.cjs"
+    },
+    "./hydration": {
+      "types": "./dist/hydration/index.d.mts",
+      "import": "./dist/hydration/index.mjs",
+      "require": "./dist/hydration/index.cjs"
+    },
     "./store": {
       "types": "./dist/store/index.d.mts",
       "import": "./dist/store/index.mjs",

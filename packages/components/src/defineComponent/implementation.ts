@@ -12,6 +12,7 @@ import {
 } from "@/css/implementation";
 import {
   bindCurrentStoreToSubtree,
+  canUseComponentDOMRuntime,
   captureCurrentStore,
   getStoreFromHost,
   peekStoreFromHost,
@@ -27,7 +28,7 @@ import {
   HYDRATE_ISLANDS_HOOK,
   HYDRATE_ISLANDS_STATUS,
 } from "@dathra/runtime/hydration";
-import { getClientAction, insert, setAttr } from "@dathra/runtime";
+import { fromMarkup, getClientAction, insert, setAttr } from "@dathra/runtime";
 import {
   CLIENT_ACTIONS_METADATA_ATTRIBUTE,
   CLIENT_EVENT_METADATA_ATTRIBUTE,
@@ -65,6 +66,16 @@ interface PropDefinition {
 /** Schema mapping prop names to their definitions. */
 type PropsSchema = Record<string, PropDefinition>;
 type EmptyPropsSchema = Record<never, never>;
+
+function buildComponentContent(content: Node | string): Node {
+  if (typeof content === "string") {
+    const fragment = fromMarkup(content)();
+    bindCurrentStoreToSubtree(fragment);
+    return fragment;
+  }
+
+  return content;
+}
 
 /** Infer the runtime type from a PropDefinition's type field. */
 type InferPropType<D extends PropDefinition> = D extends {
@@ -665,60 +676,69 @@ function propsToSSRAttributes<S extends PropsSchema>(
   return attrs;
 }
 
+function createBrowserJSXElement<S extends PropsSchema>(
+  tagName: string,
+  props: JSXComponentProps<S>,
+  propsSchema?: S,
+): HTMLElement {
+  const element = document.createElement(tagName) as HTMLElement;
+
+  for (const [key, value] of Object.entries(props)) {
+    if (key === "children" || isIslandsDirectiveProp(key)) {
+      continue;
+    }
+
+    if (isEventHandlerKey(key) && typeof value === "function") {
+      element.addEventListener(getEventType(key), value as EventListener);
+      continue;
+    }
+
+    if (isReactiveValue(value)) {
+      templateEffect(() => {
+        applyJSXValue(element, key, value.value, propsSchema);
+      });
+      continue;
+    }
+
+    applyJSXValue(element, key, value, propsSchema);
+  }
+
+  const children = props.children;
+  if (children !== undefined) {
+    if (hasDynamicJSXChildren(children)) {
+      const anchor = document.createComment("component-children");
+      element.append(anchor);
+      templateEffect(() => {
+        insert(element, resolveJSXChildren(children), anchor);
+        bindCurrentStoreToSubtree(element);
+      });
+    } else {
+      insert(element, children, null);
+      bindCurrentStoreToSubtree(element);
+    }
+  }
+
+  bindCurrentStoreToSubtree(element);
+
+  return element;
+}
+
 function createJSXComponent<S extends PropsSchema>(
   tagName: string,
   propsSchema?: S,
+  useBrowserRuntime = canUseComponentDOMRuntime(),
 ): JSXComponent<S> {
   return (props: JSXComponentProps<S> | null) => {
     const safeProps = props ?? ({} as JSXComponentProps<S>);
 
-    if (typeof window === "undefined") {
+    if (!useBrowserRuntime) {
       return renderDSD(
         tagName,
         propsToSSRAttributes(safeProps, propsSchema),
       ) as unknown as Node;
     }
 
-    const element = document.createElement(tagName) as HTMLElement;
-
-    for (const [key, value] of Object.entries(safeProps)) {
-      if (key === "children" || isIslandsDirectiveProp(key)) {
-        continue;
-      }
-
-      if (isEventHandlerKey(key) && typeof value === "function") {
-        element.addEventListener(getEventType(key), value as EventListener);
-        continue;
-      }
-
-      if (isReactiveValue(value)) {
-        templateEffect(() => {
-          applyJSXValue(element, key, value.value, propsSchema);
-        });
-        continue;
-      }
-
-      applyJSXValue(element, key, value, propsSchema);
-    }
-
-    const children = safeProps.children;
-    if (children !== undefined) {
-      if (hasDynamicJSXChildren(children)) {
-        const anchor = document.createComment("component-children");
-        element.append(anchor);
-        templateEffect(() => {
-          insert(element, resolveJSXChildren(children), anchor);
-          bindCurrentStoreToSubtree(element);
-        });
-      } else {
-        insert(element, children, null);
-        bindCurrentStoreToSubtree(element);
-      }
-    }
-
-    bindCurrentStoreToSubtree(element);
-
-    return element;
+    return createBrowserJSXElement(tagName, safeProps, propsSchema);
   };
 }
 
@@ -771,60 +791,73 @@ function wrapFunctionComponent<S extends PropsSchema>(
   };
 }
 
-/**
- * Define a custom element with automatic Shadow DOM, reactive props with
- * type coercion, adoptedStyleSheets, and lifecycle management.
- * Accepts a FunctionComponent that receives reactive prop signals.
- * @param tagName - Custom element tag name (must contain a hyphen).
- * @param component - Function component that creates the component's DOM content.
- * @param options - Optional configuration for styles, props, and hydration.
- * @returns A component definition object containing the custom element class and JSX helper.
- */
-function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
-  tagName: string,
-  component: FunctionComponent<S>,
-  options: ComponentOptions<S> = {},
-): DefinedComponent<S> {
-  const isSSR = typeof window === "undefined";
-  const jsx = createJSXComponent(tagName, options.props);
-  const hydrationMetadata = (component as unknown as ComponentMetadata<S>)
-    .__hydrationMetadata__;
+function collectServerCssTexts(
+  styles?: readonly (CSSStyleSheet | string)[],
+): string[] {
+  const cssTexts: string[] = [];
 
-  // Wrap function component into SetupFunction
-  const resolvedSetup: SetupFunction<S> = wrapFunctionComponent(
-    component,
-    options.props,
-  );
-
-  if (isSSR) {
-    const cssTexts: string[] = [];
-    if (options.styles?.length) {
-      for (const s of options.styles) {
-        const text = getCssText(s);
-        if (text) cssTexts.push(text);
+  if (styles?.length) {
+    for (const style of styles) {
+      const text = getCssText(style);
+      if (text) {
+        cssTexts.push(text);
       }
     }
-    registerComponent(
-      tagName,
-      resolvedSetup as SetupFunction,
-      cssTexts,
-      options.props as PropsSchema | undefined,
-      hydrationMetadata,
-    );
-    ensureComponentRenderer();
-    const SSRClass = class {} as any;
-    SSRClass.__tagName__ = tagName;
-    SSRClass.__propsSchema__ = options.props;
-    SSRClass.__hydrationMetadata__ = hydrationMetadata;
-    return createDefinedComponent(
-      SSRClass,
-      jsx,
-      options.props,
-      tagName,
-      hydrationMetadata,
-    );
   }
 
+  return cssTexts;
+}
+
+function createSSRPlaceholderClass<S extends PropsSchema>(
+  tagName: string,
+  propsSchema: S | undefined,
+  hydrationMetadata?: ComponentHydrationMetadata,
+): ComponentConstructor<S> {
+  const SSRClass = class {} as ComponentConstructor<S> & {
+    __tagName__?: string;
+    __propsSchema__?: S;
+    __hydrationMetadata__?: ComponentHydrationMetadata;
+  };
+
+  SSRClass.__tagName__ = tagName;
+  SSRClass.__propsSchema__ = propsSchema;
+  SSRClass.__hydrationMetadata__ = hydrationMetadata;
+
+  return SSRClass;
+}
+
+function createServerDefinedComponent<S extends PropsSchema>(
+  tagName: string,
+  resolvedSetup: SetupFunction<S>,
+  options: ComponentOptions<S>,
+  jsx: JSXComponent<S>,
+  hydrationMetadata?: ComponentHydrationMetadata,
+): DefinedComponent<S> {
+  registerComponent(
+    tagName,
+    resolvedSetup as SetupFunction,
+    collectServerCssTexts(options.styles),
+    options.props as PropsSchema | undefined,
+    hydrationMetadata,
+  );
+  ensureComponentRenderer();
+
+  return createDefinedComponent(
+    createSSRPlaceholderClass(tagName, options.props, hydrationMetadata),
+    jsx,
+    options.props,
+    tagName,
+    hydrationMetadata,
+  );
+}
+
+function createClientDefinedComponent<S extends PropsSchema>(
+  tagName: string,
+  resolvedSetup: SetupFunction<S>,
+  options: ComponentOptions<S>,
+  jsx: JSXComponent<S>,
+  hydrationMetadata?: ComponentHydrationMetadata,
+): DefinedComponent<S> {
   const { styles, props: propsSchema, hydrate: hydrateSetup } = options;
 
   if (typeof __DEV__ !== "undefined" && __DEV__) {
@@ -835,20 +868,18 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
     }
   }
 
-  // Pre-process styles
   let sheets: CSSStyleSheet[] | undefined;
   if (styles?.length) {
-    sheets = styles.map((s) => {
-      if (typeof s === "string") {
+    sheets = styles.map((style) => {
+      if (typeof style === "string") {
         const sheet = new CSSStyleSheet();
-        sheet.replaceSync(s);
+        sheet.replaceSync(style);
         return sheet;
       }
-      return s;
+      return style;
     });
   }
 
-  // Build attr→prop mapping from schema
   const attrToProp = new Map<string, string>();
   const observedAttrNames: string[] = [];
   if (propsSchema) {
@@ -861,7 +892,6 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
     }
   }
 
-  // WeakMap to store prop signals (accessible from property descriptors)
   const propSignalMap = new WeakMap<
     HTMLElement,
     Record<string, Signal<unknown>>
@@ -878,7 +908,6 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
       super();
       captureCurrentStore(this);
 
-      // Shadow DOM setup
       if (!this.shadowRoot) {
         const template = this.querySelector(
           ":scope > template[shadowrootmode]",
@@ -891,7 +920,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
           this.attachShadow({ mode: "open" });
         }
       }
-      // Create prop signals with type coercion
+
       if (propsSchema) {
         const signals: Record<string, Signal<unknown>> = {};
         for (const propName of Object.keys(propsSchema)) {
@@ -1107,7 +1136,7 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
               shadowRoot.innerHTML = "";
             }
             const content = resolvedSetup(this, ctx);
-            shadowRoot.append(content as string | Node);
+            shadowRoot.append(buildComponentContent(content as string | Node));
             finalizeHostClientActions(trigger);
             replayHydrationTrigger(shadowRoot, trigger);
           });
@@ -1203,10 +1232,10 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
       if (!propName || !propsSchema) return;
       const def = propsSchema[propName]!;
       const propSignals = propSignalMap.get(this);
-      const sig = propSignals?.[propName];
-      if (sig) {
+      const signalValue = propSignals?.[propName];
+      if (signalValue) {
         try {
-          sig.set(coerceValue(def, newValue) as never);
+          signalValue.set(coerceValue(def, newValue) as never);
         } catch (error) {
           console.error("[dathra] Error updating prop signal:", error);
         }
@@ -1214,7 +1243,6 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
     }
   }
 
-  // Define JS property getters/setters on the element prototype
   if (propsSchema) {
     for (const propName of Object.keys(propsSchema)) {
       Object.defineProperty(Component.prototype, propName, {
@@ -1232,15 +1260,63 @@ function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
 
   customElements.define(tagName, Component);
 
-  (Component as any).__tagName__ = tagName;
-  (Component as any).__propsSchema__ = propsSchema;
-  (Component as any).__hydrationMetadata__ = hydrationMetadata;
+  const componentMetadata = Component as typeof Component & {
+    __tagName__?: string;
+    __propsSchema__?: S;
+    __hydrationMetadata__?: ComponentHydrationMetadata;
+  };
+
+  componentMetadata.__tagName__ = tagName;
+  componentMetadata.__propsSchema__ = propsSchema;
+  componentMetadata.__hydrationMetadata__ = hydrationMetadata;
 
   return createDefinedComponent(
     Component as unknown as ComponentConstructor<S>,
     jsx,
     propsSchema,
     tagName,
+    hydrationMetadata,
+  );
+}
+
+/**
+ * Define a custom element with automatic Shadow DOM, reactive props with
+ * type coercion, adoptedStyleSheets, and lifecycle management.
+ * Accepts a FunctionComponent that receives reactive prop signals.
+ * @param tagName - Custom element tag name (must contain a hyphen).
+ * @param component - Function component that creates the component's DOM content.
+ * @param options - Optional configuration for styles, props, and hydration.
+ * @returns A component definition object containing the custom element class and JSX helper.
+ */
+function defineComponent<const S extends PropsSchema = EmptyPropsSchema>(
+  tagName: string,
+  component: FunctionComponent<S>,
+  options: ComponentOptions<S> = {},
+): DefinedComponent<S> {
+  const useBrowserRuntime = canUseComponentDOMRuntime();
+  const jsx = createJSXComponent(tagName, options.props, useBrowserRuntime);
+  const hydrationMetadata = (component as unknown as ComponentMetadata<S>)
+    .__hydrationMetadata__;
+  const resolvedSetup: SetupFunction<S> = wrapFunctionComponent(
+    component,
+    options.props,
+  );
+
+  if (!useBrowserRuntime) {
+    return createServerDefinedComponent(
+      tagName,
+      resolvedSetup,
+      options,
+      jsx,
+      hydrationMetadata,
+    );
+  }
+
+  return createClientDefinedComponent(
+    tagName,
+    resolvedSetup,
+    options,
+    jsx,
     hydrationMetadata,
   );
 }
